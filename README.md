@@ -6,3 +6,5 @@
 
 
 New things: different url for each chat
+
+Make the buttons better
