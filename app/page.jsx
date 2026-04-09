@@ -20,7 +20,7 @@ export default function App() {
   // Settings
   const [settings, setSettings] = useState({
     apiKey: '',
-    model: 'google/gemini-3.1-pro',
+    model: 'google/gemini-3.1-pro-preview',
     dbToken: '',
     systemPrompt: '' 
   });
