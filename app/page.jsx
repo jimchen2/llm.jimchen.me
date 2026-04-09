@@ -20,9 +20,9 @@ export default function App() {
   // Settings
   const [settings, setSettings] = useState({
     apiKey: '',
-    model: 'openai/gpt-4',
+    model: 'google/gemini-3.1-pro',
     dbToken: '',
-    systemPrompt: 'You are a helpful assistant.' 
+    systemPrompt: '' 
   });
   const [showSettings, setShowSettings] = useState(false);
 
