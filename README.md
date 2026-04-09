@@ -1,4 +1,4 @@
 - A separate file to call the LLM, minimal and fast interface
 - User can set a default model, no default system instructions. User provides the API, but all the endpoints are in the backend, enter sends the message in the frontend, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
-- User can copy, edit, branch, and delete any previous message by user or bot, and "retry" for every previous bot message based on messages before that (use a doubly linked list)
+- User can copy, edit, branch, and delete any previous message by user or bot, user can "retry" for every previous bot message based on messages before that, user can copy the code (use a doubly linked list)
 - All messages are saved on server Redis and PSQL, one user with one password authentication, message continues if user closes the browser tab, timeout 120s
