@@ -236,7 +236,7 @@ export default function App() {
     });
 
     const source = new EventSource(
-      `/api/chat/stream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
+      `/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
     );
     
     source.onmessage = (e) => {
@@ -406,7 +406,7 @@ export default function App() {
     });
     
     const source = new EventSource(
-      `/api/chat/stream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
+      `/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
     );
     
     source.onmessage = (e) => {
