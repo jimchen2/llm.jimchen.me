@@ -14,3 +14,5 @@ Split the frontend into different files
 Make it work on mobile
 
 Instead of "Assistant" make it specific which LLM is answering
+
+Remove the telegram bot (just do 2 deployments)
