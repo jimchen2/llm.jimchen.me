@@ -17,7 +17,7 @@ export default function App() {
   const [currentId, setCurrentId] = useState(null);
   const [input, setInput] = useState('');
   
-  // ADDED: systemPrompt default setting
+  // Settings
   const [settings, setSettings] = useState({
     apiKey: '',
     model: 'openai/gpt-4',
@@ -26,6 +26,10 @@ export default function App() {
   });
   const [showSettings, setShowSettings] = useState(false);
 
+  // Edit States
+  const [editingId, setEditingId] = useState(null);
+  const [editContent, setEditContent] = useState('');
+
   const endOfMessagesRef = useRef(null);
 
   useEffect(() => {
@@ -33,7 +37,7 @@ export default function App() {
     let initialSettings = settings;
     
     if (saved) {
-      initialSettings = { ...settings, ...JSON.parse(saved) }; // Merge to preserve defaults like systemPrompt
+      initialSettings = { ...settings, ...JSON.parse(saved) }; 
       setSettings(initialSettings);
     }
 
@@ -43,6 +47,41 @@ export default function App() {
       loadConversations(initialSettings.dbToken);
     }
   }, []);
+
+  // Add Copy to Clipboard buttons to pre/code blocks dynamically
+  useEffect(() => {
+    const codeBlocks = document.querySelectorAll('pre');
+    codeBlocks.forEach(pre => {
+      if (pre.querySelector('.copy-code-btn')) return;
+
+      const btn = document.createElement('button');
+      btn.className = 'copy-code-btn';
+      btn.innerText = 'Copy';
+      btn.style.position = 'absolute';
+      btn.style.top = '5px';
+      btn.style.right = '5px';
+      btn.style.padding = '2px 6px';
+      btn.style.fontSize = '12px';
+      btn.style.cursor = 'pointer';
+      btn.style.background = '#444';
+      btn.style.color = '#fff';
+      btn.style.border = 'none';
+      btn.style.borderRadius = '3px';
+      btn.style.opacity = '0.8';
+
+      pre.style.position = 'relative';
+      
+      btn.onclick = () => {
+        const codeElement = pre.querySelector('code');
+        const codeText = codeElement ? codeElement.textContent : pre.textContent.replace('Copy', '');
+        navigator.clipboard.writeText(codeText);
+        btn.innerText = 'Copied!';
+        setTimeout(() => { btn.innerText = 'Copy'; }, 2000);
+      };
+
+      pre.appendChild(btn);
+    });
+  }, [messages, currentId, activeConversation]);
 
   const loadConversations = (dbToken) => {
     fetch('/api/conversations', {
@@ -168,7 +207,6 @@ export default function App() {
     setCurrentId(botMsgId);
     if (!contentOverride) setInput('');
 
-    // Prepare LLM History Path
     const path = [];
     let curr = isRetry ? parentId : userMsgId;
     while (curr && newMsgs[curr]) {
@@ -176,7 +214,6 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    // ADDED: Prepend the System Prompt if it exists
     if (settings.systemPrompt && settings.systemPrompt.trim() !== '') {
       path.unshift({ role: 'system', content: settings.systemPrompt.trim() });
     }
@@ -198,6 +235,176 @@ export default function App() {
       })
     });
 
+    const source = new EventSource(
+      `/api/chat/stream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
+    );
+    
+    source.onmessage = (e) => {
+      const chunk = JSON.parse(e.data);
+      setMessages(prev => ({
+        ...prev,
+        [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk }
+      }));
+    };
+    source.onerror = () => source.close();
+  };
+
+  // Node Editing
+  const startEditing = (msg) => {
+    setEditingId(msg.id);
+    setEditContent(msg.content);
+  };
+
+  const saveEdit = async (id) => {
+    await fetch('/api/messages', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-db-token': settings.dbToken },
+      body: JSON.stringify({ id, content: editContent })
+    });
+    setMessages(prev => ({
+      ...prev,
+      [id]: { ...prev[id], content: editContent }
+    }));
+    setEditingId(null);
+  };
+
+  // Node Copy Action
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  // Node Branch Action (Duplicates path into a new Conversation)
+  const handleBranch = async (msgId) => {
+    if (!settings.dbToken) { alert("Configure Database Token."); return; }
+    
+    const path = [];
+    let curr = msgId;
+    while (curr && messages[curr]) {
+      path.unshift(messages[curr]);
+      curr = messages[curr].parent_id;
+    }
+    
+    const newConvId = generateId();
+    const title = 'Branch: ' + (conversations.find(c => c.id === activeConversation)?.title || 'New');
+    
+    await fetch('/api/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-db-token': settings.dbToken },
+      body: JSON.stringify({ id: newConvId, title })
+    });
+    
+    const newMessages = [];
+    let lastNewId = null;
+    const idMap = {};
+    let time = Date.now();
+    
+    for (const m of path) {
+      const newId = generateId();
+      idMap[m.id] = newId;
+      newMessages.push({
+        id: newId,
+        conversation_id: newConvId,
+        parent_id: m.parent_id ? idMap[m.parent_id] : null,
+        role: m.role,
+        content: m.content,
+        created_at: time++
+      });
+      lastNewId = newId;
+    }
+    
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-db-token': settings.dbToken },
+      body: JSON.stringify({ messages: newMessages })
+    });
+    
+    setConversations(prev => [{ id: newConvId, title }, ...prev]);
+    setActiveConversation(newConvId);
+    
+    const msgMap = {};
+    newMessages.forEach(m => msgMap[m.id] = m);
+    setMessages(msgMap);
+    setCurrentId(lastNewId);
+  };
+
+  // Node Delete Action (Deletes selected node and sub-nodes downstream)
+  const deleteMessage = async (msgId) => {
+    if (!confirm('Delete this message and all its replies?')) return;
+    
+    await fetch('/api/messages', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-db-token': settings.dbToken },
+      body: JSON.stringify({ id: msgId })
+    });
+    
+    const newMsgs = { ...messages };
+    const toDelete = [msgId];
+    
+    // Find all downstream dependents
+    for (let i = 0; i < toDelete.length; i++) {
+      const id = toDelete[i];
+      Object.values(newMsgs).forEach(m => {
+        if (m.parent_id === id && !toDelete.includes(m.id)) {
+          toDelete.push(m.id);
+        }
+      });
+    }
+    toDelete.forEach(id => delete newMsgs[id]);
+    setMessages(newMsgs);
+    
+    if (toDelete.includes(currentId)) {
+      setCurrentId(messages[msgId].parent_id || null);
+    }
+  };
+
+  // Node Retry Bot Action (Generates another message based on its parent node context)
+  const handleRetry = async (msgId) => {
+    if (!settings.apiKey || !settings.dbToken) {
+      alert("Configure Database Token & API Key.");
+      return;
+    }
+    const msg = messages[msgId];
+    if (msg.role !== 'assistant') return;
+    
+    const parentId = msg.parent_id;
+    const botMsgId = generateId();
+    
+    const newMsgs = { ...messages };
+    newMsgs[botMsgId] = {
+      id: botMsgId,
+      parent_id: parentId,
+      role: 'assistant',
+      content: ''
+    };
+    
+    setMessages(newMsgs);
+    setCurrentId(botMsgId);
+    
+    const path = [];
+    let curr = parentId;
+    while (curr && newMsgs[curr]) {
+      path.unshift({ role: newMsgs[curr].role, content: newMsgs[curr].content });
+      curr = newMsgs[curr].parent_id;
+    }
+    
+    if (settings.systemPrompt && settings.systemPrompt.trim() !== '') {
+      path.unshift({ role: 'system', content: settings.systemPrompt.trim() });
+    }
+    
+    await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-db-token': settings.dbToken },
+      body: JSON.stringify({
+        messages: path,
+        userMsgId: null, // Avoid duplicating the user context node
+        botMsgId: botMsgId,
+        parentId: parentId,
+        conversationId: activeConversation,
+        apiKey: settings.apiKey,
+        model: settings.model
+      })
+    });
+    
     const source = new EventSource(
       `/api/chat/stream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
     );
@@ -297,7 +504,6 @@ export default function App() {
               <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Model</label>
               <input placeholder="Model" value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})} />
 
-              {/* ADDED: System Prompt Textarea */}
               <label style={{ fontSize: '12px', fontWeight: 'bold' }}>System Prompt</label>
               <textarea 
                 placeholder="You are a helpful assistant." 
@@ -321,20 +527,42 @@ export default function App() {
               <div key={msg.id} className={`message ${msg.role}`} style={{ marginBottom:'20px', padding: '15px', borderRadius: '8px', background: msg.role === 'user' ? '#e9ecef' : '#f8f9fa' }}>
                 <div className="msg-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <strong>{msg.role === 'user' ? 'You' : 'Assistant'}</strong>
-                  <div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {siblings.length > 1 && (
-                      <span className="branch-controls" style={{marginRight: '15px'}}>
+                      <span className="branch-controls" style={{marginRight: '10px'}}>
                         <button disabled={index === 0} onClick={() => switchBranch(siblings[index - 1].id)}>←</button>
-                        <span style={{margin: '0 5px'}}>{index + 1}/{siblings.length}</span>
+                        <span style={{margin: '0 5px', fontSize: '12px'}}>{index + 1}/{siblings.length}</span>
                         <button disabled={index === siblings.length - 1} onClick={() => switchBranch(siblings[index + 1].id)}>→</button>
                       </span>
                     )}
+                    <button style={{fontSize:'12px', cursor:'pointer'}} onClick={() => handleCopy(msg.content)}>Copy</button>
+                    <button style={{fontSize:'12px', cursor:'pointer'}} onClick={() => startEditing(msg)}>Edit</button>
+                    <button style={{fontSize:'12px', cursor:'pointer'}} onClick={() => handleBranch(msg.id)}>Branch</button>
+                    {msg.role === 'assistant' && (
+                      <button style={{fontSize:'12px', cursor:'pointer'}} onClick={() => handleRetry(msg.id)}>Retry</button>
+                    )}
+                    <button style={{fontSize:'12px', cursor:'pointer', color:'red'}} onClick={() => deleteMessage(msg.id)}>Delete</button>
                   </div>
                 </div>
-                <div 
-                  className="msg-content markdown-body" 
-                  dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }} 
-                />
+                
+                {editingId === msg.id ? (
+                  <div>
+                    <textarea 
+                      value={editContent} 
+                      onChange={e => setEditContent(e.target.value)} 
+                      style={{width: '100%', minHeight: '100px', padding: '10px', borderRadius:'5px'}} 
+                    />
+                    <div style={{marginTop: '10px', display: 'flex', gap: '10px'}}>
+                      <button onClick={() => saveEdit(msg.id)} style={{cursor:'pointer', padding: '5px 10px'}}>Save</button>
+                      <button onClick={() => setEditingId(null)} style={{cursor:'pointer', padding: '5px 10px'}}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    className="msg-content markdown-body" 
+                    dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }} 
+                  />
+                )}
               </div>
             );
           })}

@@ -24,3 +24,22 @@ export async function DELETE(req) {
   `, [id]);
   return NextResponse.json({ success: true });
 }
+
+export async function PUT(req) {
+  const { id, content } = await req.json();
+  await pool.query('UPDATE messages SET content = $1 WHERE id = $2', [content, id]);
+  return NextResponse.json({ success: true });
+}
+
+export async function POST(req) {
+  const { messages } = await req.json();
+  if (Array.isArray(messages)) {
+    for (const m of messages) {
+      await pool.query(
+        'INSERT INTO messages (id, conversation_id, parent_id, role, content, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
+        [m.id, m.conversation_id, m.parent_id, m.role, m.content, m.created_at]
+      );
+    }
+  }
+  return NextResponse.json({ success: true });
+}

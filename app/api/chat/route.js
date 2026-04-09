@@ -6,10 +6,10 @@ import pool from "../../../lib/db";
 export async function POST(req) {
   const { messages, userMsgId, botMsgId, parentId, conversationId, apiKey, model } = await req.json();
 
-  const userMsg = messages[messages.length - 1];
+  const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
 
-  // Save User Message
-  if (userMsg.role === "user") {
+  // Save User Message (skipped if userMsgId is null, e.g. when "retrying" a bot message)
+  if (userMsg && userMsg.role === "user" && userMsgId) {
     await pool.query(
       "INSERT INTO messages (id, conversation_id, parent_id, role, content, created_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING", 
       [userMsgId, conversationId, parentId, "user", userMsg.content, Date.now()]
