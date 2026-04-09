@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
 import pool from '../../../lib/db';
 
-export async function GET() {
-  const { rows } = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
+export async function GET(req) {
+  const conversationId = req.nextUrl.searchParams.get('conversationId');
+  if (!conversationId) return NextResponse.json([]);
+
+  const { rows } = await pool.query(
+    'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC',
+    [conversationId]
+  );
   return NextResponse.json(rows);
 }
 
 export async function DELETE(req) {
   const { id } = await req.json();
-  // Using a recursive CTE to delete the message and all its children (branches)
   await pool.query(`
     WITH RECURSIVE del_tree AS (
       SELECT id FROM messages WHERE id = $1

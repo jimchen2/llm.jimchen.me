@@ -1,4 +1,3 @@
-// app/page.jsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -8,14 +7,19 @@ import mk from '@vscode/markdown-it-katex';
 const md = new MarkdownIt({ html: true, breaks: true }).use(mk);
 
 export default function App() {
+  // Conversation States
+  const [conversations, setConversations] = useState([]);
+  const [activeConversation, setActiveConversation] = useState(null);
+
+  // Message States
   const [messages, setMessages] = useState({});
   const [currentId, setCurrentId] = useState(null);
   const [input, setInput] = useState('');
   
   const [settings, setSettings] = useState({
     apiKey: '',
-    model: 'openai/gpt-4', // Eden AI model format
-    dbToken: ''            // Backend Database Access Token
+    model: 'openai/gpt-4',
+    dbToken: ''
   });
   const [showSettings, setShowSettings] = useState(false);
 
@@ -31,42 +35,72 @@ export default function App() {
     }
 
     if (!initialSettings.dbToken) {
-      setShowSettings(true); // Force them to input tokens if not set
+      setShowSettings(true);
     } else {
-      loadMessages(initialSettings.dbToken);
+      loadConversations(initialSettings.dbToken);
     }
   }, []);
 
-  const loadMessages = (dbToken) => {
-    fetch('/api/messages', {
+  // -- Load the Sidebar List --
+  const loadConversations = (dbToken) => {
+    fetch('/api/conversations', {
       headers: { 'x-db-token': dbToken }
     })
-      .then(r => {
-        if (r.status === 401) {
-          setShowSettings(true);
-          throw new Error('Unauthorized');
-        }
-        return r.json();
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) setConversations(data);
       })
+      .catch(console.error);
+  };
+
+  // -- Load a specific Chat --
+  const loadMessages = (dbToken, convId) => {
+    fetch(`/api/messages?conversationId=${convId}`, {
+      headers: { 'x-db-token': dbToken }
+    })
+      .then(r => r.json())
       .then(data => {
         if (!data || data.error) return;
         const msgMap = {};
         let lastId = null;
         data.forEach(m => {
           msgMap[m.id] = m;
-          lastId = m.id;
+          lastId = m.id; // Because it's ordered by ASC time, this safely captures latest leaf
         });
         setMessages(msgMap);
         setCurrentId(lastId);
+        setActiveConversation(convId);
       })
       .catch(console.error);
+  };
+
+  const handleNewChat = () => {
+    setActiveConversation(null);
+    setMessages({});
+    setCurrentId(null);
+    setInput('');
+  };
+
+  const handleDeleteConversation = async (e, id) => {
+    e.stopPropagation();
+    if (!confirm('Delete this entire conversation?')) return;
+    
+    await fetch('/api/conversations', { 
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-db-token': settings.dbToken },
+      body: JSON.stringify({ id }) 
+    });
+    
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (activeConversation === id) handleNewChat();
   };
 
   const saveSettings = (newSettings) => {
     setSettings(newSettings);
     localStorage.setItem('llm_settings', JSON.stringify(newSettings));
     setShowSettings(false);
-    loadMessages(newSettings.dbToken); // Reload messages with new token
+    loadConversations(newSettings.dbToken);
+    if (activeConversation) loadMessages(newSettings.dbToken, activeConversation);
   };
 
   const getActivePath = () => {
@@ -90,11 +124,29 @@ export default function App() {
 
   const sendMessage = async (contentOverride = null, parentOverride = null) => {
     if ((!input.trim() && !contentOverride) || !settings.apiKey || !settings.dbToken) {
-      if (!settings.dbToken || !settings.apiKey) alert("Please configure Database Token and API Key in Settings.");
+      if (!settings.dbToken || !settings.apiKey) alert("Configure Database Token & API Key.");
       return;
     }
     
     const content = contentOverride || input;
+    
+    // Check if we need to initialize a NEW conversation
+    let convId = activeConversation;
+    if (!convId) {
+      convId = generateId();
+      const title = content.substring(0, 30) + (content.length > 30 ? '...' : '');
+      
+      await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-db-token': settings.dbToken },
+        body: JSON.stringify({ id: convId, title })
+      });
+      
+      setActiveConversation(convId);
+      // Quickly append to the sidebar without refetching fully yet
+      setConversations(prev => [{ id: convId, title }, ...prev]); 
+    }
+
     const parentId = parentOverride !== null ? parentOverride : currentId;
     const userMsgId = generateId();
     const botMsgId = generateId();
@@ -117,7 +169,6 @@ export default function App() {
     setCurrentId(botMsgId);
     if (!contentOverride) setInput('');
 
-    // Prepare history for LLM
     const path = [];
     let curr = isRetry ? parentId : userMsgId;
     while (curr && newMsgs[curr]) {
@@ -125,7 +176,6 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    // Trigger Backend API with custom auth header
     await fetch('/api/chat', {
       method: 'POST',
       headers: {
@@ -137,14 +187,14 @@ export default function App() {
         userMsgId: isRetry ? null : userMsgId,
         botMsgId,
         parentId,
+        conversationId: convId,
         apiKey: settings.apiKey,
         model: settings.model
       })
     });
 
-    // Start SSE Stream, passing dbToken in the URL because EventSource doesn't support custom headers
     const source = new EventSource(
-      `/api/chat/stream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
+      `/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
     );
     
     source.onmessage = (e) => {
@@ -164,37 +214,7 @@ export default function App() {
     }
   };
 
-  const handleEdit = (msg) => {
-    const newContent = prompt('Edit message:', msg.content);
-    if (newContent !== null && newContent !== msg.content) {
-      sendMessage(newContent, msg.parent_id);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this message and all replies?')) return;
-    await fetch('/api/messages', { 
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-db-token': settings.dbToken
-      },
-      body: JSON.stringify({ id }) 
-    });
-    
-    setMessages(prev => {
-      const next = { ...prev };
-      const parentId = next[id]?.parent_id;
-      delete next[id];
-      setCurrentId(parentId || null);
-      return next;
-    });
-  };
-
-  const handleRetry = (msg) => {
-    sendMessage(msg.content, msg.parent_id);
-  };
-
+  // Branch controls ... (keep existing logic)
   const getSiblings = (msgId, parentId) => {
     const siblings = Object.values(messages).filter(m => m.parent_id === parentId);
     const index = siblings.findIndex(m => m.id === msgId);
@@ -213,66 +233,105 @@ export default function App() {
   };
 
   return (
-    <div className="app-container">
-      <header>
-        <h3>Minimal LLM (Eden AI)</h3>
-        <button onClick={() => setShowSettings(!showSettings)}>Settings</button>
-      </header>
-
-      {showSettings && (
-        <div className="settings-modal">
-          <label>Database Auth Token (Backend Password)</label>
-          <input type="password" value={settings.dbToken} onChange={e => setSettings({...settings, dbToken: e.target.value})} />
-          
-          <label>Eden AI API Key</label>
-          <input type="password" value={settings.apiKey} onChange={e => setSettings({...settings, apiKey: e.target.value})} />
-          
-          <label>Model (e.g., openai/gpt-4)</label>
-          <input value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})} />
-          
-          <button onClick={() => saveSettings(settings)}>Save</button>
+    <div style={{ display: 'flex', height: '100vh', margin: 0, padding: 0 }}>
+      
+      {/* SIDEBAR */}
+      <div style={{ width: '260px', backgroundColor: '#1e1e1e', color: '#fff', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '15px' }}>
+          <button 
+            onClick={handleNewChat}
+            style={{ width: '100%', padding: '10px', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: '5px', cursor: 'pointer' }}
+          >
+            + New Chat
+          </button>
         </div>
-      )}
-
-      <div className="chat-container">
-        {activePath.map(msg => {
-          const { siblings, index } = getSiblings(msg.id, msg.parent_id);
-          return (
-            <div key={msg.id} className={`message ${msg.role}`}>
-              <div className="msg-header">
-                <strong>{msg.role === 'user' ? 'You' : 'Assistant'}</strong>
-                <div className="msg-controls">
-                  {siblings.length > 1 && (
-                    <span className="branch-controls">
-                      <button disabled={index === 0} onClick={() => switchBranch(siblings[index - 1].id)}>←</button>
-                      {index + 1}/{siblings.length}
-                      <button disabled={index === siblings.length - 1} onClick={() => switchBranch(siblings[index + 1].id)}>→</button>
-                    </span>
-                  )}
-                  <button onClick={() => navigator.clipboard.writeText(msg.content)}>Copy</button>
-                  <button onClick={() => handleEdit(msg)}>Edit/Branch</button>
-                  {msg.role === 'assistant' && <button onClick={() => handleRetry(msg)}>Retry</button>}
-                  <button className="delete" onClick={() => handleDelete(msg.id)}>Delete</button>
-                </div>
-              </div>
-              <div 
-                className="msg-content markdown-body" 
-                dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }} 
-              />
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px' }}>
+          {conversations.map(c => (
+            <div 
+              key={c.id} 
+              onClick={() => loadMessages(settings.dbToken, c.id)}
+              style={{ 
+                padding: '10px', 
+                marginBottom: '5px',
+                borderRadius: '5px',
+                cursor: 'pointer', 
+                backgroundColor: c.id === activeConversation ? '#2a2b32' : 'transparent',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{c.title}</span>
+              <button 
+                onClick={(e) => handleDeleteConversation(e, c.id)} 
+                style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', marginLeft: '5px' }}
+              >
+                ×
+              </button>
             </div>
-          );
-        })}
-        <div ref={endOfMessagesRef} />
+          ))}
+        </div>
+        <div style={{ padding: '15px', borderTop: '1px solid #333' }}>
+          <button onClick={() => setShowSettings(!showSettings)} style={{ width: '100%', padding: '10px', cursor:'pointer' }}>⚙ Settings</button>
+        </div>
       </div>
 
-      <div className="input-container">
-        <textarea
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
-        />
-        <button onClick={() => sendMessage()}>Send</button>
+      {/* MAIN CHAT */}
+      <div className="app-container" style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        
+        {showSettings && (
+          <div className="settings-modal" style={{ position: 'absolute', top: 10, right: 10, zIndex: 10, background: '#fff', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
+            <h4>Settings</h4>
+            <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+              <input type="password" placeholder="DB Password" value={settings.dbToken} onChange={e => setSettings({...settings, dbToken: e.target.value})} />
+              <input type="password" placeholder="Eden AI Key" value={settings.apiKey} onChange={e => setSettings({...settings, apiKey: e.target.value})} />
+              <input placeholder="Model" value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})} />
+              <button onClick={() => saveSettings(settings)}>Save</button>
+            </div>
+          </div>
+        )}
+
+        <div className="chat-container" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          {activePath.length === 0 && (
+            <h2 style={{ textAlign:'center', marginTop: '10vh', color:'#aaa' }}>How can I help you today?</h2>
+          )}
+          {activePath.map(msg => {
+            const { siblings, index } = getSiblings(msg.id, msg.parent_id);
+            return (
+              <div key={msg.id} className={`message ${msg.role}`} style={{ marginBottom:'20px', padding: '15px', borderRadius: '8px', background: msg.role === 'user' ? '#e9ecef' : '#f8f9fa' }}>
+                <div className="msg-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <strong>{msg.role === 'user' ? 'You' : 'Assistant'}</strong>
+                  <div>
+                    {siblings.length > 1 && (
+                      <span className="branch-controls" style={{marginRight: '15px'}}>
+                        <button disabled={index === 0} onClick={() => switchBranch(siblings[index - 1].id)}>←</button>
+                        <span style={{margin: '0 5px'}}>{index + 1}/{siblings.length}</span>
+                        <button disabled={index === siblings.length - 1} onClick={() => switchBranch(siblings[index + 1].id)}>→</button>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div 
+                  className="msg-content markdown-body" 
+                  dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }} 
+                />
+              </div>
+            );
+          })}
+          <div ref={endOfMessagesRef} />
+        </div>
+
+        <div className="input-container" style={{ padding: '20px', borderTop: '1px solid #ccc', display:'flex', gap:'10px' }}>
+          <textarea
+            style={{ flex: 1, padding: '10px', borderRadius:'8px', minHeight: '50px', resize: 'none' }}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
+          />
+          <button onClick={() => sendMessage()} style={{ padding: '0 20px', cursor:'pointer' }}>Send</button>
+        </div>
+
       </div>
     </div>
   );

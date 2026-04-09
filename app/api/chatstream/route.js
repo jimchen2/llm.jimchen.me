@@ -1,4 +1,4 @@
-// app/api/chat/stream/route.js
+// app/api/chatstream/route.js
 import { redisSubscriber } from '@/lib/redis';
 
 export async function GET(req) {
