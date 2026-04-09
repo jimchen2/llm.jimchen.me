@@ -5,9 +5,9 @@
 
 
 
-New things: different url for each chat
+different url uuids for each chat
 
-Make the buttons better
+Make the buttons copy edit branch, etc, on the bottom of each answer
 
 Split the frontend into different files
 
