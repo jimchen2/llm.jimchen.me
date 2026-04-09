@@ -12,60 +12,63 @@ export default function App() {
   const [currentId, setCurrentId] = useState(null);
   const [input, setInput] = useState('');
   
-  // NOTE: Removed apiBase from settings
   const [settings, setSettings] = useState({
     apiKey: '',
-    model: 'openai/gpt-3.5-turbo' // Using Eden AI model format
+    model: 'openai/gpt-4', // Eden AI model format
+    dbToken: ''            // Backend Database Access Token
   });
   const [showSettings, setShowSettings] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(true); // Assuming true, checked by API
 
   const endOfMessagesRef = useRef(null);
 
   useEffect(() => {
-    // Check URL for login param
-    if (window.location.search.includes('login=true')) setLoggedIn(false);
-    
     const saved = localStorage.getItem('llm_settings');
-    if (saved) setSettings(JSON.parse(saved));
+    let initialSettings = settings;
+    
+    if (saved) {
+      initialSettings = JSON.parse(saved);
+      setSettings(initialSettings);
+    }
 
-    fetch('/api/messages')
-      .then(r => r.json())
+    if (!initialSettings.dbToken) {
+      setShowSettings(true); // Force them to input tokens if not set
+    } else {
+      loadMessages(initialSettings.dbToken);
+    }
+  }, []);
+
+  const loadMessages = (dbToken) => {
+    fetch('/api/messages', {
+      headers: { 'x-db-token': dbToken }
+    })
+      .then(r => {
+        if (r.status === 401) {
+          setShowSettings(true);
+          throw new Error('Unauthorized');
+        }
+        return r.json();
+      })
       .then(data => {
         if (!data || data.error) return;
         const msgMap = {};
         let lastId = null;
         data.forEach(m => {
           msgMap[m.id] = m;
-          lastId = m.id; // approximate leaf, can be refined for exact branch persistence
+          lastId = m.id;
         });
         setMessages(msgMap);
         setCurrentId(lastId);
-      });
-  }, []);
+      })
+      .catch(console.error);
+  };
 
   const saveSettings = (newSettings) => {
     setSettings(newSettings);
     localStorage.setItem('llm_settings', JSON.stringify(newSettings));
     setShowSettings(false);
+    loadMessages(newSettings.dbToken); // Reload messages with new token
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    const res = await fetch('/api/auth', {
-      method: 'POST',
-      body: JSON.stringify({ password: e.target.password.value })
-    });
-    if (res.ok) {
-      setLoggedIn(true);
-      window.history.replaceState(null, '', '/');
-      window.location.reload();
-    } else {
-      alert('Wrong password');
-    }
-  };
-
-  // Traverses backward from currentId to reconstruct the single active chat path
   const getActivePath = () => {
     const path = [];
     let curr = currentId;
@@ -86,10 +89,9 @@ export default function App() {
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
   const sendMessage = async (contentOverride = null, parentOverride = null) => {
-    // Eden AI requires an API key. Model format is provider/model.
-    if ((!input.trim() && !contentOverride) || !settings.apiKey || !settings.model.includes('/')) {
-        alert("Please set your Eden AI API Key and use the model format 'provider/model' (e.g., openai/gpt-4) in settings.");
-        return;
+    if ((!input.trim() && !contentOverride) || !settings.apiKey || !settings.dbToken) {
+      if (!settings.dbToken || !settings.apiKey) alert("Please configure Database Token and API Key in Settings.");
+      return;
     }
     
     const content = contentOverride || input;
@@ -98,7 +100,6 @@ export default function App() {
     const botMsgId = generateId();
 
     const newMsgs = { ...messages };
-    
     const isRetry = contentOverride && !parentOverride;
 
     if (!isRetry) {
@@ -124,9 +125,13 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    // Trigger Backend - NOTE: apiBase is no longer sent
+    // Trigger Backend API with custom auth header
     await fetch('/api/chat', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-db-token': settings.dbToken
+      },
       body: JSON.stringify({
         messages: path,
         userMsgId: isRetry ? null : userMsgId,
@@ -137,8 +142,11 @@ export default function App() {
       })
     });
 
-    // Start SSE Stream
-    const source = new EventSource(`/api/chat/stream?id=${botMsgId}`);
+    // Start SSE Stream, passing dbToken in the URL because EventSource doesn't support custom headers
+    const source = new EventSource(
+      `/api/chat/stream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
+    );
+    
     source.onmessage = (e) => {
       const chunk = JSON.parse(e.data);
       setMessages(prev => ({
@@ -159,30 +167,34 @@ export default function App() {
   const handleEdit = (msg) => {
     const newContent = prompt('Edit message:', msg.content);
     if (newContent !== null && newContent !== msg.content) {
-      // Editing branches the history
       sendMessage(newContent, msg.parent_id);
     }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this message and all replies?')) return;
-    await fetch('/api/messages', { method: 'DELETE', body: JSON.stringify({ id }) });
+    await fetch('/api/messages', { 
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-db-token': settings.dbToken
+      },
+      body: JSON.stringify({ id }) 
+    });
+    
     setMessages(prev => {
       const next = { ...prev };
       const parentId = next[id]?.parent_id;
       delete next[id];
-      // simplified local cleanup, refresh for full tree cleanup
       setCurrentId(parentId || null);
       return next;
     });
   };
 
   const handleRetry = (msg) => {
-    // Retry generates a new assistant message based on the parent user message
     sendMessage(msg.content, msg.parent_id);
   };
 
-  // Look for siblings (branches)
   const getSiblings = (msgId, parentId) => {
     const siblings = Object.values(messages).filter(m => m.parent_id === parentId);
     const index = siblings.findIndex(m => m.id === msgId);
@@ -190,7 +202,6 @@ export default function App() {
   };
 
   const switchBranch = (siblingId) => {
-    // Find the deepest leaf in this new branch
     let leaf = siblingId;
     let found = true;
     while(found) {
@@ -201,18 +212,6 @@ export default function App() {
     setCurrentId(leaf);
   };
 
-  if (!loggedIn) {
-    return (
-      <div className="login-container">
-        <form onSubmit={handleLogin} className="login-form">
-          <h2>Login</h2>
-          <input type="password" name="password" placeholder="Password" required />
-          <button type="submit">Enter</button>
-        </form>
-      </div>
-    );
-  }
-
   return (
     <div className="app-container">
       <header>
@@ -222,11 +221,15 @@ export default function App() {
 
       {showSettings && (
         <div className="settings-modal">
-          {/* NOTE: API Base URL input removed */}
+          <label>Database Auth Token (Backend Password)</label>
+          <input type="password" value={settings.dbToken} onChange={e => setSettings({...settings, dbToken: e.target.value})} />
+          
           <label>Eden AI API Key</label>
           <input type="password" value={settings.apiKey} onChange={e => setSettings({...settings, apiKey: e.target.value})} />
+          
           <label>Model (e.g., openai/gpt-4)</label>
           <input value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})} />
+          
           <button onClick={() => saveSettings(settings)}>Save</button>
         </div>
       )}
