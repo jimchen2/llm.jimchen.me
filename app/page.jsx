@@ -1,3 +1,4 @@
+// app/page.jsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -16,10 +17,12 @@ export default function App() {
   const [currentId, setCurrentId] = useState(null);
   const [input, setInput] = useState('');
   
+  // ADDED: systemPrompt default setting
   const [settings, setSettings] = useState({
     apiKey: '',
     model: 'openai/gpt-4',
-    dbToken: ''
+    dbToken: '',
+    systemPrompt: 'You are a helpful assistant.' 
   });
   const [showSettings, setShowSettings] = useState(false);
 
@@ -30,7 +33,7 @@ export default function App() {
     let initialSettings = settings;
     
     if (saved) {
-      initialSettings = JSON.parse(saved);
+      initialSettings = { ...settings, ...JSON.parse(saved) }; // Merge to preserve defaults like systemPrompt
       setSettings(initialSettings);
     }
 
@@ -41,7 +44,6 @@ export default function App() {
     }
   }, []);
 
-  // -- Load the Sidebar List --
   const loadConversations = (dbToken) => {
     fetch('/api/conversations', {
       headers: { 'x-db-token': dbToken }
@@ -53,7 +55,6 @@ export default function App() {
       .catch(console.error);
   };
 
-  // -- Load a specific Chat --
   const loadMessages = (dbToken, convId) => {
     fetch(`/api/messages?conversationId=${convId}`, {
       headers: { 'x-db-token': dbToken }
@@ -65,7 +66,7 @@ export default function App() {
         let lastId = null;
         data.forEach(m => {
           msgMap[m.id] = m;
-          lastId = m.id; // Because it's ordered by ASC time, this safely captures latest leaf
+          lastId = m.id;
         });
         setMessages(msgMap);
         setCurrentId(lastId);
@@ -130,7 +131,6 @@ export default function App() {
     
     const content = contentOverride || input;
     
-    // Check if we need to initialize a NEW conversation
     let convId = activeConversation;
     if (!convId) {
       convId = generateId();
@@ -143,7 +143,6 @@ export default function App() {
       });
       
       setActiveConversation(convId);
-      // Quickly append to the sidebar without refetching fully yet
       setConversations(prev => [{ id: convId, title }, ...prev]); 
     }
 
@@ -169,11 +168,17 @@ export default function App() {
     setCurrentId(botMsgId);
     if (!contentOverride) setInput('');
 
+    // Prepare LLM History Path
     const path = [];
     let curr = isRetry ? parentId : userMsgId;
     while (curr && newMsgs[curr]) {
       path.unshift({ role: newMsgs[curr].role, content: newMsgs[curr].content });
       curr = newMsgs[curr].parent_id;
+    }
+
+    // ADDED: Prepend the System Prompt if it exists
+    if (settings.systemPrompt && settings.systemPrompt.trim() !== '') {
+      path.unshift({ role: 'system', content: settings.systemPrompt.trim() });
     }
 
     await fetch('/api/chat', {
@@ -194,7 +199,7 @@ export default function App() {
     });
 
     const source = new EventSource(
-      `/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
+      `/api/chat/stream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`
     );
     
     source.onmessage = (e) => {
@@ -214,7 +219,6 @@ export default function App() {
     }
   };
 
-  // Branch controls ... (keep existing logic)
   const getSiblings = (msgId, parentId) => {
     const siblings = Object.values(messages).filter(m => m.parent_id === parentId);
     const index = siblings.findIndex(m => m.id === msgId);
@@ -280,13 +284,29 @@ export default function App() {
       <div className="app-container" style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
         
         {showSettings && (
-          <div className="settings-modal" style={{ position: 'absolute', top: 10, right: 10, zIndex: 10, background: '#fff', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-            <h4>Settings</h4>
-            <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+          <div className="settings-modal" style={{ position: 'absolute', top: 10, right: 10, zIndex: 10, background: '#fff', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', minWidth: '300px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+            <h4 style={{ margin: '0 0 15px 0' }}>Settings</h4>
+            <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+              
+              <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Database Password</label>
               <input type="password" placeholder="DB Password" value={settings.dbToken} onChange={e => setSettings({...settings, dbToken: e.target.value})} />
+              
+              <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Eden AI Key</label>
               <input type="password" placeholder="Eden AI Key" value={settings.apiKey} onChange={e => setSettings({...settings, apiKey: e.target.value})} />
+              
+              <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Model</label>
               <input placeholder="Model" value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})} />
-              <button onClick={() => saveSettings(settings)}>Save</button>
+
+              {/* ADDED: System Prompt Textarea */}
+              <label style={{ fontSize: '12px', fontWeight: 'bold' }}>System Prompt</label>
+              <textarea 
+                placeholder="You are a helpful assistant." 
+                value={settings.systemPrompt} 
+                onChange={e => setSettings({...settings, systemPrompt: e.target.value})}
+                style={{ minHeight: '80px', padding: '8px', resize: 'vertical' }}
+              />
+
+              <button onClick={() => saveSettings(settings)} style={{ marginTop: '10px', padding: '8px', cursor: 'pointer', backgroundColor: '#0070f3', color: '#fff', border: 'none', borderRadius: '4px' }}>Save</button>
             </div>
           </div>
         )}
