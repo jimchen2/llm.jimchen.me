@@ -571,6 +571,7 @@ export default function App() {
 
         <div className="input-container" style={{ padding: '20px', borderTop: '1px solid #ccc', display:'flex', gap:'10px' }}>
           <textarea
+            autoFocus
             style={{ flex: 1, padding: '10px', borderRadius:'8px', minHeight: '50px', resize: 'none' }}
             value={input}
             onChange={e => setInput(e.target.value)}
