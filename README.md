@@ -12,3 +12,5 @@ Make the buttons better
 Split the frontend into different files
 
 Make it work on mobile
+
+Instead of "Assistant" make it specific which LLM is answering
