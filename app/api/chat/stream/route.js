@@ -1,42 +1,50 @@
-import { redis, redisSubscriber } from '@/lib/redis';
-
-export const dynamic = 'force-dynamic';
+// app/api/chat/stream/route.js
+import { redisSubscriber } from '@/lib/redis';
 
 export async function GET(req) {
   const id = req.nextUrl.searchParams.get('id');
-  
+  if (!id) return new Response('Missing message ID', { status: 400 });
+
   const stream = new ReadableStream({
-    async start(controller) {
-      // Send anything already generated (if user reconnected)
-      const existingContent = await redis.get(`msg:${id}:content`);
-      if (existingContent) {
-        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(existingContent)}\n\n`));
-      }
-
+    start(controller) {
       const channel = `msg:${id}:channel`;
-      await redisSubscriber.subscribe(channel);
 
-      redisSubscriber.on('message', (chan, message) => {
-        if (chan === channel) {
-          if (message === '[DONE]') {
-            redisSubscriber.unsubscribe(channel);
-            controller.close();
-          } else {
-            controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(message)}\n\n`));
-          }
+      const handler = (channel, message) => {
+        if (message === '[DONE]') {
+          cleanup();
+          controller.close();
+          return;
+        }
+        // The data from redis is already JSON stringified
+        controller.enqueue(`data: ${message}\n\n`);
+      };
+      
+      const cleanup = () => {
+        redisSubscriber.unsubscribe(channel);
+        redisSubscriber.removeListener('message', handler);
+      };
+
+      // Handle client disconnect
+      req.signal.onabort = () => {
+        cleanup();
+        console.log(`Stream for ${id} aborted.`);
+      };
+
+      redisSubscriber.subscribe(channel, (err) => {
+        if (err) {
+          console.error(`Error subscribing to Redis channel ${channel}`, err);
+          controller.error(err);
+        } else {
+          redisSubscriber.on('message', handler);
         }
       });
-
-      req.signal.addEventListener('abort', () => {
-        redisSubscriber.unsubscribe(channel);
-      });
-    }
+    },
   });
 
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
+      'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
     },
   });

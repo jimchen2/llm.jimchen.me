@@ -1,3 +1,4 @@
+// app/page.jsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -11,10 +12,10 @@ export default function App() {
   const [currentId, setCurrentId] = useState(null);
   const [input, setInput] = useState('');
   
+  // NOTE: Removed apiBase from settings
   const [settings, setSettings] = useState({
-    apiBase: 'https://api.openai.com/v1',
     apiKey: '',
-    model: 'gpt-3.5-turbo'
+    model: 'openai/gpt-3.5-turbo' // Using Eden AI model format
   });
   const [showSettings, setShowSettings] = useState(false);
   const [loggedIn, setLoggedIn] = useState(true); // Assuming true, checked by API
@@ -85,7 +86,11 @@ export default function App() {
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
   const sendMessage = async (contentOverride = null, parentOverride = null) => {
-    if ((!input.trim() && !contentOverride) || !settings.apiKey) return;
+    // Eden AI requires an API key. Model format is provider/model.
+    if ((!input.trim() && !contentOverride) || !settings.apiKey || !settings.model.includes('/')) {
+        alert("Please set your Eden AI API Key and use the model format 'provider/model' (e.g., openai/gpt-4) in settings.");
+        return;
+    }
     
     const content = contentOverride || input;
     const parentId = parentOverride !== null ? parentOverride : currentId;
@@ -119,7 +124,7 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    // Trigger Backend
+    // Trigger Backend - NOTE: apiBase is no longer sent
     await fetch('/api/chat', {
       method: 'POST',
       body: JSON.stringify({
@@ -127,7 +132,8 @@ export default function App() {
         userMsgId: isRetry ? null : userMsgId,
         botMsgId,
         parentId,
-        ...settings
+        apiKey: settings.apiKey,
+        model: settings.model
       })
     });
 
@@ -210,17 +216,16 @@ export default function App() {
   return (
     <div className="app-container">
       <header>
-        <h3>Minimal LLM</h3>
+        <h3>Minimal LLM (Eden AI)</h3>
         <button onClick={() => setShowSettings(!showSettings)}>Settings</button>
       </header>
 
       {showSettings && (
         <div className="settings-modal">
-          <label>API Base URL</label>
-          <input value={settings.apiBase} onChange={e => setSettings({...settings, apiBase: e.target.value})} />
-          <label>API Key</label>
+          {/* NOTE: API Base URL input removed */}
+          <label>Eden AI API Key</label>
           <input type="password" value={settings.apiKey} onChange={e => setSettings({...settings, apiKey: e.target.value})} />
-          <label>Model</label>
+          <label>Model (e.g., openai/gpt-4)</label>
           <input value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})} />
           <button onClick={() => saveSettings(settings)}>Save</button>
         </div>
