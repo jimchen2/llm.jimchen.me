@@ -73,7 +73,8 @@ export default function MessageNode({
           </div>
         ) : (
           <div 
-            className="markdown-body" 
+            className="markdown-body fs-5" 
+            style={{ fontSize: '1.1rem' }}
             dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }} 
           />
         )}

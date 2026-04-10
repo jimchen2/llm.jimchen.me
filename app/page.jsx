@@ -24,6 +24,7 @@ export default function App() {
   });
 
   const endOfMessagesRef = useRef(null);
+  const textareaRef = useRef(null); // Added for auto-expanding input
 
   // URL State & Settings Initialization
   useEffect(() => {
@@ -103,6 +104,7 @@ export default function App() {
     setCurrentId(null);
     setInput('');
     setShowMobileMenu(false);
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'; // Reset input height
   };
 
   const handleDeleteConversation = async (e, id) => {
@@ -135,7 +137,8 @@ export default function App() {
   };
 
   const scrollToBottom = () => endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  useEffect(() => { scrollToBottom(); }, [messages, currentId]);
+  // FIX: Removed `messages` dependency so it doesn't auto-scroll while streaming
+  useEffect(() => { scrollToBottom(); }, [currentId]); 
 
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
@@ -171,7 +174,10 @@ export default function App() {
 
     setMessages(newMsgs);
     setCurrentId(botMsgId);
-    if (!contentOverride) setInput('');
+    if (!contentOverride) {
+      setInput('');
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'; // Reset input height
+    }
 
     const path = [];
     let curr = isRetry ? parentId : userMsgId;
@@ -290,7 +296,8 @@ export default function App() {
   const activePath = getActivePath();
 
   return (
-    <Container fluid className="vh-100 p-0 overflow-hidden d-flex">
+    // FIX: Replaced vh-100 with dynamic viewport height (100dvh) for mobile bars
+    <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: '100dvh' }}>
       
       {/* DESKTOP SIDEBAR */}
       <div className="d-none d-md-block" style={{ width: '280px' }}>
@@ -360,9 +367,18 @@ export default function App() {
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: '800px' }}>
             <InputGroup>
+              {/* FIX: Auto-expanding textarea with refs, larger font (fs-5), and height logic */}
               <Form.Control
-                as="textarea" rows={2} className="shadow-none border-secondary" autoFocus style={{ resize: 'none' }}
-                value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
+                ref={textareaRef}
+                as="textarea" rows={1} className="shadow-none border-secondary fs-5" autoFocus 
+                style={{ resize: 'none', maxHeight: '200px', overflowY: 'auto' }}
+                value={input} 
+                onChange={e => {
+                  setInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }} 
+                onKeyDown={handleKeyDown}
                 placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
               />
               <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={() => sendMessage()}>Send</Button>
