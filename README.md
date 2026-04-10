@@ -6,3 +6,5 @@
 Mobile problem 
 
 Scrolling problem
+
+Font too small
