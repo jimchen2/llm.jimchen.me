@@ -1,4 +1,3 @@
-// app/api/chatstream/route.js
 import { redisSubscriber } from '@/lib/redis';
 
 export async function GET(req) {
@@ -7,9 +6,12 @@ export async function GET(req) {
 
   const stream = new ReadableStream({
     start(controller) {
-      const channel = `msg:${id}:channel`;
+      const targetChannel = `msg:${id}:channel`;
 
-      const handler = (channel, message) => {
+      const handler = (incomingChannel, message) => {
+        // FIX: Ignore messages meant for other concurrent streams/windows
+        if (incomingChannel !== targetChannel) return;
+
         if (message === '[DONE]') {
           cleanup();
           controller.close();
@@ -20,7 +22,7 @@ export async function GET(req) {
       };
       
       const cleanup = () => {
-        redisSubscriber.unsubscribe(channel);
+        redisSubscriber.unsubscribe(targetChannel);
         redisSubscriber.removeListener('message', handler);
       };
 
@@ -30,9 +32,9 @@ export async function GET(req) {
         console.log(`Stream for ${id} aborted.`);
       };
 
-      redisSubscriber.subscribe(channel, (err) => {
+      redisSubscriber.subscribe(targetChannel, (err) => {
         if (err) {
-          console.error(`Error subscribing to Redis channel ${channel}`, err);
+          console.error(`Error subscribing to Redis channel ${targetChannel}`, err);
           controller.error(err);
         } else {
           redisSubscriber.on('message', handler);

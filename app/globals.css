@@ -1,11 +1,23 @@
 @import url("https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css");
 
-body { background: #f9f9f9; }
+body {
+  background: #f9f9f9;
+}
 
 /* min-width: 0 is CRITICAL here. It stops flex items from stretching beyond the screen on mobile */
-.message { max-width: 90%; min-width: 0; }
-.message.user { align-self: flex-end; background: #e3f2fd; }
-.message.assistant { align-self: flex-start; background: #ffffff; border: 1px solid #dee2e6; }
+.message {
+  max-width: 90%;
+  min-width: 0;
+}
+.message.user {
+  align-self: flex-end;
+  background: #e3f2fd;
+}
+.message.assistant {
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+}
 
 /* Markdown Styles */
 .markdown-body {
@@ -15,22 +27,22 @@ body { background: #f9f9f9; }
 }
 
 /* 1. BLOCK CODE (<pre>) */
-.markdown-body pre { 
-  background: #212529; 
-  color: white; 
-  padding: 10px; 
-  border-radius: 5px; 
+.markdown-body pre {
+  background: #212529;
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
   overflow-x: auto; /* Enables horizontal scrollbar */
-  max-width: 100%; 
+  max-width: 100%;
   box-sizing: border-box; /* CRITICAL: Prevents padding from causing width overflow */
 }
 
 /* 2. INLINE CODE (`like this`) */
-.markdown-body code { 
-  font-family: monospace; 
-  background: rgba(0,0,0,0.05); 
-  padding: 2px 4px; 
-  border-radius: 3px; 
+.markdown-body code {
+  font-family: monospace;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 4px;
+  border-radius: 3px;
   word-break: break-word; /* Allows long inline commands to wrap */
   white-space: pre-wrap;
 }
@@ -43,4 +55,24 @@ body { background: #f9f9f9; }
   word-break: normal;
 }
 
-.markdown-body p:last-child { margin: 0; }
+.markdown-body p:last-child {
+  margin: 0;
+}
+
+/* Fix for KaTeX Overflow */
+
+/* 1. For Inline Math (like the one in your example) */
+.markdown-body .katex {
+  max-width: 100%;
+  overflow-x: auto; /* Allows horizontal scrolling */
+  overflow-y: hidden;
+  display: inline-block; /* CRITICAL: overflow only works on block/inline-block elements */
+  vertical-align: middle; /* Keeps inline math aligned with surrounding text */
+}
+
+/* 2. For Block Math (Equations on their own line) */
+.markdown-body .katex-display {
+  max-width: 100%;
+  overflow-x: auto; /* Allows horizontal scrolling */
+  overflow-y: hidden;
+}
