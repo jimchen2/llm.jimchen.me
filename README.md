@@ -5,8 +5,4 @@
 
 Frontend retry behavior
 
-fix the width of the llm website on mobile width overflow
-
 Different conversation streaming messed up
-
-Make a scrolling for the history prompts so it doesn't become too large
