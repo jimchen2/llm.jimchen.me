@@ -320,7 +320,7 @@ export default function App() {
     return true;
   };
 
-const handleRetry = async (msgId) => {
+  const handleRetry = async (msgId) => {
     const msg = messages[msgId];
     if (!msg) return;
     
@@ -348,6 +348,13 @@ const handleRetry = async (msgId) => {
       else found = false;
     }
     setCurrentId(leaf);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   const activePath = getActivePath();
