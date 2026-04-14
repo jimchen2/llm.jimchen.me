@@ -14,14 +14,19 @@ export async function GET(req) {
 
 export async function DELETE(req) {
   const { id } = await req.json();
-  await pool.query(`
-    WITH RECURSIVE del_tree AS (
-      SELECT id FROM messages WHERE id = $1
-      UNION ALL
-      SELECT m.id FROM messages m INNER JOIN del_tree dt ON m.parent_id = dt.id
-    )
-    DELETE FROM messages WHERE id IN (SELECT id FROM del_tree);
-  `, [id]);
+  
+  // 1. Get the parent_id of the message being deleted
+  const { rows } = await pool.query('SELECT parent_id FROM messages WHERE id = $1', [id]);
+  
+  if (rows.length > 0) {
+    const parentId = rows[0].parent_id;
+    // 2. Re-parent children: Any message replying to the deleted message now replies to its parent
+    await pool.query('UPDATE messages SET parent_id = $1 WHERE parent_id = $2', [parentId, id]);
+  }
+
+  // 3. Delete only the requested message
+  await pool.query('DELETE FROM messages WHERE id = $1', [id]);
+  
   return NextResponse.json({ success: true });
 }
 

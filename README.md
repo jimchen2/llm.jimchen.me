@@ -11,5 +11,3 @@ Frontend retry behavior
 Different conversation streaming messed up
 
 Mobile width still has a problem
-
-Create a fucking chat route in the code
