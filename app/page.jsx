@@ -16,6 +16,10 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
+  // Pagination states
+  const [hasMoreConv, setHasMoreConv] = useState(true);
+  const [isLoadingConv, setIsLoadingConv] = useState(false);
+
   const [settings, setSettings] = useState({
     apiKey: '',
     model: 'google/gemini-3.1-pro-preview',
@@ -24,7 +28,7 @@ export default function App() {
   });
 
   const endOfMessagesRef = useRef(null);
-  const textareaRef = useRef(null); // Added for auto-expanding input
+  const textareaRef = useRef(null);
 
   // URL State & Settings Initialization
   useEffect(() => {
@@ -39,17 +43,22 @@ export default function App() {
     if (!initialSettings.dbToken) {
       setShowSettings(true);
     } else {
-      loadConversations(initialSettings.dbToken);
+      loadConversations(initialSettings.dbToken, 0);
       
-      // Handle URL UUID loading
+      // Support old ?chat= query & new /chat/uuid layout
+      const pathname = window.location.pathname;
       const params = new URLSearchParams(window.location.search);
-      const urlId = params.get('chat');
+      let urlId = params.get('chat');
+      
+      if (pathname.startsWith('/chat/')) {
+        urlId = pathname.split('/chat/')[1];
+      }
+
       if (urlId) {
         loadMessages(initialSettings.dbToken, urlId);
       }
     }
 
-    // Global listener for editing messages
     const handleSaveEdit = async (e) => {
       const { id, content } = e.detail;
       await fetch('/api/messages', {
@@ -63,20 +72,31 @@ export default function App() {
     return () => window.removeEventListener('save-message-edit', handleSaveEdit);
   }, []);
 
-  // Sync URL when activeConversation changes
+  // Sync URL to be /chat/uuid instead
   useEffect(() => {
     if (activeConversation) {
-      window.history.pushState({}, '', `/?chat=${activeConversation}`);
+      window.history.pushState({}, '', `/chat/${activeConversation}`);
     } else {
       window.history.pushState({}, '', `/`);
     }
   }, [activeConversation]);
 
-  const loadConversations = (dbToken) => {
-    fetch('/api/conversations', { headers: { 'x-db-token': dbToken } })
+  const loadConversations = (dbToken, offset = 0) => {
+    setIsLoadingConv(true);
+    fetch(`/api/conversations?offset=${offset}&limit=10`, { headers: { 'x-db-token': dbToken } })
       .then(r => r.json())
-      .then(data => { if (!data.error) setConversations(data); })
-      .catch(console.error);
+      .then(data => { 
+        if (!data.error) {
+          if (offset === 0) {
+            setConversations(data);
+          } else {
+            setConversations(prev => [...prev, ...data]);
+          }
+          setHasMoreConv(data.length === 10);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoadingConv(false));
   };
 
   const loadMessages = (dbToken, convId) => {
@@ -93,7 +113,7 @@ export default function App() {
         setMessages(msgMap);
         setCurrentId(lastId);
         setActiveConversation(convId);
-        setShowMobileMenu(false); // Close mobile menu if open
+        setShowMobileMenu(false);
       })
       .catch(console.error);
   };
@@ -104,7 +124,7 @@ export default function App() {
     setCurrentId(null);
     setInput('');
     setShowMobileMenu(false);
-    if (textareaRef.current) textareaRef.current.style.height = 'auto'; // Reset input height
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
 
   const handleDeleteConversation = async (e, id) => {
@@ -122,7 +142,7 @@ export default function App() {
   const saveSettings = () => {
     localStorage.setItem('llm_settings', JSON.stringify(settings));
     setShowSettings(false);
-    loadConversations(settings.dbToken);
+    loadConversations(settings.dbToken, 0);
     if (activeConversation) loadMessages(settings.dbToken, activeConversation);
   };
 
@@ -137,7 +157,6 @@ export default function App() {
   };
 
   const scrollToBottom = () => endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  // FIX: Removed `messages` dependency so it doesn't auto-scroll while streaming
   useEffect(() => { scrollToBottom(); }, [currentId]); 
 
   const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -176,7 +195,7 @@ export default function App() {
     setCurrentId(botMsgId);
     if (!contentOverride) {
       setInput('');
-      if (textareaRef.current) textareaRef.current.style.height = 'auto'; // Reset input height
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'; 
     }
 
     const path = [];
@@ -296,7 +315,6 @@ export default function App() {
   const activePath = getActivePath();
 
   return (
-    // FIX: Replaced vh-100 with dynamic viewport height (100dvh) for mobile bars
     <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: '100dvh' }}>
       
       {/* DESKTOP SIDEBAR */}
@@ -306,6 +324,8 @@ export default function App() {
           handleNewChat={handleNewChat} loadMessages={loadMessages}
           handleDeleteConversation={handleDeleteConversation} setShowSettings={setShowSettings}
           dbToken={settings.dbToken}
+          loadMore={() => loadConversations(settings.dbToken, conversations.length)}
+          hasMore={hasMoreConv} isLoading={isLoadingConv}
         />
       </div>
 
@@ -320,6 +340,8 @@ export default function App() {
             handleNewChat={handleNewChat} loadMessages={loadMessages}
             handleDeleteConversation={handleDeleteConversation} setShowSettings={setShowSettings}
             dbToken={settings.dbToken}
+            loadMore={() => loadConversations(settings.dbToken, conversations.length)}
+            hasMore={hasMoreConv} isLoading={isLoadingConv}
           />
         </Offcanvas.Body>
       </Offcanvas>
@@ -367,7 +389,6 @@ export default function App() {
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: '800px' }}>
             <InputGroup>
-              {/* FIX: Auto-expanding textarea with refs, larger font (fs-5), and height logic */}
               <Form.Control
                 ref={textareaRef}
                 as="textarea" rows={1} className="shadow-none border-secondary fs-5" autoFocus 

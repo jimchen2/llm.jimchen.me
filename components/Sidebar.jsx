@@ -8,8 +8,21 @@ export default function Sidebar({
   loadMessages, 
   handleDeleteConversation, 
   setShowSettings,
-  dbToken 
+  dbToken,
+  loadMore,
+  hasMore,
+  isLoading
 }) {
+
+  // Infinite scroll trigger function
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    // Buffer of 5 pixels to trigger load
+    if (scrollHeight - scrollTop <= clientHeight + 5 && hasMore && !isLoading) {
+      loadMore();
+    }
+  };
+
   return (
     <div className="d-flex flex-column h-100 bg-dark text-light border-end border-secondary">
       <div className="p-3 border-bottom border-secondary">
@@ -18,7 +31,7 @@ export default function Sidebar({
         </Button>
       </div>
       
-      <div className="flex-grow-1 overflow-auto p-2">
+      <div className="flex-grow-1 overflow-auto p-2" onScroll={handleScroll}>
         <ListGroup variant="flush">
           {conversations.map(c => (
             <ListGroup.Item 
@@ -42,6 +55,13 @@ export default function Sidebar({
             </ListGroup.Item>
           ))}
         </ListGroup>
+        
+        {/* Loading Spinner / Text indicator */}
+        {isLoading && (
+          <div className="text-center p-3 text-secondary">
+            <small>Loading...</small>
+          </div>
+        )}
       </div>
       
       <div className="p-3 border-top border-secondary">

@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 import pool from '../../../lib/db';
 
-export async function GET() {
-  const { rows } = await pool.query('SELECT * FROM conversations ORDER BY created_at DESC');
+export async function GET(req) {
+  const url = new URL(req.url);
+  const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+  const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+
+  const { rows } = await pool.query(
+    'SELECT * FROM conversations ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+    [limit, offset]
+  );
   return NextResponse.json(rows);
 }
 

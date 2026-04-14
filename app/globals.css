@@ -1,11 +1,36 @@
 @import url("https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css");
 
 body { background: #f9f9f9; }
-.message { max-width: 90%; }
+
+/* min-width: 0 is CRITICAL here. It stops flex items from stretching beyond the screen on mobile */
+.message { max-width: 90%; min-width: 0; }
 .message.user { align-self: flex-end; background: #e3f2fd; }
 .message.assistant { align-self: flex-start; background: #ffffff; border: 1px solid #dee2e6; }
 
 /* Markdown Styles */
-.markdown-body pre { background: #212529; color: white; padding: 10px; border-radius: 5px; overflow-x: auto; position: relative; }
-.markdown-body code { font-family: monospace; background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 3px; }
+.markdown-body {
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+.markdown-body pre { 
+  background: #212529; 
+  color: white; 
+  padding: 10px; 
+  border-radius: 5px; 
+  overflow-x: auto; 
+  position: relative; 
+  max-width: 100%; /* Ensures it stays inside the message bubble */
+  white-space: pre-wrap; /* Forces code/text to wrap to the next line */
+  word-break: break-word; /* Breaks exceptionally long contiguous strings */
+}
+
+.markdown-body code { 
+  font-family: monospace; 
+  background: rgba(0,0,0,0.05); 
+  padding: 2px 4px; 
+  border-radius: 3px; 
+  word-break: break-word; /* Prevents long inline commands from breaking layout */
+}
+
 .markdown-body p:last-child { margin: 0; }
