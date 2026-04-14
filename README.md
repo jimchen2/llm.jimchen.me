@@ -6,8 +6,6 @@
   - Retry: Retrying means first deleting the message, before invoking the LLM again
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
 
-Frontend retry behavior
-
 Different conversation streaming messed up
 
 Mobile width still has a problem
