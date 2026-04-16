@@ -7,3 +7,4 @@
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
 
 Mobile width still has a problem
+Make a sign if the message isn't send successfully
