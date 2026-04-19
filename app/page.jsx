@@ -247,27 +247,44 @@ export default function App() {
 
     if (settings.systemPrompt?.trim()) path.unshift({ role: "system", content: settings.systemPrompt.trim() });
 
-    await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-      body: JSON.stringify({
-        messages: path,
-        userMsgId: isBotRetry ? null : userMsgId,
-        botMsgId,
-        parentId,
-        conversationId: convId,
-        apiKey: settings.apiKey,
-        model: settings.model,
-      }),
-    });
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+        body: JSON.stringify({
+          messages: path,
+          userMsgId: isBotRetry ? null : userMsgId,
+          botMsgId,
+          parentId,
+          conversationId: convId,
+          apiKey: settings.apiKey,
+          model: settings.model,
+        }),
+      });
 
-    const source = new EventSource(`/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`);
-    source.onmessage = (e) => {
-      const chunk = JSON.parse(e.data);
-      setMessages((prev) => ({ ...prev, [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk } }));
-    };
-    source.onerror = () => source.close();
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.status}`);
+      }
+
+      const source = new EventSource(`/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`);
+      source.onmessage = (e) => {
+        const chunk = JSON.parse(e.data);
+        setMessages((prev) => ({ ...prev, [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk } }));
+      };
+      source.onerror = () => source.close();
+      
+    } catch (error) {
+      console.error("Network error sending message:", error);
+      setMessages((prev) => ({
+        ...prev,
+        [botMsgId]: { 
+          ...prev[botMsgId], 
+          content: `⚠️ **Network Error:** Failed to send message to the server. Please check your connection and click "Retry".\n\n\`${error.message}\`` 
+        }
+      }));
+    }
   };
+  
   const handleCopy = (text) => navigator.clipboard.writeText(text);
 
   const handleBranch = async (msgId) => {
