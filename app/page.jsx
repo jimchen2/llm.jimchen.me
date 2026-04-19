@@ -7,12 +7,55 @@ import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 
+// Isolated Input Component to prevent whole-page re-renders on every keystroke
+const ChatInput = ({ onSend }) => {
+  const [input, setInput] = useState("");
+  const textareaRef = useRef(null);
+
+  const submitMessage = () => {
+    if (!input.trim()) return;
+    onSend(input);
+    setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submitMessage();
+    }
+  };
+
+  return (
+    <InputGroup>
+      <Form.Control
+        ref={textareaRef}
+        as="textarea"
+        rows={1}
+        className="shadow-none border-secondary fs-5"
+        autoFocus
+        style={{ resize: "none", maxHeight: "200px", overflowY: "auto" }}
+        value={input}
+        onChange={(e) => {
+          setInput(e.target.value);
+          e.target.style.height = "auto";
+          e.target.style.height = `${e.target.scrollHeight}px`;
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
+      />
+      <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={submitMessage}>
+        Send
+      </Button>
+    </InputGroup>
+  );
+};
+
 export default function App() {
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
   const [messages, setMessages] = useState({});
   const [currentId, setCurrentId] = useState(null);
-  const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
@@ -28,7 +71,6 @@ export default function App() {
   });
 
   const endOfMessagesRef = useRef(null);
-  const textareaRef = useRef(null);
 
   // URL State & Settings Initialization
   useEffect(() => {
@@ -122,9 +164,7 @@ export default function App() {
     setActiveConversation(null);
     setMessages({});
     setCurrentId(null);
-    setInput("");
     setShowMobileMenu(false);
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
   const handleDeleteConversation = async (e, id) => {
@@ -163,13 +203,13 @@ export default function App() {
 
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
-  const sendMessage = async (contentOverride = null, parentOverride = null, isBotRetry = false) => {
-    if ((!input.trim() && !contentOverride && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
+  const sendMessage = async (text = null, parentOverride = null, isBotRetry = false) => {
+    if ((!text?.trim() && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
       if (!settings.dbToken || !settings.apiKey) alert("Configure Database Token & API Key.");
       return;
     }
 
-    const content = contentOverride || input;
+    const content = text || "";
     let convId = activeConversation;
 
     if (!convId) {
@@ -197,11 +237,6 @@ export default function App() {
 
     setMessages(newMsgs);
     setCurrentId(botMsgId);
-
-    if (!contentOverride && !isBotRetry) {
-      setInput("");
-      if (textareaRef.current) textareaRef.current.style.height = "auto";
-    }
 
     const path = [];
     let curr = isBotRetry ? parentId : userMsgId;
@@ -350,13 +385,6 @@ export default function App() {
     setCurrentId(leaf);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
   const activePath = getActivePath();
 
   return (
@@ -443,27 +471,10 @@ export default function App() {
         {/* INPUT AREA */}
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
-            <InputGroup>
-              <Form.Control
-                ref={textareaRef}
-                as="textarea"
-                rows={1}
-                className="shadow-none border-secondary fs-5"
-                autoFocus
-                style={{ resize: "none", maxHeight: "200px", overflowY: "auto" }}
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  e.target.style.height = "auto";
-                  e.target.style.height = `${e.target.scrollHeight}px`;
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
-              />
-              <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={() => sendMessage()}>
-                Send
-              </Button>
-            </InputGroup>
+            <ChatInput 
+              key={activeConversation || 'new-chat'} 
+              onSend={(text) => sendMessage(text)} 
+            />
           </Container>
         </div>
       </div>
