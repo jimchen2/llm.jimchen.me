@@ -58,6 +58,7 @@ export default function App() {
   const [currentId, setCurrentId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Pagination states
   const [hasMoreConv, setHasMoreConv] = useState(true);
@@ -65,12 +66,44 @@ export default function App() {
 
   const [settings, setSettings] = useState({
     apiKey: "",
-    model: "google/gemini-3.1-pro-preview",
+    model: "gemini-3.1-pro-preview",
     dbToken: "",
     systemPrompt: "",
   });
 
   const endOfMessagesRef = useRef(null);
+
+  // DarkReader Initialization
+  useEffect(() => {
+    import("darkreader").then((DarkReader) => {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") {
+        setIsDarkMode(true);
+        DarkReader.enable({
+          brightness: 100,
+          contrast: 90,
+          sepia: 10,
+        });
+      }
+    });
+  }, []);
+
+  const toggleDarkMode = async () => {
+    const DarkReader = await import("darkreader");
+    if (isDarkMode) {
+      DarkReader.disable();
+      localStorage.setItem("theme", "light");
+      setIsDarkMode(false);
+    } else {
+      DarkReader.enable({
+        brightness: 100,
+        contrast: 90,
+        sepia: 10,
+      });
+      localStorage.setItem("theme", "dark");
+      setIsDarkMode(true);
+    }
+  };
 
   // URL State & Settings Initialization
   useEffect(() => {
@@ -447,12 +480,24 @@ export default function App() {
 
       {/* MAIN CHAT */}
       <div className="d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
+        
+        {/* DARK MODE TOGGLE */}
+        <Button
+          variant="outline-secondary"
+          className="rounded-circle d-flex justify-content-center align-items-center shadow-sm"
+          style={{ position: "absolute", top: "15px", right: "20px", zIndex: 1000, width: "40px", height: "40px" }}
+          onClick={toggleDarkMode}
+          title="Toggle Dark Mode"
+        >
+          {isDarkMode ? "☀️" : "🌙"}
+        </Button>
+
         {/* MOBILE HEADER */}
         <div className="d-md-none p-2 border-bottom d-flex align-items-center bg-light">
           <Button variant="outline-dark" size="sm" onClick={() => setShowMobileMenu(true)}>
             ☰ Menu
           </Button>
-          <span className="ms-3 fw-bold text-truncate">{conversations.find((c) => c.id === activeConversation)?.title || "New Chat"}</span>
+          <span className="ms-3 fw-bold text-truncate pe-5">{conversations.find((c) => c.id === activeConversation)?.title || "New Chat"}</span>
         </div>
 
         {/* MESSAGES AREA */}

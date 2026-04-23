@@ -14,8 +14,8 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             <Form.Control type="password" placeholder="DB Password" value={settings.dbToken} onChange={e => setSettings({...settings, dbToken: e.target.value})} />
           </Form.Group>
           <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">Eden AI Key</Form.Label>
-            <Form.Control type="password" placeholder="Eden AI Key" value={settings.apiKey} onChange={e => setSettings({...settings, apiKey: e.target.value})} />
+            <Form.Label className="fw-bold">API Key</Form.Label>
+            <Form.Control type="password" placeholder="API Key" value={settings.apiKey} onChange={e => setSettings({...settings, apiKey: e.target.value})} />
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="fw-bold">Model</Form.Label>
