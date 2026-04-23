@@ -1,5 +1,6 @@
 'use client';
 import { Modal, Form, Button } from 'react-bootstrap';
+import Darkreader from "react-darkreader";
 
 export default function SettingsModal({ show, onHide, settings, setSettings, onSave }) {
   return (
@@ -9,6 +10,10 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
       </Modal.Header>
       <Modal.Body>
         <Form>
+          <Form.Group className="mb-4 d-flex justify-content-between align-items-center">
+            <Form.Label className="fw-bold mb-0">Dark Mode</Form.Label>
+            <Darkreader />
+          </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="fw-bold">Database Password</Form.Label>
             <Form.Control type="password" placeholder="DB Password" value={settings.dbToken} onChange={e => setSettings({...settings, dbToken: e.target.value})} />
