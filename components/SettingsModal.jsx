@@ -3,34 +3,34 @@
 
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button } from 'react-bootstrap';
-import { 
-  enable as enableDarkMode, 
-  disable as disableDarkMode, 
-  isEnabled as isDarkReaderEnabled 
-} from 'darkreader';
 
 export default function SettingsModal({ show, onHide, settings, setSettings, onSave }) {
   const [isDark, setIsDark] = useState(false);
 
-  // Sync the local toggle state with darkreader's actual state when the modal opens
+  // Dynamically check if Dark Reader is enabled when modal opens
   useEffect(() => {
     if (show) {
-      setIsDark(isDarkReaderEnabled());
+      import('darkreader').then((darkreader) => {
+        setIsDark(darkreader.isEnabled());
+      });
     }
   }, [show]);
 
-  const handleDarkModeToggle = (e) => {
+  const handleDarkModeToggle = async (e) => {
     const enable = e.target.checked;
     setIsDark(enable);
     
+    // Dynamically import darkreader only on the client
+    const darkreader = await import('darkreader');
+    
     if (enable) {
-      enableDarkMode({
+      darkreader.enable({
         brightness: 100,
         contrast: 90,
         sepia: 10,
       });
     } else {
-      disableDarkMode();
+      darkreader.disable();
     }
   };
 
