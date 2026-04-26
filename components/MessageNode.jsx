@@ -87,9 +87,6 @@ export default function MessageNode({
             <Button variant="outline-secondary" onClick={() => handleCopy(msg.content)}>Copy</Button>
             <Button variant="outline-secondary" onClick={() => setIsEditing(true)}>Edit</Button>
             <Button variant="outline-secondary" onClick={() => handleBranch(msg.id)}>Branch</Button>
-            {msg.role === 'assistant' && (
-              <Button variant="outline-secondary" onClick={() => handleRetry(msg.id)}>Retry</Button>
-            )}
             <Button variant="outline-danger" onClick={() => deleteMessage(msg.id)}>Delete</Button>
           </ButtonGroup>
         </Card.Footer>
