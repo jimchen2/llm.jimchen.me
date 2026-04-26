@@ -70,29 +70,19 @@ export default function App() {
     systemPrompt: "",
   });
 
-  // Состояние для темы
-  const [theme, setTheme] = useState("light");
-
   const endOfMessagesRef = useRef(null);
-
-  // Инициализация темы из cookie при загрузке
-  useEffect(() => {
-    const match = document.cookie.match(/(^| )theme=([^;]+)/);
-    const savedTheme = match ? match[2] : "light";
-    setTheme(savedTheme);
-    document.documentElement.setAttribute("data-bs-theme", savedTheme);
-  }, []);
-
-  // Функция переключения темы
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    document.documentElement.setAttribute("data-bs-theme", newTheme);
-    document.cookie = `theme=${newTheme}; path=/; max-age=31536000`; // Сохраняем на 1 год
-  };
 
   // URL State & Settings Initialization
   useEffect(() => {
+    // === ДОБАВЬТЕ ЭТОТ БЛОК ===
+    // Проверяем cookie на наличие темной темы при загрузке
+    if (document.cookie.split('; ').find(row => row.startsWith('theme=dark'))) {
+      import('darkreader').then(darkreader => {
+        darkreader.enable({ brightness: 100, contrast: 90, sepia: 10 });
+      });
+    }
+    // ==========================
+
     const saved = localStorage.getItem("llm_settings");
     let initialSettings = settings;
 
@@ -465,26 +455,17 @@ export default function App() {
       <SettingsModal show={showSettings} onHide={() => setShowSettings(false)} settings={settings} setSettings={setSettings} onSave={saveSettings} />
 
       {/* MAIN CHAT */}
-      <div className={`d-flex flex-column h-100 flex-grow-1 position-relative ${theme === 'dark' ? 'bg-dark text-light' : 'bg-white text-dark'}`}>
-        
-        {/* HEADER & THEME TOGGLE */}
-        <div className={`p-2 border-bottom d-flex align-items-center justify-content-between ${theme === 'dark' ? 'bg-dark border-secondary' : 'bg-light'}`}>
-          <div className="d-flex align-items-center">
-            <Button variant={theme === 'dark' ? "outline-light" : "outline-dark"} size="sm" className="d-md-none" onClick={() => setShowMobileMenu(true)}>
-              ☰ Menu
-            </Button>
-            <span className="ms-3 fw-bold text-truncate d-md-none">
-              {conversations.find((c) => c.id === activeConversation)?.title || "New Chat"}
-            </span>
-          </div>
-          
-          <Button variant={theme === 'dark' ? "outline-light" : "outline-dark"} size="sm" onClick={toggleTheme}>
-            {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+      <div className="d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
+        {/* MOBILE HEADER */}
+        <div className="d-md-none p-2 border-bottom d-flex align-items-center bg-light">
+          <Button variant="outline-dark" size="sm" onClick={() => setShowMobileMenu(true)}>
+            ☰ Menu
           </Button>
+          <span className="ms-3 fw-bold text-truncate">{conversations.find((c) => c.id === activeConversation)?.title || "New Chat"}</span>
         </div>
 
         {/* MESSAGES AREA */}
-        <div className={`flex-grow-1 overflow-auto p-3 p-md-4 ${theme === 'dark' ? 'bg-dark' : 'bg-light'}`}>
+        <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
               <h3 className="text-muted">How can I help you today?</h3>
@@ -514,7 +495,7 @@ export default function App() {
         </div>
 
         {/* INPUT AREA */}
-        <div className={`p-3 border-top ${theme === 'dark' ? 'bg-dark border-secondary' : 'bg-white'}`}>
+        <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
             <ChatInput 
               key={activeConversation || 'new-chat'} 
