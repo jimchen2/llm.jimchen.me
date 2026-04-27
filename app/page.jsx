@@ -310,8 +310,7 @@ export default function App() {
              return {
               ...prev,
               [botMsgId]: { 
-                ...prev[botMsgId], 
-                content: currentContent + `\n\n⚠️ *(Network connection interrupted. Click Retry to generate again)*` 
+                ...prev[botMsgId] 
               }
             };
           }
