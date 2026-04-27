@@ -74,14 +74,12 @@ export default function App() {
 
   // URL State & Settings Initialization
   useEffect(() => {
-    // === ДОБАВЬТЕ ЭТОТ БЛОК ===
     // Проверяем cookie на наличие темной темы при загрузке
     if (document.cookie.split('; ').find(row => row.startsWith('theme=dark'))) {
       import('darkreader').then(darkreader => {
         darkreader.enable({ brightness: 100, contrast: 90, sepia: 10 });
       });
     }
-    // ==========================
 
     const saved = localStorage.getItem("llm_settings");
     let initialSettings = settings;
@@ -220,25 +218,20 @@ export default function App() {
 
     const content = text || "";
     let convId = activeConversation;
+    const isNewConv = !convId;
 
-    if (!convId) {
+    if (isNewConv) {
       convId = generateId();
-      const title = content ? content.substring(0, 30) + (content.length > 30 ? "..." : "") : "New Chat";
-      await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id: convId, title }),
-      });
-      setActiveConversation(convId);
-      setConversations((prev) => [{ id: convId, title }, ...prev]);
     }
 
     const parentId = parentOverride !== null ? parentOverride : currentId;
     const userMsgId = generateId();
     const botMsgId = generateId();
+
+    // 1. OPTIMISTIC UI UPDATE: Lock message into UI state immediately.
+    // This prevents the message from "disappearing" if the internet is disconnected right away.
     const newMsgs = { ...messages };
 
-    // If it's a bot retry, we skip creating a new User message and just append a bot to the parent
     if (!isBotRetry) {
       newMsgs[userMsgId] = { id: userMsgId, parent_id: parentId, role: "user", content };
     }
@@ -247,6 +240,13 @@ export default function App() {
     setMessages(newMsgs);
     setCurrentId(botMsgId);
 
+    const title = content ? content.substring(0, 30) + (content.length > 30 ? "..." : "") : "New Chat";
+    if (isNewConv) {
+      setActiveConversation(convId);
+      setConversations((prev) => [{ id: convId, title }, ...prev]);
+    }
+
+    // 2. Build Path
     const path = [];
     let curr = isBotRetry ? parentId : userMsgId;
     while (curr && newMsgs[curr]) {
@@ -256,7 +256,17 @@ export default function App() {
 
     if (settings.systemPrompt?.trim()) path.unshift({ role: "system", content: settings.systemPrompt.trim() });
 
+    // 3. Perform Network Requests
     try {
+      if (isNewConv) {
+        // Safe to await now because UI is already updated
+        await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+          body: JSON.stringify({ id: convId, title }),
+        });
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
@@ -276,11 +286,37 @@ export default function App() {
       }
 
       const source = new EventSource(`/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`);
+      
       source.onmessage = (e) => {
         const chunk = JSON.parse(e.data);
         setMessages((prev) => ({ ...prev, [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk } }));
       };
-      source.onerror = () => source.close();
+
+      source.onerror = () => {
+        source.close();
+        // Triggered when EventSource drops or is interrupted without finishing
+        setMessages((prev) => {
+          const currentContent = prev[botMsgId]?.content || "";
+          
+          if (!currentContent) {
+            return {
+              ...prev,
+              [botMsgId]: { 
+                ...prev[botMsgId], 
+                content: `⚠️ **Network Error:** Connection lost to the stream. Please check your internet connection and click "Retry".` 
+              }
+            };
+          } else {
+             return {
+              ...prev,
+              [botMsgId]: { 
+                ...prev[botMsgId], 
+                content: currentContent + `\n\n⚠️ *(Network connection interrupted. Click Retry to generate again)*` 
+              }
+            };
+          }
+        });
+      };
       
     } catch (error) {
       console.error("Network error sending message:", error);
@@ -308,44 +344,48 @@ export default function App() {
     const newConvId = generateId();
     const title = "Branch: " + (conversations.find((c) => c.id === activeConversation)?.title || "New");
 
-    await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-      body: JSON.stringify({ id: newConvId, title }),
-    });
-
-    const newMessages = [];
-    let lastNewId = null;
-    const idMap = {};
-    let time = Date.now();
-
-    for (const m of path) {
-      const newId = generateId();
-      idMap[m.id] = newId;
-      newMessages.push({
-        id: newId,
-        conversation_id: newConvId,
-        parent_id: m.parent_id ? idMap[m.parent_id] : null,
-        role: m.role,
-        content: m.content,
-        created_at: time++,
+    try {
+      await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+        body: JSON.stringify({ id: newConvId, title }),
       });
-      lastNewId = newId;
+
+      const newMessages = [];
+      let lastNewId = null;
+      const idMap = {};
+      let time = Date.now();
+
+      for (const m of path) {
+        const newId = generateId();
+        idMap[m.id] = newId;
+        newMessages.push({
+          id: newId,
+          conversation_id: newConvId,
+          parent_id: m.parent_id ? idMap[m.parent_id] : null,
+          role: m.role,
+          content: m.content,
+          created_at: time++,
+        });
+        lastNewId = newId;
+      }
+
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+
+      setConversations((prev) => [{ id: newConvId, title }, ...prev]);
+      setActiveConversation(newConvId);
+
+      const msgMap = {};
+      newMessages.forEach((m) => (msgMap[m.id] = m));
+      setMessages(msgMap);
+      setCurrentId(lastNewId);
+    } catch(err) {
+      alert("Network Error: Could not branch conversation. Check your connection.");
     }
-
-    await fetch("/api/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-      body: JSON.stringify({ messages: newMessages }),
-    });
-
-    setConversations((prev) => [{ id: newConvId, title }, ...prev]);
-    setActiveConversation(newConvId);
-
-    const msgMap = {};
-    newMessages.forEach((m) => (msgMap[m.id] = m));
-    setMessages(msgMap);
-    setCurrentId(lastNewId);
   };
 
   const deleteMessage = async (msgId, skipConfirm = false) => {
@@ -354,12 +394,17 @@ export default function App() {
     const msgToDelete = messages[msgId];
     const parentId = msgToDelete ? msgToDelete.parent_id : null;
 
-    // Delete in DB
-    await fetch("/api/messages", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-      body: JSON.stringify({ id: msgId }),
-    });
+    // We wrap DB deletion in try/catch. This ensures that clicking "Retry" 
+    // will still successfully clear the broken local node and attempt to retry
+    try {
+      await fetch("/api/messages", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+        body: JSON.stringify({ id: msgId }),
+      });
+    } catch (error) {
+      console.warn("Could not delete from DB (likely offline), deleting locally only:", error);
+    }
 
     const newMsgs = { ...messages };
 
