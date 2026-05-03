@@ -1,13 +1,13 @@
-
 /* Update your existing .markdown-body class */
 .markdown-body {
   min-width: 0;
   max-width: 100%;
   
-  /* CRITICAL: These properties force long continuous text (like gibberish or URLs) to break */
+  /* CRITICAL: These properties force continuous text and CJK characters to break */
   overflow-wrap: anywhere; 
   word-wrap: break-word;
-  word-break: break-word; /* Legacy support that aggressively breaks words */
+  word-break: break-word; /* Legacy support */
+  line-break: anywhere; /* Specifically helps with Chinese/Japanese/Korean text wrapping */
 }
 
 /* Prevent lists and paragraphs from expanding past the container */
@@ -24,6 +24,7 @@
   overflow-x: auto; /* Adds a horizontal scrollbar specifically to the code block */
   white-space: pre-wrap; /* Forces long unbroken lines inside <pre> to wrap */
   word-wrap: break-word;
+  word-break: break-all; /* Ensures long CJK strings break inside code blocks */
 }
 
 /* Ensure inline code blocks don't break layouts either */
@@ -32,6 +33,7 @@
   word-wrap: break-word;
   white-space: pre-wrap;
   overflow-wrap: break-word;
+  word-break: break-all; /* Ensures long CJK strings break inside inline code */
 }
 
 /* Adjust list padding on mobile. 
