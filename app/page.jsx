@@ -502,16 +502,13 @@ export default function App() {
       <div className="d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
         {/* MOBILE HEADER */}
         <div className="d-md-none p-2 border-bottom d-flex align-items-center bg-light">
-          {/* Add flex-shrink-0 so the button never gets squished by the long text */}
-          <Button variant="outline-dark" size="sm" onClick={() => setShowMobileMenu(true)} className="flex-shrink-0">
+          <Button variant="outline-dark" size="sm" onClick={() => setShowMobileMenu(true)}>
             ☰ Menu
           </Button>
-          
-          {/* Add style={{ minWidth: 0 }} so text-truncate can actually do its job inside a flexbox */}
-          <span className="ms-3 fw-bold text-truncate" style={{ minWidth: 0 }}>
-            {conversations.find((c) => c.id === activeConversation)?.title || "New Chat"}
-          </span>
+          {/* Always just show static text to completely avoid overflow issues */}
+          <span className="ms-3 fw-bold">Chat</span>
         </div>
+
 
         {/* MESSAGES AREA */}
         <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
