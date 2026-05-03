@@ -1,3 +1,4 @@
+
 /* Update your existing .markdown-body class */
 .markdown-body {
   min-width: 0;
@@ -15,6 +16,22 @@
 .markdown-body ol, 
 .markdown-body li {
   max-width: 100%;
+}
+
+/* Prevent code blocks from overflowing the screen */
+.markdown-body pre {
+  max-width: 100%;
+  overflow-x: auto; /* Adds a horizontal scrollbar specifically to the code block */
+  white-space: pre-wrap; /* Forces long unbroken lines inside <pre> to wrap */
+  word-wrap: break-word;
+}
+
+/* Ensure inline code blocks don't break layouts either */
+.markdown-body code {
+  max-width: 100%;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 /* Adjust list padding on mobile. 
