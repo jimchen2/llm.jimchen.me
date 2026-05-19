@@ -1,3 +1,6 @@
+The copy thing, don't generate the copy button in CSS or somemthing just do it directly add it to the prompt when
+
+
 - A separate file to call the LLM, minimal and fast interface
 - User can set a default model, no default system instructions. User provides the API, but all the endpoints are in the backend, enter sends the message in the frontend, autofocus on page load, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
 - User can copy (purely on frontend), edit, branch, and delete any messages by user or bot, user can "retry" for every previous bot message, based on messages before that, user can copy the specific code snippets
