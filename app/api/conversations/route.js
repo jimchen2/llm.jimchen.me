@@ -1,32 +1,50 @@
 import { NextResponse } from 'next/server';
-import pool from '../../../lib/db';
+import { redis } from '@/lib/redis';
+
+const WEEK = 604800; // 7 days in seconds
 
 export async function GET(req) {
   const url = new URL(req.url);
   const offset = parseInt(url.searchParams.get('offset') || '0', 10);
   const limit = parseInt(url.searchParams.get('limit') || '10', 10);
 
-  const { rows } = await pool.query(
-    'SELECT * FROM conversations ORDER BY created_at DESC LIMIT $1 OFFSET $2',
-    [limit, offset]
-  );
+  // Get conversation IDs sorted by newest first
+  const convIds = await redis.zrevrange('conversations:index', offset, offset + limit - 1);
+  
+  if (convIds.length === 0) return NextResponse.json([]);
+
+  const pipeline = redis.pipeline();
+  convIds.forEach(id => pipeline.hgetall(`conv:${id}`));
+  const results = await pipeline.exec();
+
+  const rows = results.map(([err, data]) => data).filter(Boolean);
   return NextResponse.json(rows);
 }
 
 export async function POST(req) {
   const { id, title } = await req.json();
-  await pool.query(
-    'INSERT INTO conversations (id, title, created_at) VALUES ($1, $2, $3)',
-    [id, title || 'New Conversation', Date.now()]
-  );
+  const now = Date.now();
+
+  const pipeline = redis.pipeline();
+  pipeline.zadd('conversations:index', now, id);
+  pipeline.hset(`conv:${id}`, { id, title: title || 'New Conversation', created_at: now });
+  
+  // Set 1 week expiration
+  pipeline.expire('conversations:index', WEEK);
+  pipeline.expire(`conv:${id}`, WEEK);
+  
+  await pipeline.exec();
   return NextResponse.json({ success: true });
 }
 
 export async function DELETE(req) {
   const { id } = await req.json();
-  // Delete all messages associated with this conversation
-  await pool.query('DELETE FROM messages WHERE conversation_id = $1', [id]);
-  // Delete the conversation itself
-  await pool.query('DELETE FROM conversations WHERE id = $1', [id]);
+  
+  const pipeline = redis.pipeline();
+  pipeline.zrem('conversations:index', id);
+  pipeline.del(`conv:${id}`);
+  pipeline.del(`msgs:${id}`);
+  await pipeline.exec();
+
   return NextResponse.json({ success: true });
 }

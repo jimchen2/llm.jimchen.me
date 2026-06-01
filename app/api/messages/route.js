@@ -1,50 +1,83 @@
 import { NextResponse } from 'next/server';
-import pool from '../../../lib/db';
+import { redis } from '@/lib/redis';
+
+const WEEK = 604800; 
 
 export async function GET(req) {
   const conversationId = req.nextUrl.searchParams.get('conversationId');
   if (!conversationId) return NextResponse.json([]);
 
-  const { rows } = await pool.query(
-    'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC',
-    [conversationId]
-  );
+  const rawMessages = await redis.hgetall(`msgs:${conversationId}`);
+  if (!rawMessages) return NextResponse.json([]);
+
+  const rows = Object.values(rawMessages)
+    .map(m => typeof m === 'string' ? JSON.parse(m) : m)
+    .sort((a, b) => a.created_at - b.created_at);
+
   return NextResponse.json(rows);
 }
 
 export async function DELETE(req) {
   const { id } = await req.json();
   
-  // 1. Get the parent_id of the message being deleted
-  const { rows } = await pool.query('SELECT parent_id FROM messages WHERE id = $1', [id]);
-  
-  if (rows.length > 0) {
-    const parentId = rows[0].parent_id;
-    // 2. Re-parent children: Any message replying to the deleted message now replies to its parent
-    await pool.query('UPDATE messages SET parent_id = $1 WHERE parent_id = $2', [parentId, id]);
-  }
+  // Since we don't pass conversationId in DELETE easily, we have to find it
+  // This is a bit expensive but fine for single user/small scale. 
+  // Alternatively, pass conversation_id from the frontend.
+  const keys = await redis.keys('msgs:*');
+  for (const key of keys) {
+    const rawMsg = await redis.hget(key, id);
+    if (rawMsg) {
+      const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
+      const parentId = msg.parent_id;
 
-  // 3. Delete only the requested message
-  await pool.query('DELETE FROM messages WHERE id = $1', [id]);
+      // Re-parent children
+      const allMsgs = await redis.hgetall(key);
+      const pipeline = redis.pipeline();
+      
+      for (const [mId, mRaw] of Object.entries(allMsgs)) {
+        const m = typeof mRaw === 'string' ? JSON.parse(mRaw) : mRaw;
+        if (m.parent_id === id) {
+          m.parent_id = parentId;
+          pipeline.hset(key, mId, JSON.stringify(m));
+        }
+      }
+      
+      pipeline.hdel(key, id);
+      await pipeline.exec();
+      break;
+    }
+  }
   
   return NextResponse.json({ success: true });
 }
 
 export async function PUT(req) {
   const { id, content } = await req.json();
-  await pool.query('UPDATE messages SET content = $1 WHERE id = $2', [content, id]);
+  const keys = await redis.keys('msgs:*');
+  for (const key of keys) {
+    const rawMsg = await redis.hget(key, id);
+    if (rawMsg) {
+      const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
+      msg.content = content;
+      await redis.hset(key, id, JSON.stringify(msg));
+      break;
+    }
+  }
   return NextResponse.json({ success: true });
 }
 
 export async function POST(req) {
   const { messages } = await req.json();
-  if (Array.isArray(messages)) {
+  if (Array.isArray(messages) && messages.length > 0) {
+    const convId = messages[0].conversation_id;
+    const key = `msgs:${convId}`;
+    const pipeline = redis.pipeline();
+    
     for (const m of messages) {
-      await pool.query(
-        'INSERT INTO messages (id, conversation_id, parent_id, role, content, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
-        [m.id, m.conversation_id, m.parent_id, m.role, m.content, m.created_at]
-      );
+      pipeline.hset(key, m.id, JSON.stringify(m));
     }
+    pipeline.expire(key, WEEK);
+    await pipeline.exec();
   }
   return NextResponse.json({ success: true });
 }
