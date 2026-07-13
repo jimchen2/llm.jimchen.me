@@ -65,7 +65,7 @@ export default function App() {
 
   const [settings, setSettings] = useState({
     apiKey: "",
-    model: "gemini-3.1-pro-preview",
+    model: "gemini-3.5-flash",
     dbToken: "",
     systemPrompt: "",
   });

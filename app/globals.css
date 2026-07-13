@@ -1,4 +1,3 @@
-
 /* Update your existing .markdown-body class */
 .markdown-body {
   min-width: 0;
@@ -24,14 +23,23 @@
   overflow-x: auto; /* Adds a horizontal scrollbar specifically to the code block */
   white-space: pre-wrap; /* Forces long unbroken lines inside <pre> to wrap */
   word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* Ensure inline code blocks don't break layouts either */
 .markdown-body code {
   max-width: 100%;
-  word-wrap: break-word;
   white-space: pre-wrap;
-  overflow-wrap: break-word;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-all; /* CRITICAL: Forces ultra-long variables/words to break on mobile */
+}
+
+/* Prevent photos and images from overflowing */
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* Adjust list padding on mobile. 
