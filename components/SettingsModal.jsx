@@ -71,7 +71,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
           
           <Form.Group className="mb-3">
             <Form.Label className="fw-bold">System Prompt</Form.Label>
-            <Form.Control as="textarea" rows={3} placeholder="You are a helpful assistant." value={settings.systemPrompt} onChange={e => setSettings({...settings, systemPrompt: e.target.value})} />
+            <Form.Control as="textarea" rows={3} placeholder="be logical, do not make assumptions, be very concise" value={settings.systemPrompt} onChange={e => setSettings({...settings, systemPrompt: e.target.value})} />
           </Form.Group>
         </Form>
       </Modal.Body>

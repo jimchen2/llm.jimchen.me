@@ -1,6 +1,7 @@
 // app/page.jsx
 "use client";
 
+
 import { useState, useEffect, useRef } from "react";
 import { Container, Row, Col, Button, Form, InputGroup, Offcanvas } from "react-bootstrap";
 import Sidebar from "../components/Sidebar";
@@ -65,7 +66,7 @@ export default function App() {
 
   const [settings, setSettings] = useState({
     apiKey: "",
-    model: "gemini-3.5-flash",
+    model: "gemini-3.6-flash",
     dbToken: "",
     systemPrompt: "",
   });
