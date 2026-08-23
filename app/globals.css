@@ -42,6 +42,28 @@
   display: block;
 }
 
+/* ==================================================== */
+/* KATEX HORIZONTAL SCROLLBAR FIX FOR MOBILE            */
+/* ==================================================== */
+
+/* Block (Display) Math Equations - adds horizontal scrollbar */
+.markdown-body .katex-display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iOS */
+  padding: 0.5rem 0;                /* Prevents scrollbars from clipping text/symbols */
+}
+
+/* Inline Math Equations - ensures long inline formulas also scroll if too wide */
+.markdown-body .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Adjust list padding on mobile. 
    Default browser padding (~40px) combined with long text often pushes list items off-screen on narrow devices. */
 @media (max-width: 768px) {
