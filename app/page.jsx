@@ -515,7 +515,7 @@ export default function App() {
         <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
-              <h3 className="text-muted">How can I help you today?</h3>
+              <h3 className="text-muted">Please only take about coding</h3>
             </div>
           ) : (
             <Container className="px-0" style={{ maxWidth: "800px" }}>
