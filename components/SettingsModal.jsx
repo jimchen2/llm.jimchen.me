@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button } from 'react-bootstrap';
 
-const DEFAULT_SYSTEM_PROMPT = 'You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.';
 
 export default function SettingsModal({ show, onHide, settings, setSettings, onSave }) {
   const [isDark, setIsDark] = useState(false);
@@ -91,7 +90,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             <Form.Control 
               as="textarea" 
               rows={3} 
-              value={settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT} 
+              value={settings.systemPrompt } 
               onChange={e => setSettings({...settings, systemPrompt: e.target.value})} 
             />
           </Form.Group>

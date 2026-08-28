@@ -63,12 +63,14 @@ export default function App() {
   // Pagination states
   const [hasMoreConv, setHasMoreConv] = useState(true);
   const [isLoadingConv, setIsLoadingConv] = useState(false);
+  const DEFAULT_SYSTEM_PROMPT =
+    "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
 
   const [settings, setSettings] = useState({
     apiKey: "",
     model: "gemini-3.7-flash",
     dbToken: "",
-    systemPrompt: "",
+    systemPrompt: DEFAULT_SYSTEM_PROMPT,
   });
 
   const endOfMessagesRef = useRef(null);
@@ -76,8 +78,8 @@ export default function App() {
   // URL State & Settings Initialization
   useEffect(() => {
     // Проверяем cookie на наличие темной темы при загрузке
-    if (document.cookie.split('; ').find(row => row.startsWith('theme=dark'))) {
-      import('darkreader').then(darkreader => {
+    if (document.cookie.split("; ").find((row) => row.startsWith("theme=dark"))) {
+      import("darkreader").then((darkreader) => {
         darkreader.enable({ brightness: 100, contrast: 90, sepia: 10 });
       });
     }
@@ -287,10 +289,13 @@ export default function App() {
       }
 
       const source = new EventSource(`/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`);
-      
+
       source.onmessage = (e) => {
         const chunk = JSON.parse(e.data);
-        setMessages((prev) => ({ ...prev, [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk } }));
+        setMessages((prev) => ({
+          ...prev,
+          [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk },
+        }));
       };
 
       source.onerror = () => {
@@ -298,38 +303,37 @@ export default function App() {
         // Triggered when EventSource drops or is interrupted without finishing
         setMessages((prev) => {
           const currentContent = prev[botMsgId]?.content || "";
-          
+
           if (!currentContent) {
             return {
               ...prev,
-              [botMsgId]: { 
-                ...prev[botMsgId], 
-                content: `⚠️ **Network Error:** Connection lost to the stream. Please check your internet connection and click "Retry".` 
-              }
+              [botMsgId]: {
+                ...prev[botMsgId],
+                content: `⚠️ **Network Error:** Connection lost to the stream. Please check your internet connection and click "Retry".`,
+              },
             };
           } else {
-             return {
+            return {
               ...prev,
-              [botMsgId]: { 
-                ...prev[botMsgId] 
-              }
+              [botMsgId]: {
+                ...prev[botMsgId],
+              },
             };
           }
         });
       };
-      
     } catch (error) {
       console.error("Network error sending message:", error);
       setMessages((prev) => ({
         ...prev,
-        [botMsgId]: { 
-          ...prev[botMsgId], 
-          content: `⚠️ **Network Error:** Failed to send message to the server. Please check your connection and click "Retry".\n\n\`${error.message}\`` 
-        }
+        [botMsgId]: {
+          ...prev[botMsgId],
+          content: `⚠️ **Network Error:** Failed to send message to the server. Please check your connection and click "Retry".\n\n\`${error.message}\``,
+        },
       }));
     }
   };
-  
+
   const handleCopy = (text) => navigator.clipboard.writeText(text);
 
   const handleBranch = async (msgId) => {
@@ -383,7 +387,7 @@ export default function App() {
       newMessages.forEach((m) => (msgMap[m.id] = m));
       setMessages(msgMap);
       setCurrentId(lastNewId);
-    } catch(err) {
+    } catch (err) {
       alert("Network Error: Could not branch conversation. Check your connection.");
     }
   };
@@ -394,7 +398,7 @@ export default function App() {
     const msgToDelete = messages[msgId];
     const parentId = msgToDelete ? msgToDelete.parent_id : null;
 
-    // We wrap DB deletion in try/catch. This ensures that clicking "Retry" 
+    // We wrap DB deletion in try/catch. This ensures that clicking "Retry"
     // will still successfully clear the broken local node and attempt to retry
     try {
       await fetch("/api/messages", {
@@ -429,7 +433,7 @@ export default function App() {
   const handleRetry = async (msgId) => {
     const msg = messages[msgId];
     if (!msg) return;
-    
+
     const parentId = msg.parent_id;
 
     // 1. First, delete the current assistant message (skips user confirmation)
@@ -460,7 +464,6 @@ export default function App() {
 
   return (
     <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: "100dvh" }}>
-      
       {/* POPUP COMPONENT ADDED HERE */}
       <PopupMessage />
 
@@ -481,7 +484,12 @@ export default function App() {
       </div>
 
       {/* MOBILE SIDEBAR (OFFCANVAS) */}
-      <Offcanvas show={showMobileMenu} onHide={() => setShowMobileMenu(false)} placement="start" className="bg-dark text-light w-75">
+      <Offcanvas
+        show={showMobileMenu}
+        onHide={() => setShowMobileMenu(false)}
+        placement="start"
+        className="bg-dark text-light w-75"
+      >
         <Offcanvas.Header closeButton closeVariant="white">
           <Offcanvas.Title>Chats</Offcanvas.Title>
         </Offcanvas.Header>
@@ -501,7 +509,13 @@ export default function App() {
         </Offcanvas.Body>
       </Offcanvas>
 
-      <SettingsModal show={showSettings} onHide={() => setShowSettings(false)} settings={settings} setSettings={setSettings} onSave={saveSettings} />
+      <SettingsModal
+        show={showSettings}
+        onHide={() => setShowSettings(false)}
+        settings={settings}
+        setSettings={setSettings}
+        onSave={saveSettings}
+      />
 
       {/* MAIN CHAT */}
       <div className="d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
@@ -513,7 +527,6 @@ export default function App() {
           {/* Always just show static text to completely avoid overflow issues */}
           <span className="ms-3 fw-bold">Chat</span>
         </div>
-
 
         {/* MESSAGES AREA */}
         <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
@@ -548,10 +561,7 @@ export default function App() {
         {/* INPUT AREA */}
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
-            <ChatInput 
-              key={activeConversation || 'new-chat'} 
-              onSend={(text) => sendMessage(text)} 
-            />
+            <ChatInput key={activeConversation || "new-chat"} onSend={(text) => sendMessage(text)} />
           </Container>
         </div>
       </div>
