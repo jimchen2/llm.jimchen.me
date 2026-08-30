@@ -68,6 +68,8 @@ export default function App() {
   const [hasMoreConv, setHasMoreConv] = useState(true);
   const [isLoadingConv, setIsLoadingConv] = useState(false);
 
+  const isInitializedRef = useRef(false);
+
   const DEFAULT_SYSTEM_PROMPT =
     "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
 
@@ -75,7 +77,7 @@ export default function App() {
     apiKey: "",
     model: "gemini-3.7-flash",
     dbToken: "",
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
+    systemPrompt: "",
   });
 
   const endOfMessagesRef = useRef(null);
@@ -91,9 +93,9 @@ export default function App() {
       if (data.settings) {
         setSettings({
           dbToken: token,
-          apiKey: data.settings.apiKey || "",
-          model: data.settings.model || "gemini-3.7-flash",
-          systemPrompt: data.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+          apiKey: data.settings.apiKey ?? "",
+          model: data.settings.model ?? "gemini-3.7-flash",
+          systemPrompt: data.settings.systemPrompt ?? "",
         });
       } else {
         setSettings((prev) => ({ ...prev, dbToken: token }));
@@ -118,6 +120,7 @@ export default function App() {
     if (urlId) {
       loadMessages(token, urlId);
     }
+    isInitializedRef.current = true;
   };
 
   useEffect(() => {
@@ -168,6 +171,8 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (!isInitializedRef.current) return;
+
     if (activeConversation) {
       window.history.pushState({}, "", `/chat/${activeConversation}`);
     } else {
