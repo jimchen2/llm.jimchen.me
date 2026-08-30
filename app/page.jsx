@@ -510,7 +510,7 @@ export default function App() {
         <Form onSubmit={handleAuthSubmit}>
           <Modal.Body>
             <Form.Group className="mb-3">
-              <Form.Label>Database Password</Form.Label>
+              <Form.Label>Access Password</Form.Label>
               <Form.Control
                 type="password"
                 placeholder="Enter access password"

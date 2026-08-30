@@ -5,7 +5,7 @@ import { redis } from '@/lib/redis';
 // Simple token authentication check against env or fixed key
 function isAuthorized(request) {
   const token = request.headers.get('x-db-token');
-  const validToken = process.env.DB_PASSWORD || 'your-default-password';
+  const validToken = process.env.APP_PASSWORD || 'your-default-password';
   return token === validToken;
 }
 
