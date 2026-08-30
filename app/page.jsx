@@ -2,13 +2,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Container, Row, Col, Button, Form, InputGroup, Offcanvas } from "react-bootstrap";
+import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-bootstrap";
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
-import PopupMessage from "../components/PopupMessage"; // <--- Added Popup Import
+import PopupMessage from "../components/PopupMessage";
 
-// Isolated Input Component to prevent whole-page re-renders on every keystroke
 const ChatInput = ({ onSend }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
@@ -60,9 +59,15 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
+  // Authentication Modal State
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [inputPassword, setInputPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+
   // Pagination states
   const [hasMoreConv, setHasMoreConv] = useState(true);
   const [isLoadingConv, setIsLoadingConv] = useState(false);
+
   const DEFAULT_SYSTEM_PROMPT =
     "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
 
@@ -75,47 +80,72 @@ export default function App() {
 
   const endOfMessagesRef = useRef(null);
 
-  // URL State & Settings Initialization
+  const fetchRemoteSettings = async (token) => {
+    try {
+      const res = await fetch("/api/settings", {
+        headers: { "x-db-token": token },
+      });
+      if (!res.ok) throw new Error("Invalid password");
+
+      const data = await res.json();
+      if (data.settings) {
+        setSettings({
+          dbToken: token,
+          apiKey: data.settings.apiKey || "",
+          model: data.settings.model || "gemini-3.7-flash",
+          systemPrompt: data.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+        });
+      } else {
+        setSettings((prev) => ({ ...prev, dbToken: token }));
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const initializeApp = async (token) => {
+    loadConversations(token, 0);
+
+    const pathname = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    let urlId = params.get("chat");
+
+    if (pathname.startsWith("/chat/")) {
+      urlId = pathname.split("/chat/")[1];
+    }
+
+    if (urlId) {
+      loadMessages(token, urlId);
+    }
+  };
+
   useEffect(() => {
-    // Проверяем cookie на наличие темной темы при загрузке
     if (document.cookie.split("; ").find((row) => row.startsWith("theme=dark"))) {
       import("darkreader").then((darkreader) => {
         darkreader.enable({ brightness: 100, contrast: 90, sepia: 10 });
       });
     }
 
-    const saved = localStorage.getItem("llm_settings");
-    let initialSettings = settings;
-
-    if (saved) {
-      initialSettings = { ...settings, ...JSON.parse(saved) };
-      setSettings(initialSettings);
-    }
-
-    if (!initialSettings.dbToken) {
-      setShowSettings(true);
+    const savedToken = sessionStorage.getItem("db_access_token");
+    if (!savedToken) {
+      setShowAuthModal(true);
     } else {
-      loadConversations(initialSettings.dbToken, 0);
-
-      // Support old ?chat= query & new /chat/uuid layout
-      const pathname = window.location.pathname;
-      const params = new URLSearchParams(window.location.search);
-      let urlId = params.get("chat");
-
-      if (pathname.startsWith("/chat/")) {
-        urlId = pathname.split("/chat/")[1];
-      }
-
-      if (urlId) {
-        loadMessages(initialSettings.dbToken, urlId);
-      }
+      fetchRemoteSettings(savedToken).then((success) => {
+        if (success) {
+          initializeApp(savedToken);
+        } else {
+          sessionStorage.removeItem("db_access_token");
+          setShowAuthModal(true);
+        }
+      });
     }
 
     const handleSaveEdit = async (e) => {
       const { id, content } = e.detail;
       await fetch("/api/messages", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-db-token": initialSettings.dbToken },
+        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
         body: JSON.stringify({ id, content }),
       });
       setMessages((prev) => ({ ...prev, [id]: { ...prev[id], content } }));
@@ -124,7 +154,19 @@ export default function App() {
     return () => window.removeEventListener("save-message-edit", handleSaveEdit);
   }, []);
 
-  // Sync URL to be /chat/uuid instead
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError("");
+    const success = await fetchRemoteSettings(inputPassword);
+    if (success) {
+      sessionStorage.setItem("db_access_token", inputPassword);
+      setShowAuthModal(false);
+      initializeApp(inputPassword);
+    } else {
+      setAuthError("Invalid access password");
+    }
+  };
+
   useEffect(() => {
     if (activeConversation) {
       window.history.pushState({}, "", `/chat/${activeConversation}`);
@@ -189,11 +231,29 @@ export default function App() {
     if (activeConversation === id) handleNewChat();
   };
 
-  const saveSettings = () => {
-    localStorage.setItem("llm_settings", JSON.stringify(settings));
-    setShowSettings(false);
-    loadConversations(settings.dbToken, 0);
-    if (activeConversation) loadMessages(settings.dbToken, activeConversation);
+  const saveSettings = async () => {
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-db-token": settings.dbToken,
+        },
+        body: JSON.stringify({
+          apiKey: settings.apiKey,
+          model: settings.model,
+          systemPrompt: settings.systemPrompt,
+        }),
+      });
+
+      if (!res.ok) {
+        alert("Failed to sync settings to Redis.");
+        return;
+      }
+      setShowSettings(false);
+    } catch (err) {
+      alert(`Error updating settings: ${err.message}`);
+    }
   };
 
   const getActivePath = () => {
@@ -215,7 +275,7 @@ export default function App() {
 
   const sendMessage = async (text = null, parentOverride = null, isBotRetry = false) => {
     if ((!text?.trim() && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
-      if (!settings.dbToken || !settings.apiKey) alert("Configure Database Token & API Key.");
+      if (!settings.dbToken || !settings.apiKey) alert("Configure API Key in Settings.");
       return;
     }
 
@@ -231,8 +291,6 @@ export default function App() {
     const userMsgId = generateId();
     const botMsgId = generateId();
 
-    // 1. OPTIMISTIC UI UPDATE: Lock message into UI state immediately.
-    // This prevents the message from "disappearing" if the internet is disconnected right away.
     const newMsgs = { ...messages };
 
     if (!isBotRetry) {
@@ -249,7 +307,6 @@ export default function App() {
       setConversations((prev) => [{ id: convId, title }, ...prev]);
     }
 
-    // 2. Build Path
     const path = [];
     let curr = isBotRetry ? parentId : userMsgId;
     while (curr && newMsgs[curr]) {
@@ -259,10 +316,8 @@ export default function App() {
 
     if (settings.systemPrompt?.trim()) path.unshift({ role: "system", content: settings.systemPrompt.trim() });
 
-    // 3. Perform Network Requests
     try {
       if (isNewConv) {
-        // Safe to await now because UI is already updated
         await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
@@ -300,35 +355,26 @@ export default function App() {
 
       source.onerror = () => {
         source.close();
-        // Triggered when EventSource drops or is interrupted without finishing
         setMessages((prev) => {
           const currentContent = prev[botMsgId]?.content || "";
-
           if (!currentContent) {
             return {
               ...prev,
               [botMsgId]: {
                 ...prev[botMsgId],
-                content: `⚠️ **Network Error:** Connection lost to the stream. Please check your internet connection and click "Retry".`,
-              },
-            };
-          } else {
-            return {
-              ...prev,
-              [botMsgId]: {
-                ...prev[botMsgId],
+                content: `⚠️ **Network Error:** Connection lost to the stream.`,
               },
             };
           }
+          return prev;
         });
       };
     } catch (error) {
-      console.error("Network error sending message:", error);
       setMessages((prev) => ({
         ...prev,
         [botMsgId]: {
           ...prev[botMsgId],
-          content: `⚠️ **Network Error:** Failed to send message to the server. Please check your connection and click "Retry".\n\n\`${error.message}\``,
+          content: `⚠️ **Network Error:** Failed to send message.\n\n\`${error.message}\``,
         },
       }));
     }
@@ -387,8 +433,8 @@ export default function App() {
       newMessages.forEach((m) => (msgMap[m.id] = m));
       setMessages(msgMap);
       setCurrentId(lastNewId);
-    } catch (err) {
-      alert("Network Error: Could not branch conversation. Check your connection.");
+    } catch {
+      alert("Network Error: Could not branch conversation.");
     }
   };
 
@@ -398,8 +444,6 @@ export default function App() {
     const msgToDelete = messages[msgId];
     const parentId = msgToDelete ? msgToDelete.parent_id : null;
 
-    // We wrap DB deletion in try/catch. This ensures that clicking "Retry"
-    // will still successfully clear the broken local node and attempt to retry
     try {
       await fetch("/api/messages", {
         method: "DELETE",
@@ -407,12 +451,10 @@ export default function App() {
         body: JSON.stringify({ id: msgId }),
       });
     } catch (error) {
-      console.warn("Could not delete from DB (likely offline), deleting locally only:", error);
+      console.warn("Local deletion only:", error);
     }
 
     const newMsgs = { ...messages };
-
-    // Re-parent children in the local state so the tree doesn't break
     Object.values(newMsgs).forEach((m) => {
       if (m.parent_id === msgId) {
         m.parent_id = parentId;
@@ -422,7 +464,6 @@ export default function App() {
     delete newMsgs[msgId];
     setMessages(newMsgs);
 
-    // If the user deleted the message they are currently viewing, move view to parent
     if (currentId === msgId) {
       setCurrentId(parentId);
     }
@@ -433,14 +474,9 @@ export default function App() {
   const handleRetry = async (msgId) => {
     const msg = messages[msgId];
     if (!msg) return;
-
     const parentId = msg.parent_id;
-
-    // 1. First, delete the current assistant message (skips user confirmation)
     const deleted = await deleteMessage(msgId, true);
     if (!deleted) return;
-
-    // 2. Invoke LLM generation again attached to the parent
     sendMessage(null, parentId, true);
   };
 
@@ -464,10 +500,37 @@ export default function App() {
 
   return (
     <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: "100dvh" }}>
-      {/* POPUP COMPONENT ADDED HERE */}
       <PopupMessage />
 
-      {/* DESKTOP SIDEBAR */}
+      {/* Access Password Prompt Modal */}
+      <Modal show={showAuthModal} backdrop="static" keyboard={false} centered>
+        <Modal.Header>
+          <Modal.Title>Access Required</Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleAuthSubmit}>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Database Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter access password"
+                value={inputPassword}
+                onChange={(e) => setInputPassword(e.target.value)}
+                autoFocus
+                required
+              />
+              {authError && <div className="text-danger mt-2 small">{authError}</div>}
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="primary" type="submit">
+              Authenticate
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* Desktop Sidebar */}
       <div className="d-none d-md-block" style={{ width: "280px" }}>
         <Sidebar
           conversations={conversations}
@@ -483,7 +546,7 @@ export default function App() {
         />
       </div>
 
-      {/* MOBILE SIDEBAR (OFFCANVAS) */}
+      {/* Mobile Sidebar */}
       <Offcanvas
         show={showMobileMenu}
         onHide={() => setShowMobileMenu(false)}
@@ -517,18 +580,15 @@ export default function App() {
         onSave={saveSettings}
       />
 
-      {/* MAIN CHAT */}
+      {/* Main Area */}
       <div className="d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
-        {/* MOBILE HEADER */}
         <div className="d-md-none p-2 border-bottom d-flex align-items-center bg-light">
           <Button variant="outline-dark" size="sm" onClick={() => setShowMobileMenu(true)}>
             ☰ Menu
           </Button>
-          {/* Always just show static text to completely avoid overflow issues */}
           <span className="ms-3 fw-bold">Chat</span>
         </div>
 
-        {/* MESSAGES AREA */}
         <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
@@ -558,7 +618,6 @@ export default function App() {
           )}
         </div>
 
-        {/* INPUT AREA */}
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
             <ChatInput key={activeConversation || "new-chat"} onSend={(text) => sendMessage(text)} />

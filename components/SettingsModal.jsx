@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button } from 'react-bootstrap';
 
-
 export default function SettingsModal({ show, onHide, settings, setSettings, onSave }) {
   const [isDark, setIsDark] = useState(false);
 
@@ -21,7 +20,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
     const enable = e.target.checked;
     setIsDark(enable);
     
-    // Сохраняем выбор темы в cookie на 1 год
+    // Save theme preference in cookie for 1 year
     document.cookie = `theme=${enable ? 'dark' : 'light'}; path=/; max-age=31536000`;
     
     // Dynamically import darkreader only on the client
@@ -56,16 +55,6 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
           </Form.Group>
           
           <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">Database Password</Form.Label>
-            <Form.Control 
-              type="password" 
-              placeholder="DB Password" 
-              value={settings.dbToken || ''} 
-              onChange={e => setSettings({...settings, dbToken: e.target.value})} 
-            />
-          </Form.Group>
-          
-          <Form.Group className="mb-3">
             <Form.Label className="fw-bold">API Key</Form.Label>
             <Form.Control 
               type="password" 
@@ -90,7 +79,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             <Form.Control 
               as="textarea" 
               rows={3} 
-              value={settings.systemPrompt } 
+              value={settings.systemPrompt} 
               onChange={e => setSettings({...settings, systemPrompt: e.target.value})} 
             />
           </Form.Group>
