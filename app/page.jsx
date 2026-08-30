@@ -127,7 +127,7 @@ export default function App() {
       });
     }
 
-    const savedToken = sessionStorage.getItem("db_access_token");
+    const savedToken = localStorage.getItem("db_access_token");
     if (!savedToken) {
       setShowAuthModal(true);
     } else {
@@ -135,7 +135,7 @@ export default function App() {
         if (success) {
           initializeApp(savedToken);
         } else {
-          sessionStorage.removeItem("db_access_token");
+          localStorage.removeItem("db_access_token");
           setShowAuthModal(true);
         }
       });
@@ -159,7 +159,7 @@ export default function App() {
     setAuthError("");
     const success = await fetchRemoteSettings(inputPassword);
     if (success) {
-      sessionStorage.setItem("db_access_token", inputPassword);
+      localStorage.setItem("db_access_token", inputPassword);
       setShowAuthModal(false);
       initializeApp(inputPassword);
     } else {
