@@ -6,7 +6,6 @@ import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-boo
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
-import PopupMessage from "../components/PopupMessage";
 
 const ChatInput = ({ onSend }) => {
   const [input, setInput] = useState("");
@@ -505,8 +504,6 @@ export default function App() {
 
   return (
     <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: "100dvh" }}>
-      <PopupMessage />
-
       {/* Access Password Prompt Modal */}
       <Modal show={showAuthModal} backdrop="static" keyboard={false} centered>
         <Modal.Header>
