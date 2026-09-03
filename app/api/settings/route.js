@@ -50,7 +50,7 @@ export async function POST(request) {
     // 2. Handle 3-minute temporary system prompt
     if (systemPrompt && systemPrompt.trim() !== '' && systemPrompt.trim() !== DEFAULT_SYSTEM_PROMPT) {
       // Set key with 180 seconds (3 minutes) TTL
-      await redis.setex('app_llm_temp_system_prompt', 180, systemPrompt.trim());
+      await redis.set('app_llm_temp_system_prompt', systemPrompt.trim(), 'EX', 180);
     } else {
       // If cleared or reset to default, delete the temporary key immediately
       await redis.del('app_llm_temp_system_prompt');
