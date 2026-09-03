@@ -7,6 +7,9 @@ import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 
+const DEFAULT_SYSTEM_PROMPT =
+  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
+
 const ChatInput = ({ onSend }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
@@ -69,14 +72,11 @@ export default function App() {
 
   const isInitializedRef = useRef(false);
 
-  const DEFAULT_SYSTEM_PROMPT =
-    "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
-
   const [settings, setSettings] = useState({
     apiKey: "",
     model: "gemini-3.7-flash",
     dbToken: "",
-    systemPrompt: "",
+    systemPrompt: DEFAULT_SYSTEM_PROMPT,
   });
 
   const endOfMessagesRef = useRef(null);
@@ -94,15 +94,22 @@ export default function App() {
           dbToken: token,
           apiKey: data.settings.apiKey ?? "",
           model: data.settings.model ?? "gemini-3.7-flash",
-          systemPrompt: data.settings.systemPrompt ?? "",
+          systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
         });
       } else {
-        setSettings((prev) => ({ ...prev, dbToken: token }));
+        setSettings((prev) => ({ ...prev, dbToken: token, systemPrompt: DEFAULT_SYSTEM_PROMPT }));
       }
       return true;
     } catch {
       return false;
     }
+  };
+
+  const handleOpenSettings = async () => {
+    if (settings.dbToken) {
+      await fetchRemoteSettings(settings.dbToken);
+    }
+    setShowSettings(true);
   };
 
   const initializeApp = async (token) => {
@@ -318,7 +325,22 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    if (settings.systemPrompt?.trim()) path.unshift({ role: "system", content: settings.systemPrompt.trim() });
+    // Always fetch latest prompt to ensure expiration fallback is respected
+    let activeSystemPrompt = settings.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT;
+    try {
+      const res = await fetch("/api/settings", { headers: { "x-db-token": settings.dbToken } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.settings?.systemPrompt) {
+          activeSystemPrompt = data.settings.systemPrompt;
+          setSettings((prev) => ({ ...prev, systemPrompt: activeSystemPrompt }));
+        }
+      }
+    } catch (e) {
+      console.warn("Could not sync fresh prompt status, using client state", e);
+    }
+
+    path.unshift({ role: "system", content: activeSystemPrompt });
 
     try {
       if (isNewConv) {
@@ -540,7 +562,7 @@ export default function App() {
           handleNewChat={handleNewChat}
           loadMessages={loadMessages}
           handleDeleteConversation={handleDeleteConversation}
-          setShowSettings={setShowSettings}
+          setShowSettings={handleOpenSettings}
           dbToken={settings.dbToken}
           loadMore={() => loadConversations(settings.dbToken, conversations.length)}
           hasMore={hasMoreConv}
@@ -565,7 +587,7 @@ export default function App() {
             handleNewChat={handleNewChat}
             loadMessages={loadMessages}
             handleDeleteConversation={handleDeleteConversation}
-            setShowSettings={setShowSettings}
+            setShowSettings={handleOpenSettings}
             dbToken={settings.dbToken}
             loadMore={() => loadConversations(settings.dbToken, conversations.length)}
             hasMore={hasMoreConv}
