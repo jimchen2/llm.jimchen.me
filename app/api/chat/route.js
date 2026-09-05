@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { redis } from "@/lib/redis";
+import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
 import { callLLM } from "@/lib/llm";
-
-const WEEK = 604800;
 
 export async function POST(req) {
   const { messages, userMsgId, botMsgId, parentId, conversationId, apiKey, model } = await req.json();
@@ -26,11 +24,11 @@ export async function POST(req) {
     role: "assistant", content: "", created_at: Date.now() + 1
   };
   pipeline.hset(msgKey, botMsgId, JSON.stringify(botPayload));
-  pipeline.expire(msgKey, WEEK);
+  pipeline.expire(msgKey, CACHE_TTL_SECONDS);
   
   // Extend conversation index expiration
-  pipeline.expire('conversations:index', WEEK);
-  pipeline.expire(`conv:${conversationId}`, WEEK);
+  pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
+  pipeline.expire(`conv:${conversationId}`, CACHE_TTL_SECONDS);
   
   await pipeline.exec();
 

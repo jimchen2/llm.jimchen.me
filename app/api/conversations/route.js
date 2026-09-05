@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { redis } from '@/lib/redis';
-
-const WEEK = 604800; // 7 days in seconds
+import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
 
 export async function GET(req) {
   const url = new URL(req.url);
@@ -29,9 +27,9 @@ export async function POST(req) {
   pipeline.zadd('conversations:index', now, id);
   pipeline.hset(`conv:${id}`, { id, title: title || 'New Conversation', created_at: now });
   
-  // Set 1 week expiration
-  pipeline.expire('conversations:index', WEEK);
-  pipeline.expire(`conv:${id}`, WEEK);
+  // Set expiration
+  pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
+  pipeline.expire(`conv:${id}`, CACHE_TTL_SECONDS);
   
   await pipeline.exec();
   return NextResponse.json({ success: true });

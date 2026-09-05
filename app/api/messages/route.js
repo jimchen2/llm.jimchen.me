@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { redis } from '@/lib/redis';
-
-const WEEK = 604800; 
+import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
 
 export async function GET(req) {
   const conversationId = req.nextUrl.searchParams.get('conversationId');
@@ -76,7 +74,7 @@ export async function POST(req) {
     for (const m of messages) {
       pipeline.hset(key, m.id, JSON.stringify(m));
     }
-    pipeline.expire(key, WEEK);
+    pipeline.expire(key, CACHE_TTL_SECONDS);
     await pipeline.exec();
   }
   return NextResponse.json({ success: true });
