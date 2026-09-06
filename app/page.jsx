@@ -75,11 +75,18 @@ export default function App() {
   const [settings, setSettings] = useState({
     apiKey: "",
     model: "gemini-3.7-flash",
+    thinkingLevel: "low",
     dbToken: "",
     systemPrompt: DEFAULT_SYSTEM_PROMPT,
   });
 
   const endOfMessagesRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+
+  // Active SSE streams keyed by bot message id.
+  // value: { convId, attempts, startedAt }
+  const activeStreamsRef = useRef(new Map());
+  const pollTimerRef = useRef(null);
 
   const fetchRemoteSettings = async (token) => {
     try {
@@ -94,6 +101,7 @@ export default function App() {
           dbToken: token,
           apiKey: data.settings.apiKey ?? "",
           model: data.settings.model ?? "gemini-3.7-flash",
+          thinkingLevel: data.settings.thinkingLevel ?? "low",
           systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
         });
       } else {
@@ -151,11 +159,11 @@ export default function App() {
     }
 
     const handleSaveEdit = async (e) => {
-      const { id, content } = e.detail;
+      const { id, conversationId, content } = e.detail;
       await fetch("/api/messages", {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id, content }),
+        body: JSON.stringify({ id, conversationId, content }),
       });
       setMessages((prev) => ({ ...prev, [id]: { ...prev[id], content } }));
     };
@@ -204,6 +212,153 @@ export default function App() {
       .finally(() => setIsLoadingConv(false));
   };
 
+  // ---- Streaming helpers (resumable across refreshes) ----------------------
+
+  const stickToBottom = () => {
+    requestAnimationFrame(() => {
+      const el = scrollContainerRef.current;
+      if (!el) return;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 160;
+      if (nearBottom) endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+  };
+
+  const hydrate = async (botMsgId, convId) => {
+    try {
+      const res = await fetch(`/api/messages?conversationId=${convId}`, {
+        headers: { "x-db-token": settings.dbToken },
+      });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      const remote = Array.isArray(rows) ? rows.find((m) => m.id === botMsgId) : null;
+      if (remote?.content) {
+        setMessages((prev) => {
+          const local = prev[botMsgId]?.content || "";
+          if (remote.content.length > local.length) {
+            return { ...prev, [botMsgId]: { ...(prev[botMsgId] || {}), content: remote.content } };
+          }
+          return prev;
+        });
+        stickToBottom();
+      }
+      return remote?.content || "";
+    } catch {
+      return null;
+    }
+  };
+
+  const markStreamFailed = (botMsgId) => {
+    activeStreamsRef.current.delete(botMsgId);
+    setMessages((prev) => {
+      const cur = prev[botMsgId]?.content || "";
+      if (cur) return prev;
+      return {
+        ...prev,
+        [botMsgId]: {
+          ...(prev[botMsgId] || {}),
+          content: "⚠️ **Network Error:** Connection lost to the stream. Use *Retry* below.",
+        },
+      };
+    });
+  };
+
+  const startPolling = () => {
+    if (pollTimerRef.current) return;
+    pollTimerRef.current = setInterval(async () => {
+      const entries = [...activeStreamsRef.current.entries()];
+      if (entries.length === 0) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+        return;
+      }
+      for (const [botMsgId, info] of entries) {
+        const content = await hydrate(botMsgId, info.convId);
+        // Watchdog: if nothing arrived long after the stream started, stop.
+        // 150s > the 120s LLM timeout, so slow thinking models are not killed.
+        if (content === "" && Date.now() - info.startedAt > 150000) {
+          markStreamFailed(botMsgId);
+        }
+      }
+    }, 1200);
+  };
+
+  const openStream = (botMsgId, convId) => {
+    if (activeStreamsRef.current.has(botMsgId)) return;
+    startPolling();
+
+    const info = { convId, attempts: 0, startedAt: Date.now() };
+    activeStreamsRef.current.set(botMsgId, info);
+
+    const connect = () => {
+      const source = new EventSource(
+        `/api/chatstream?id=${botMsgId}&conversationId=${convId}&dbToken=${encodeURIComponent(settings.dbToken)}`
+      );
+      info.source = source;
+
+      source.onmessage = (e) => {
+        // Completion sentinel: close the stream and stop tracking it.
+        if (e.data === "[DONE]") {
+          source.close();
+          activeStreamsRef.current.delete(botMsgId);
+          return;
+        }
+        let chunk;
+        try {
+          chunk = JSON.parse(e.data);
+        } catch {
+          return;
+        }
+        setMessages((prev) => ({
+          ...prev,
+          [botMsgId]: {
+            ...(prev[botMsgId] || {}),
+            content: (prev[botMsgId]?.content || "") + chunk,
+          },
+        }));
+        stickToBottom();
+      };
+
+      source.onerror = () => {
+        source.close();
+        // Already completed (DONE handled) -> ignore the trailing error event.
+        if (!activeStreamsRef.current.has(botMsgId)) return;
+
+        info.attempts += 1;
+        if (info.attempts >= 6) {
+          markStreamFailed(botMsgId);
+          return;
+        }
+        // Rehydrate from Redis before resubscribing: SSE has no replay of
+        // previously published chunks, but every chunk is persisted server-side.
+        const delay = Math.min(400 * 2 ** (info.attempts - 1), 5000);
+        setTimeout(async () => {
+          if (!activeStreamsRef.current.has(botMsgId)) return;
+          await hydrate(botMsgId, convId);
+          connect();
+        }, delay);
+      };
+    };
+
+    connect();
+  };
+
+  const stopAllStreams = () => {
+    for (const [, info] of activeStreamsRef.current.entries()) {
+      try {
+        info.source?.close();
+      } catch {
+        /* noop */
+      }
+    }
+    activeStreamsRef.current.clear();
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  // ---- Conversation / message operations -----------------------------------
+
   const loadMessages = (dbToken, convId) => {
     fetch(`/api/messages?conversationId=${convId}`, { headers: { "x-db-token": dbToken } })
       .then((r) => r.json())
@@ -219,6 +374,14 @@ export default function App() {
         setCurrentId(lastId);
         setActiveConversation(convId);
         setShowMobileMenu(false);
+
+        // Resume a generation that is still in progress (e.g. after a refresh).
+        const last = lastId ? msgMap[lastId] : null;
+        if (last?.role === "assistant" && !last.content) {
+          openStream(lastId, convId);
+        } else {
+          stopAllStreams();
+        }
       })
       .catch(console.error);
   };
@@ -228,6 +391,7 @@ export default function App() {
     setMessages({});
     setCurrentId(null);
     setShowMobileMenu(false);
+    stopAllStreams();
   };
 
   const handleDeleteConversation = async (e, id) => {
@@ -253,6 +417,7 @@ export default function App() {
         body: JSON.stringify({
           apiKey: settings.apiKey,
           model: settings.model,
+          thinkingLevel: settings.thinkingLevel,
           systemPrompt: settings.systemPrompt,
         }),
       });
@@ -282,7 +447,14 @@ export default function App() {
     scrollToBottom();
   }, [currentId]);
 
-  const generateId = () => Math.random().toString(36).substring(2, 15);
+  const generateId = () => {
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      const bytes = new Uint8Array(12);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (b) => b.toString(36).padStart(2, "0")).join("");
+    }
+    return Math.random().toString(36).substring(2, 15);
+  };
 
   const sendMessage = async (text = null, parentOverride = null, isBotRetry = false) => {
     if ((!text?.trim() && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
@@ -362,6 +534,7 @@ export default function App() {
           conversationId: convId,
           apiKey: settings.apiKey,
           model: settings.model,
+          thinkingLevel: settings.thinkingLevel || "low",
         }),
       });
 
@@ -369,32 +542,7 @@ export default function App() {
         throw new Error(`Server returned status ${response.status}`);
       }
 
-      const source = new EventSource(`/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`);
-
-      source.onmessage = (e) => {
-        const chunk = JSON.parse(e.data);
-        setMessages((prev) => ({
-          ...prev,
-          [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk },
-        }));
-      };
-
-      source.onerror = () => {
-        source.close();
-        setMessages((prev) => {
-          const currentContent = prev[botMsgId]?.content || "";
-          if (!currentContent) {
-            return {
-              ...prev,
-              [botMsgId]: {
-                ...prev[botMsgId],
-                content: `⚠️ **Network Error:** Connection lost to the stream.`,
-              },
-            };
-          }
-          return prev;
-        });
-      };
+      openStream(botMsgId, convId);
     } catch (error) {
       setMessages((prev) => ({
         ...prev,
@@ -469,12 +617,13 @@ export default function App() {
 
     const msgToDelete = messages[msgId];
     const parentId = msgToDelete ? msgToDelete.parent_id : null;
+    const conversationId = msgToDelete?.conversation_id || activeConversation;
 
     try {
       await fetch("/api/messages", {
         method: "DELETE",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id: msgId }),
+        body: JSON.stringify({ id: msgId, conversationId }),
       });
     } catch (error) {
       console.warn("Local deletion only:", error);
@@ -613,7 +762,7 @@ export default function App() {
           <span className="ms-3 fw-bold">Chat</span>
         </div>
 
-        <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
+        <div ref={scrollContainerRef} className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
               <h3 className="text-muted">Please only talk about coding</h3>

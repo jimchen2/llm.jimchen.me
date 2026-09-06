@@ -4,7 +4,7 @@ import { Card, Button, ButtonGroup, Form } from 'react-bootstrap';
 import MarkdownIt from 'markdown-it';
 import mk from '@vscode/markdown-it-katex';
 
-const md = new MarkdownIt({ html: true, breaks: true }).use(mk);
+const md = new MarkdownIt({ html: true, breaks: true, linkify: true }).use(mk);
 
 // Override markdown-it's code block renderer to inject the Copy button directly into the HTML
 const defaultRender = md.renderer.rules.fence || function (tokens, idx, options, env, self) {
@@ -37,8 +37,12 @@ export default function MessageNode({
   const [editContent, setEditContent] = useState(msg.content);
 
   const saveEdit = async () => {
-    window.dispatchEvent(new CustomEvent('save-message-edit', { 
-      detail: { id: msg.id, content: editContent } 
+    window.dispatchEvent(new CustomEvent('save-message-edit', {
+      detail: {
+        id: msg.id,
+        conversationId: msg.conversation_id,
+        content: editContent,
+      },
     }));
     setIsEditing(false);
   };

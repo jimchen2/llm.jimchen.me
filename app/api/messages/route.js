@@ -9,57 +9,65 @@ export async function GET(req) {
   if (!rawMessages) return NextResponse.json([]);
 
   const rows = Object.values(rawMessages)
-    .map(m => typeof m === 'string' ? JSON.parse(m) : m)
+    .map((m) => (typeof m === 'string' ? JSON.parse(m) : m))
     .sort((a, b) => a.created_at - b.created_at);
 
   return NextResponse.json(rows);
 }
 
-export async function DELETE(req) {
-  const { id } = await req.json();
-  
-  // Since we don't pass conversationId in DELETE easily, we have to find it
-  // This is a bit expensive but fine for single user/small scale. 
-  // Alternatively, pass conversation_id from the frontend.
+// Find the Redis key that holds a message without scanning every key.
+// Prefer the caller-supplied conversation_id (fast); fall back to KEYS for
+// older clients that don't send it.
+async function findMessageKey(id, conversationId) {
+  if (conversationId) {
+    const key = `msgs:${conversationId}`;
+    const raw = await redis.hget(key, id);
+    if (raw) return { key, msg: typeof raw === 'string' ? JSON.parse(raw) : raw };
+    return null;
+  }
   const keys = await redis.keys('msgs:*');
   for (const key of keys) {
     const rawMsg = await redis.hget(key, id);
     if (rawMsg) {
-      const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
-      const parentId = msg.parent_id;
-
-      // Re-parent children
-      const allMsgs = await redis.hgetall(key);
-      const pipeline = redis.pipeline();
-      
-      for (const [mId, mRaw] of Object.entries(allMsgs)) {
-        const m = typeof mRaw === 'string' ? JSON.parse(mRaw) : mRaw;
-        if (m.parent_id === id) {
-          m.parent_id = parentId;
-          pipeline.hset(key, mId, JSON.stringify(m));
-        }
-      }
-      
-      pipeline.hdel(key, id);
-      await pipeline.exec();
-      break;
+      return { key, msg: typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg };
     }
   }
-  
+  return null;
+}
+
+export async function DELETE(req) {
+  const { id, conversationId } = await req.json();
+
+  const found = await findMessageKey(id, conversationId);
+  if (found) {
+    const { key, msg } = found;
+    const parentId = msg.parent_id;
+
+    // Re-parent children so a deleted link doesn't orphan the rest of the branch
+    const allMsgs = await redis.hgetall(key);
+    const pipeline = redis.pipeline();
+    for (const [mId, mRaw] of Object.entries(allMsgs)) {
+      const m = typeof mRaw === 'string' ? JSON.parse(mRaw) : mRaw;
+      if (m.parent_id === id) {
+        m.parent_id = parentId;
+        pipeline.hset(key, mId, JSON.stringify(m));
+      }
+    }
+    pipeline.hdel(key, id);
+    await pipeline.exec();
+  }
+
   return NextResponse.json({ success: true });
 }
 
 export async function PUT(req) {
-  const { id, content } = await req.json();
-  const keys = await redis.keys('msgs:*');
-  for (const key of keys) {
-    const rawMsg = await redis.hget(key, id);
-    if (rawMsg) {
-      const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
-      msg.content = content;
-      await redis.hset(key, id, JSON.stringify(msg));
-      break;
-    }
+  const { id, content, conversationId } = await req.json();
+
+  const found = await findMessageKey(id, conversationId);
+  if (found) {
+    found.msg.content = content;
+    await redis.hset(found.key, id, JSON.stringify(found.msg));
+    await redis.expire(found.key, CACHE_TTL_SECONDS);
   }
   return NextResponse.json({ success: true });
 }
@@ -70,7 +78,7 @@ export async function POST(req) {
     const convId = messages[0].conversation_id;
     const key = `msgs:${convId}`;
     const pipeline = redis.pipeline();
-    
+
     for (const m of messages) {
       pipeline.hset(key, m.id, JSON.stringify(m));
     }
