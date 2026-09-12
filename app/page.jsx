@@ -93,7 +93,7 @@ export default function App() {
         setSettings({
           dbToken: token,
           apiKey: data.settings.apiKey ?? "",
-          model: data.settings.model ?? "gemini-3.7-flash",
+          model: data.settings.model ?? "gemini-3.8-flash",
           systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
         });
       } else {
