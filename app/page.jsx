@@ -6,9 +6,10 @@ import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-boo
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
+import { MODES, MODE_LABELS, DEFAULT_MODE, normalizeMode } from "../lib/modes";
 
-const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
+const emptyModes = () =>
+  Object.fromEntries(MODES.map((m) => [m, { apiKey: "", model: "", systemPrompt: "" }]));
 
 const ChatInput = ({ onSend }) => {
   const [input, setInput] = useState("");
@@ -73,11 +74,12 @@ export default function App() {
   const isInitializedRef = useRef(false);
 
   const [settings, setSettings] = useState({
-    apiKey: "",
-    model: "gemini-3.7-flash",
     dbToken: "",
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
+    activeMode: DEFAULT_MODE,
+    modes: emptyModes(),
   });
+
+  const activeModeConfig = settings.modes?.[normalizeMode(settings.activeMode)] || {};
 
   const endOfMessagesRef = useRef(null);
 
@@ -92,12 +94,11 @@ export default function App() {
       if (data.settings) {
         setSettings({
           dbToken: token,
-          apiKey: data.settings.apiKey ?? "",
-          model: data.settings.model ?? "gemini-3.8-flash",
-          systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
+          activeMode: normalizeMode(data.settings.activeMode),
+          modes: { ...emptyModes(), ...(data.settings.modes || {}) },
         });
       } else {
-        setSettings((prev) => ({ ...prev, dbToken: token, systemPrompt: DEFAULT_SYSTEM_PROMPT }));
+        setSettings((prev) => ({ ...prev, dbToken: token }));
       }
       return true;
     } catch {
@@ -251,15 +252,22 @@ export default function App() {
           "x-db-token": settings.dbToken,
         },
         body: JSON.stringify({
-          apiKey: settings.apiKey,
-          model: settings.model,
-          systemPrompt: settings.systemPrompt,
+          activeMode: normalizeMode(settings.activeMode),
+          modes: settings.modes,
         }),
       });
 
       if (!res.ok) {
         alert("Failed to sync settings to Redis.");
         return;
+      }
+      const data = await res.json();
+      if (data.settings) {
+        setSettings((prev) => ({
+          ...prev,
+          activeMode: normalizeMode(data.settings.activeMode),
+          modes: { ...emptyModes(), ...(data.settings.modes || {}) },
+        }));
       }
       setShowSettings(false);
     } catch (err) {
@@ -285,8 +293,13 @@ export default function App() {
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
   const sendMessage = async (text = null, parentOverride = null, isBotRetry = false) => {
-    if ((!text?.trim() && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
-      if (!settings.dbToken || !settings.apiKey) alert("Configure API Key in Settings.");
+    const mode = normalizeMode(settings.activeMode);
+    const modeConfig = settings.modes?.[mode] || {};
+
+    if ((!text?.trim() && !isBotRetry) || !modeConfig.apiKey || !settings.dbToken) {
+      if (!settings.dbToken || !modeConfig.apiKey) {
+        alert(`Configure the API Key for ${MODE_LABELS[mode]} in Settings.`);
+      }
       return;
     }
 
@@ -325,22 +338,11 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    // Always fetch latest prompt to ensure expiration fallback is respected
-    let activeSystemPrompt = settings.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT;
-    try {
-      const res = await fetch("/api/settings", { headers: { "x-db-token": settings.dbToken } });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.settings?.systemPrompt) {
-          activeSystemPrompt = data.settings.systemPrompt;
-          setSettings((prev) => ({ ...prev, systemPrompt: activeSystemPrompt }));
-        }
-      }
-    } catch (e) {
-      console.warn("Could not sync fresh prompt status, using client state", e);
+    // An empty system prompt is valid: simply send no system message.
+    const activeSystemPrompt = (modeConfig.systemPrompt ?? "").trim();
+    if (activeSystemPrompt) {
+      path.unshift({ role: "system", content: activeSystemPrompt });
     }
-
-    path.unshift({ role: "system", content: activeSystemPrompt });
 
     try {
       if (isNewConv) {
@@ -360,8 +362,8 @@ export default function App() {
           botMsgId,
           parentId,
           conversationId: convId,
-          apiKey: settings.apiKey,
-          model: settings.model,
+          apiKey: modeConfig.apiKey,
+          model: modeConfig.model,
         }),
       });
 
@@ -633,7 +635,7 @@ export default function App() {
                     handleBranch={handleBranch}
                     handleRetry={handleRetry}
                     deleteMessage={deleteMessage}
-                    modelName={settings.model}
+                    modelName={activeModeConfig.model}
                   />
                 );
               })}

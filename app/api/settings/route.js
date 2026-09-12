@@ -1,14 +1,40 @@
 // app/api/settings/route.js
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
+import { MODES, DEFAULT_MODE, normalizeMode, getModeEnvDefaults } from '@/lib/modes';
 
-export const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
+const SETTINGS_KEY = 'app_llm_settings';
 
 function isAuthorized(request) {
   const token = request.headers.get('x-db-token');
   const validToken = process.env.APP_PASSWORD || 'your-default-password';
   return token === validToken;
+}
+
+async function readConfig() {
+  const raw = await redis.get(SETTINGS_KEY);
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Merge stored config with env defaults. Stored values win, including an
+// explicitly empty system prompt (empty prompt is a valid configuration).
+function buildModes(config) {
+  const stored = config.modes || {};
+  const modes = {};
+  for (const mode of MODES) {
+    const envDefaults = getModeEnvDefaults(mode);
+    const saved = stored[mode] || {};
+    modes[mode] = {
+      apiKey: saved.apiKey ?? envDefaults.apiKey,
+      model: saved.model || envDefaults.model,
+      systemPrompt: saved.systemPrompt ?? envDefaults.systemPrompt,
+    };
+  }
+  return modes;
 }
 
 export async function GET(request) {
@@ -17,17 +43,14 @@ export async function GET(request) {
   }
 
   try {
-    const rawConfig = await redis.get('app_llm_settings');
-    const config = rawConfig ? JSON.parse(rawConfig) : {};
-
-    // Check if custom prompt is still alive in Redis (expires after 3 minutes)
-    const customPrompt = await redis.get('app_llm_temp_system_prompt');
+    const config = await readConfig();
+    const modes = buildModes(config);
+    const activeMode = normalizeMode(config.activeMode || DEFAULT_MODE);
 
     return NextResponse.json({
       settings: {
-        apiKey: config.apiKey ?? process.env.GEMINI_API_KEY ?? '',
-        model: config.model ?? process.env.DEFAULT_MODEL ?? 'gemini-3.8-flash',
-        systemPrompt: customPrompt !== null ? customPrompt : DEFAULT_SYSTEM_PROMPT,
+        activeMode,
+        modes,
       },
     });
   } catch (err) {
@@ -42,21 +65,26 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { apiKey, model, systemPrompt } = body;
+    const config = await readConfig();
+    const current = buildModes(config);
 
-    // 1. Save general settings persistently
-    await redis.set('app_llm_settings', JSON.stringify({ apiKey, model }));
-
-    // 2. Handle 3-minute temporary system prompt
-    if (systemPrompt && systemPrompt.trim() !== '' && systemPrompt.trim() !== DEFAULT_SYSTEM_PROMPT) {
-      // Set key with 180 seconds (3 minutes) TTL
-      await redis.set('app_llm_temp_system_prompt', systemPrompt.trim(), 'EX', 180);
-    } else {
-      // If cleared or reset to default, delete the temporary key immediately
-      await redis.del('app_llm_temp_system_prompt');
+    const incoming = body.modes || {};
+    const modes = {};
+    for (const mode of MODES) {
+      const patch = incoming[mode] || {};
+      modes[mode] = {
+        apiKey: patch.apiKey ?? current[mode].apiKey,
+        model: patch.model ?? current[mode].model,
+        // Empty string is meaningful: no system prompt for this mode.
+        systemPrompt: patch.systemPrompt ?? current[mode].systemPrompt,
+      };
     }
 
-    return NextResponse.json({ success: true });
+    const activeMode = normalizeMode(body.activeMode || config.activeMode || DEFAULT_MODE);
+
+    await redis.set(SETTINGS_KEY, JSON.stringify({ activeMode, modes }));
+
+    return NextResponse.json({ success: true, settings: { activeMode, modes } });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
