@@ -2,15 +2,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-bootstrap";
+import { Container, Button, Form, InputGroup, Offcanvas, Modal, ButtonGroup } from "react-bootstrap";
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
+import { DEFAULT_MODEL, DEFAULT_MODE, MODE_TECH, MODE_RANDOM, normalizeMode } from "@/lib/constants";
 
-const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
+// Development test runs: no access password and no API keys required.
+const IS_DEV = process.env.NODE_ENV !== "production";
 
-const ChatInput = ({ onSend }) => {
+const ChatInput = ({ onSend, placeholder }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
 
@@ -44,7 +45,7 @@ const ChatInput = ({ onSend }) => {
           e.target.style.height = `${e.target.scrollHeight}px`;
         }}
         onKeyDown={handleKeyDown}
-        placeholder="Please only talk about coding"
+        placeholder={placeholder || "Please only talk about coding"}
       />
       <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={submitMessage}>
         Send
@@ -72,14 +73,22 @@ export default function App() {
 
   const isInitializedRef = useRef(false);
 
+  // Mode state: the mode belongs to the conversation.
+  // - newChatMode: the mode picked for a brand new conversation (default tech)
+  // - convMode: the stored mode of the conversation that is currently open
+  const [newChatMode, setNewChatMode] = useState(DEFAULT_MODE);
+  const [convMode, setConvMode] = useState(null);
+
   const [settings, setSettings] = useState({
-    apiKey: "",
-    model: "gemini-3.7-flash",
+    model: DEFAULT_MODEL,
     dbToken: "",
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
   });
 
   const endOfMessagesRef = useRef(null);
+
+  // Once a conversation exists its mode is fixed; only a new chat can choose.
+  const activeMode = activeConversation ? normalizeMode(convMode) : newChatMode;
+  const modeLocked = !!activeConversation;
 
   const fetchRemoteSettings = async (token) => {
     try {
@@ -90,14 +99,12 @@ export default function App() {
 
       const data = await res.json();
       if (data.settings) {
-        setSettings({
+        setSettings((prev) => ({
           dbToken: token,
-          apiKey: data.settings.apiKey ?? "",
-          model: data.settings.model ?? "gemini-3.7-flash",
-          systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
-        });
+          model: data.settings.model || DEFAULT_MODEL,
+        }));
       } else {
-        setSettings((prev) => ({ ...prev, dbToken: token, systemPrompt: DEFAULT_SYSTEM_PROMPT }));
+        setSettings((prev) => ({ ...prev, dbToken: token }));
       }
       return true;
     } catch {
@@ -136,18 +143,23 @@ export default function App() {
       });
     }
 
-    const savedToken = localStorage.getItem("db_access_token");
-    if (!savedToken) {
-      setShowAuthModal(true);
+    if (IS_DEV) {
+      // Test run: no keys asked for — go straight into the app.
+      fetchRemoteSettings("dev").then(() => initializeApp("dev"));
     } else {
-      fetchRemoteSettings(savedToken).then((success) => {
-        if (success) {
-          initializeApp(savedToken);
-        } else {
-          localStorage.removeItem("db_access_token");
-          setShowAuthModal(true);
-        }
-      });
+      const savedToken = localStorage.getItem("db_access_token");
+      if (!savedToken) {
+        setShowAuthModal(true);
+      } else {
+        fetchRemoteSettings(savedToken).then((success) => {
+          if (success) {
+            initializeApp(savedToken);
+          } else {
+            localStorage.removeItem("db_access_token");
+            setShowAuthModal(true);
+          }
+        });
+      }
     }
 
     const handleSaveEdit = async (e) => {
@@ -161,6 +173,7 @@ export default function App() {
     };
     window.addEventListener("save-message-edit", handleSaveEdit);
     return () => window.removeEventListener("save-message-edit", handleSaveEdit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAuthSubmit = async (e) => {
@@ -211,12 +224,14 @@ export default function App() {
         if (!data || data.error) return;
         const msgMap = {};
         let lastId = null;
-        data.forEach((m) => {
+        (data.messages || []).forEach((m) => {
           msgMap[m.id] = m;
           lastId = m.id;
         });
         setMessages(msgMap);
         setCurrentId(lastId);
+        // Reopening a conversation always restores its own stored mode.
+        setConvMode(normalizeMode(data.conversation?.mode));
         setActiveConversation(convId);
         setShowMobileMenu(false);
       })
@@ -227,6 +242,9 @@ export default function App() {
     setActiveConversation(null);
     setMessages({});
     setCurrentId(null);
+    // New conversations always default to a tech conversation.
+    setConvMode(null);
+    setNewChatMode(DEFAULT_MODE);
     setShowMobileMenu(false);
   };
 
@@ -251,9 +269,7 @@ export default function App() {
           "x-db-token": settings.dbToken,
         },
         body: JSON.stringify({
-          apiKey: settings.apiKey,
           model: settings.model,
-          systemPrompt: settings.systemPrompt,
         }),
       });
 
@@ -285,10 +301,13 @@ export default function App() {
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
   const sendMessage = async (text = null, parentOverride = null, isBotRetry = false) => {
-    if ((!text?.trim() && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
-      if (!settings.dbToken || !settings.apiKey) alert("Configure API Key in Settings.");
+    if ((!text?.trim() && !isBotRetry) || !settings.dbToken) {
+      if (!settings.dbToken) alert("Please authenticate first.");
       return;
     }
+
+    // The mode is a property of the conversation: locked in when it is created.
+    const mode = activeConversation ? normalizeMode(convMode) : newChatMode;
 
     const content = text || "";
     let convId = activeConversation;
@@ -315,9 +334,12 @@ export default function App() {
     const title = content ? content.substring(0, 30) + (content.length > 30 ? "..." : "") : "New Chat";
     if (isNewConv) {
       setActiveConversation(convId);
-      setConversations((prev) => [{ id: convId, title }, ...prev]);
+      setConvMode(mode);
+      setConversations((prev) => [{ id: convId, title, mode }, ...prev]);
     }
 
+    // NOTE: no system message here — the backend attaches the right system
+    // prompt (or none, for random mode) based on the conversation's mode.
     const path = [];
     let curr = isBotRetry ? parentId : userMsgId;
     while (curr && newMsgs[curr]) {
@@ -325,29 +347,12 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    // Always fetch latest prompt to ensure expiration fallback is respected
-    let activeSystemPrompt = settings.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT;
-    try {
-      const res = await fetch("/api/settings", { headers: { "x-db-token": settings.dbToken } });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.settings?.systemPrompt) {
-          activeSystemPrompt = data.settings.systemPrompt;
-          setSettings((prev) => ({ ...prev, systemPrompt: activeSystemPrompt }));
-        }
-      }
-    } catch (e) {
-      console.warn("Could not sync fresh prompt status, using client state", e);
-    }
-
-    path.unshift({ role: "system", content: activeSystemPrompt });
-
     try {
       if (isNewConv) {
         await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-          body: JSON.stringify({ id: convId, title }),
+          body: JSON.stringify({ id: convId, title, mode }),
         });
       }
 
@@ -360,8 +365,8 @@ export default function App() {
           botMsgId,
           parentId,
           conversationId: convId,
-          apiKey: settings.apiKey,
           model: settings.model,
+          mode,
         }),
       });
 
@@ -417,6 +422,9 @@ export default function App() {
       curr = messages[curr].parent_id;
     }
 
+    // The branch inherits the mode of the conversation it came from.
+    const branchMode = activeConversation ? normalizeMode(convMode) : newChatMode;
+
     const newConvId = generateId();
     const title = "Branch: " + (conversations.find((c) => c.id === activeConversation)?.title || "New");
 
@@ -424,7 +432,7 @@ export default function App() {
       await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id: newConvId, title }),
+        body: JSON.stringify({ id: newConvId, title, mode: branchMode }),
       });
 
       const newMessages = [];
@@ -452,8 +460,9 @@ export default function App() {
         body: JSON.stringify({ messages: newMessages }),
       });
 
-      setConversations((prev) => [{ id: newConvId, title }, ...prev]);
+      setConversations((prev) => [{ id: newConvId, title, mode: branchMode }, ...prev]);
       setActiveConversation(newConvId);
+      setConvMode(branchMode);
 
       const msgMap = {};
       newMessages.forEach((m) => (msgMap[m.id] = m));
@@ -616,7 +625,16 @@ export default function App() {
         <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
-              <h3 className="text-muted">Please only talk about coding</h3>
+              <div className="text-center">
+                <h3 className="text-muted">
+                  {activeMode === MODE_RANDOM ? "🎲 Talk about anything" : "Please only talk about coding"}
+                </h3>
+                <div className="text-muted mt-2">
+                  {activeMode === MODE_RANDOM
+                    ? "Random conversation — no system prompt"
+                    : "Tech conversation — math & CS assistant"}
+                </div>
+              </div>
             </div>
           ) : (
             <Container className="px-0" style={{ maxWidth: "800px" }}>
@@ -644,7 +662,38 @@ export default function App() {
 
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
-            <ChatInput key={activeConversation || "new-chat"} onSend={(text) => sendMessage(text)} />
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <ButtonGroup size="sm" aria-label="Conversation mode">
+                <Button
+                  variant={activeMode === MODE_TECH ? "primary" : "outline-secondary"}
+                  onClick={() => setNewChatMode(MODE_TECH)}
+                  disabled={modeLocked}
+                  title={modeLocked ? "Mode is fixed per conversation" : "Mode 1: tech assistant with the tech system prompt"}
+                >
+                  🧮 Tech
+                </Button>
+                <Button
+                  variant={activeMode === MODE_RANDOM ? "warning" : "outline-secondary"}
+                  onClick={() => setNewChatMode(MODE_RANDOM)}
+                  disabled={modeLocked}
+                  title={modeLocked ? "Mode is fixed per conversation" : "Mode 2: no system prompt, talk about anything"}
+                >
+                  🎲 Random
+                </Button>
+              </ButtonGroup>
+              <small className="text-muted">
+                {modeLocked
+                  ? `🔒 ${activeMode === MODE_RANDOM ? "Random" : "Tech"} conversation — mode is fixed`
+                  : activeMode === MODE_RANDOM
+                    ? "Mode 2 — no system prompt, talk about anything"
+                    : "Mode 1 — system prompt: math & CS only"}
+              </small>
+            </div>
+            <ChatInput
+              key={activeConversation || "new-chat"}
+              onSend={(text) => sendMessage(text)}
+              placeholder={activeMode === MODE_RANDOM ? "Talk about anything" : "Please only talk about coding"}
+            />
           </Container>
         </div>
       </div>

@@ -1,8 +1,13 @@
 - A separate file to call the LLM, minimal and fast interface
-- User can set a default model, no default system instructions. User provides the API, but all the endpoints are in the backend, enter sends the message in the frontend, autofocus on page load, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
+- Two conversation modes, each with its own Gemini API key so usage is calculated and billed separately in the backend (the frontend never sees the keys, it only knows the mode):
+  - Mode 1 **tech** (default) — runs with the `SYSTEM_PROMPT_TECH` prompt from `.env` (math/CS assistant)
+  - Mode 2 **random** — no system prompt at all, talk about anything
+- The mode is set per conversation and never expires: a random conversation is always random when you come back to it, and new conversations default to tech
+- The prompts and both API keys live in `.env` (see `.env.example` — every line is `export`-prefixed so the file can also be `source`d), user can set a default model (`gemini-3.8-flash`), enter sends the message in the frontend, autofocus on page load, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
 - User can copy (purely on frontend), edit, branch, and delete any messages by user or bot, user can "retry" for every previous bot message, based on messages before that, user can copy the specific code snippets
   - Delete: Delete means deleting only the one message and not deleting anything else
-  - Branch: Branch means duplicating the entire message so far and not having any more relationships
+  - Branch: Branch means duplicating the entire message so far and not having any more relationships (the branch inherits the conversation's mode)
   - Retry: Retrying means first deleting the message, before invoking the LLM again
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
+- Development (`npm run dev`) is a test run: no access password and no API keys are asked for, and the LLM is mocked with a fixed reply telling you which mode the conversation is in ("you are in mode 1 tech / mode 2 random"); production (`npm run build && npm start`) uses the real Gemini APIs with the `.env` keys and authenticates with `APP_PASSWORD`

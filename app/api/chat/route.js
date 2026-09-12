@@ -1,11 +1,28 @@
 import { NextResponse } from "next/server";
 import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
-import { callLLM } from "@/lib/llm";
+import { callLLM, getApiKey, getSystemPrompt } from "@/lib/llm";
+import { normalizeMode } from "@/lib/constants";
 
 export async function POST(req) {
-  const { messages, userMsgId, botMsgId, parentId, conversationId, apiKey, model } = await req.json();
+  const { messages, userMsgId, botMsgId, parentId, conversationId, model, mode: requestedMode } = await req.json();
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
+
+  // The mode belongs to the conversation itself and never expires: coming back
+  // to a "random" conversation always keeps it random. It is stored on the
+  // conversation record in Redis; the client value is only a fallback for the
+  // very first message of a brand new conversation.
+  const conv = await redis.hgetall(`conv:${conversationId}`).catch(() => null);
+  const mode = normalizeMode(conv?.mode || requestedMode);
+
+  // Two separate API keys (one per mode) so usage is calculated and billed
+  // separately in the backend. The system prompt comes from the environment:
+  // tech mode uses SYSTEM_PROMPT_TECH, random mode has none at all.
+  const apiKey = getApiKey(mode);
+  const systemPrompt = getSystemPrompt(mode);
+  if (mode === "tech" && !systemPrompt) {
+    console.warn("[chat] SYSTEM_PROMPT_TECH is not set — tech conversations will run without a system prompt.");
+  }
 
   const pipeline = redis.pipeline();
 
@@ -38,6 +55,8 @@ export async function POST(req) {
     await callLLM({
       apiKey,
       model,
+      systemPrompt,
+      mode,
       messages,
       onChunk: async (chunk) => {
         finalContent += chunk;

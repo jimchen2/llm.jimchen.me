@@ -55,16 +55,6 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
           </Form.Group>
           
           <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">API Key</Form.Label>
-            <Form.Control 
-              type="password" 
-              placeholder="API Key" 
-              value={settings.apiKey || ''} 
-              onChange={e => setSettings({...settings, apiKey: e.target.value})} 
-            />
-          </Form.Group>
-          
-          <Form.Group className="mb-3">
             <Form.Label className="fw-bold">Model</Form.Label>
             <Form.Control 
               type="text" 
@@ -72,16 +62,9 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               value={settings.model || ''} 
               onChange={e => setSettings({...settings, model: e.target.value})} 
             />
-          </Form.Group>
-          
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">System Prompt</Form.Label>
-            <Form.Control 
-              as="textarea" 
-              rows={3} 
-              value={settings.systemPrompt} 
-              onChange={e => setSettings({...settings, systemPrompt: e.target.value})} 
-            />
+            <Form.Text className="text-muted">
+              Default: gemini-3.8-flash. API keys and prompts live server-side in .env (see .env.example).
+            </Form.Text>
           </Form.Group>
         </Form>
       </Modal.Body>

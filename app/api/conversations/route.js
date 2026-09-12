@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
+import { normalizeMode } from '@/lib/constants';
 
 export async function GET(req) {
   const url = new URL(req.url);
@@ -20,12 +21,19 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const { id, title } = await req.json();
+  const { id, title, mode } = await req.json();
   const now = Date.now();
 
   const pipeline = redis.pipeline();
   pipeline.zadd('conversations:index', now, id);
-  pipeline.hset(`conv:${id}`, { id, title: title || 'New Conversation', created_at: now });
+  // The mode ('tech' | 'random') is stored on the conversation record and
+  // persists for the life of the conversation — it defaults to tech.
+  pipeline.hset(`conv:${id}`, {
+    id,
+    title: title || 'New Conversation',
+    mode: normalizeMode(mode),
+    created_at: now,
+  });
   
   // Set expiration
   pipeline.expire('conversations:index', CACHE_TTL_SECONDS);

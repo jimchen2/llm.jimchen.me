@@ -3,16 +3,23 @@ import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
 
 export async function GET(req) {
   const conversationId = req.nextUrl.searchParams.get('conversationId');
-  if (!conversationId) return NextResponse.json([]);
+  if (!conversationId) return NextResponse.json({ conversation: null, messages: [] });
 
-  const rawMessages = await redis.hgetall(`msgs:${conversationId}`);
-  if (!rawMessages) return NextResponse.json([]);
+  // Return the conversation record too, so the frontend always knows which
+  // mode the conversation is in (it never has to guess or let it "expire").
+  const [rawMessages, conversation] = await Promise.all([
+    redis.hgetall(`msgs:${conversationId}`),
+    redis.hgetall(`conv:${conversationId}`),
+  ]);
 
-  const rows = Object.values(rawMessages)
+  const rows = Object.values(rawMessages || {})
     .map(m => typeof m === 'string' ? JSON.parse(m) : m)
     .sort((a, b) => a.created_at - b.created_at);
 
-  return NextResponse.json(rows);
+  return NextResponse.json({
+    conversation: conversation && conversation.id ? conversation : null,
+    messages: rows,
+  });
 }
 
 export async function DELETE(req) {
