@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Modal, Form, Button } from 'react-bootstrap';
+import { Modal, Form, Button, ListGroup, Badge } from 'react-bootstrap';
+import { DEFAULT_MODE } from '../lib/modes';
 
 export default function SettingsModal({ show, onHide, settings, setSettings, onSave }) {
   const [isDark, setIsDark] = useState(false);
@@ -37,6 +38,8 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
     }
   };
 
+  const modes = settings.modes || [];
+
   return (
     <Modal show={show} onHide={onHide} centered>
       <Modal.Header closeButton>
@@ -53,35 +56,45 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               onChange={handleDarkModeToggle}
             />
           </Form.Group>
-          
+
           <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">API Key</Form.Label>
-            <Form.Control 
-              type="password" 
-              placeholder="API Key" 
-              value={settings.apiKey || ''} 
-              onChange={e => setSettings({...settings, apiKey: e.target.value})} 
+            <Form.Label className="fw-bold">Model override</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder={settings.defaultModel}
+              value={settings.modelOverride || ''}
+              onChange={e => setSettings({...settings, modelOverride: e.target.value})}
             />
+            <Form.Text className="text-muted">
+              Leave empty to use the model configured for each mode (default: <code>{settings.defaultModel}</code>).
+            </Form.Text>
           </Form.Group>
-          
+
+          {/* API keys and system prompts are server side only (see .env.example) */}
           <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">Model</Form.Label>
-            <Form.Control 
-              type="text" 
-              placeholder="Model" 
-              value={settings.model || ''} 
-              onChange={e => setSettings({...settings, model: e.target.value})} 
-            />
-          </Form.Group>
-          
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">System Prompt</Form.Label>
-            <Form.Control 
-              as="textarea" 
-              rows={3} 
-              value={settings.systemPrompt} 
-              onChange={e => setSettings({...settings, systemPrompt: e.target.value})} 
-            />
+            <Form.Label className="fw-bold">Modes</Form.Label>
+            <ListGroup variant="flush">
+              {modes.map(m => (
+                <ListGroup.Item key={m.id} className="px-0 py-2">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span className="fw-semibold">{m.icon} Mode {m.number} · {m.label}{m.id === DEFAULT_MODE ? ' (default)' : ''}</span>
+                    <Badge bg={m.mocked ? 'warning' : 'success'} text={m.mocked ? 'dark' : undefined}>
+                      {m.mocked ? 'mock (dev)' : 'key set'}
+                    </Badge>
+                  </div>
+                  <div className="small text-muted">
+                    model <code>{m.model}</code> · key <code>{m.apiKeyEnv}</code>
+                  </div>
+                  <div className="small text-muted">
+                    system prompt: {m.hasSystemPrompt ? <code>{m.systemPromptEnv}</code> : <em>none (sent to the model without any system prompt)</em>}
+                  </div>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+            <Form.Text className="text-muted">
+              API keys and system prompts live in the server environment, not in this dialog — see
+              {' '}<code>.env.example</code>. Each mode keeps its own key so usage can be billed separately.
+            </Form.Text>
           </Form.Group>
         </Form>
       </Modal.Body>

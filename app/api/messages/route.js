@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
+import { isAuthorized, unauthorized } from '@/lib/auth';
 
 export async function GET(req) {
+  if (!isAuthorized(req)) return unauthorized();
+
   const conversationId = req.nextUrl.searchParams.get('conversationId');
   if (!conversationId) return NextResponse.json([]);
 
@@ -16,6 +19,8 @@ export async function GET(req) {
 }
 
 export async function DELETE(req) {
+  if (!isAuthorized(req)) return unauthorized();
+
   const { id } = await req.json();
   
   // Since we don't pass conversationId in DELETE easily, we have to find it
@@ -50,6 +55,8 @@ export async function DELETE(req) {
 }
 
 export async function PUT(req) {
+  if (!isAuthorized(req)) return unauthorized();
+
   const { id, content } = await req.json();
   const keys = await redis.keys('msgs:*');
   for (const key of keys) {
@@ -65,6 +72,8 @@ export async function PUT(req) {
 }
 
 export async function POST(req) {
+  if (!isAuthorized(req)) return unauthorized();
+
   const { messages } = await req.json();
   if (Array.isArray(messages) && messages.length > 0) {
     const convId = messages[0].conversation_id;

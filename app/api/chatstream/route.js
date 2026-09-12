@@ -1,6 +1,9 @@
 import { redisSubscriber } from '@/lib/redis';
+import { isAuthorized, unauthorized } from '@/lib/auth';
 
 export async function GET(req) {
+  if (!isAuthorized(req)) return unauthorized();
+
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return new Response('Missing message ID', { status: 400 });
 
@@ -13,6 +16,14 @@ export async function GET(req) {
         if (incomingChannel !== targetChannel) return;
 
         if (message === '[DONE]') {
+          // Tell the browser we are finished *before* closing: otherwise the
+          // EventSource treats the closed connection as an error and reconnects
+          // (which would leak one subscription per answer).
+          try {
+            controller.enqueue('data: [DONE]\n\n');
+          } catch {
+            /* already closed */
+          }
           cleanup();
           controller.close();
           return;
@@ -48,6 +59,8 @@ export async function GET(req) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
+      // Make sure proxies (nginx, the sandbox preview, …) do not buffer SSE.
+      'X-Accel-Buffering': 'no',
     },
   });
 }

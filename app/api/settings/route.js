@@ -1,33 +1,47 @@
 // app/api/settings/route.js
+//
+// Per-user settings only. API keys and system prompts are *not* settable from
+// the browser anymore: they live in the server environment (see .env.example)
+// and are resolved per mode in lib/llm.js / lib/prompts.js.
+
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
+import { DEFAULT_MODEL, isModeMocked, resolveModel } from '@/lib/llm';
+import { DEFAULT_MODE, MODE_LIST, normalizeMode } from '@/lib/modes';
+import { hasSystemPrompt } from '@/lib/prompts';
+import { IS_DEV } from '@/lib/config';
+import { isAuthorized, unauthorized } from '@/lib/auth';
 
-export const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
-
-function isAuthorized(request) {
-  const token = request.headers.get('x-db-token');
-  const validToken = process.env.APP_PASSWORD || 'your-default-password';
-  return token === validToken;
+function describeModes() {
+  return MODE_LIST.map((mode) => ({
+    id: mode.id,
+    number: mode.number,
+    label: mode.label,
+    icon: mode.icon,
+    hint: mode.hint,
+    model: resolveModel(mode.id),
+    apiKeyEnv: mode.apiKeyEnv,
+    systemPromptEnv: mode.id === 'random' ? 'SYSTEM_PROMPT_RANDOM' : 'SYSTEM_PROMPT_TECH',
+    hasSystemPrompt: hasSystemPrompt(mode.id),
+    mocked: isModeMocked(mode.id),
+  }));
 }
 
 export async function GET(request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!isAuthorized(request)) return unauthorized();
 
   try {
     const rawConfig = await redis.get('app_llm_settings');
     const config = rawConfig ? JSON.parse(rawConfig) : {};
 
-    // Check if custom prompt is still alive in Redis (expires after 3 minutes)
-    const customPrompt = await redis.get('app_llm_temp_system_prompt');
-
     return NextResponse.json({
       settings: {
-        apiKey: config.apiKey ?? '',
-        model: config.model ?? 'gemini-3.7-flash',
-        systemPrompt: customPrompt !== null ? customPrompt : DEFAULT_SYSTEM_PROMPT,
+        // Optional: force one model for both modes (empty = use the .env default).
+        modelOverride: config.modelOverride ?? '',
+        defaultModel: DEFAULT_MODEL,
+        defaultMode: normalizeMode(config.defaultMode || DEFAULT_MODE),
+        modes: describeModes(),
+        devMode: IS_DEV,
       },
     });
   } catch (err) {
@@ -36,25 +50,13 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!isAuthorized(request)) return unauthorized();
 
   try {
     const body = await request.json();
-    const { apiKey, model, systemPrompt } = body;
+    const { modelOverride } = body;
 
-    // 1. Save general settings persistently
-    await redis.set('app_llm_settings', JSON.stringify({ apiKey, model }));
-
-    // 2. Handle 3-minute temporary system prompt
-    if (systemPrompt && systemPrompt.trim() !== '' && systemPrompt.trim() !== DEFAULT_SYSTEM_PROMPT) {
-      // Set key with 180 seconds (3 minutes) TTL
-      await redis.set('app_llm_temp_system_prompt', systemPrompt.trim(), 'EX', 180);
-    } else {
-      // If cleared or reset to default, delete the temporary key immediately
-      await redis.del('app_llm_temp_system_prompt');
-    }
+    await redis.set('app_llm_settings', JSON.stringify({ modelOverride: (modelOverride || '').trim() }));
 
     return NextResponse.json({ success: true });
   } catch (err) {

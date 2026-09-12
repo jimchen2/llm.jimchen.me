@@ -1,11 +1,12 @@
 'use client';
-import { Button, ListGroup } from 'react-bootstrap';
+import { Badge, Button, ListGroup } from 'react-bootstrap';
+import { MODES, normalizeMode } from '../lib/modes';
 
 export default function Sidebar({ 
   conversations, 
   activeConversation, 
   handleNewChat, 
-  loadMessages, 
+  openConversation, 
   handleDeleteConversation, 
   setShowSettings,
   dbToken,
@@ -33,18 +34,29 @@ export default function Sidebar({
       
       <div className="flex-grow-1 overflow-auto p-2" onScroll={handleScroll}>
         <ListGroup variant="flush">
-          {conversations.map(c => (
+          {conversations.map(c => {
+            const convMode = MODES[normalizeMode(c.mode)];
+            return (
             <ListGroup.Item 
               as="div"
               key={c.id} 
               action 
-              onClick={() => loadMessages(dbToken, c.id)}
+              onClick={() => openConversation(dbToken, c.id)}
               className={`d-flex justify-content-between align-items-center rounded mb-1 text-light border-0 ${
                 c.id === activeConversation ? 'bg-secondary' : 'bg-dark'
               }`}
               style={{ cursor: 'pointer' }}
             >
-              <span className="text-truncate flex-grow-1 me-2">{c.title}</span>
+              <span className="text-truncate flex-grow-1 me-2">
+                <Badge
+                  bg={convMode.id === 'tech' ? 'primary' : 'secondary'}
+                  className="me-2 align-middle"
+                  title={convMode.hint}
+                >
+                  {convMode.number}
+                </Badge>
+                {c.title}
+              </span>
               <Button 
                 variant="link" 
                 className="p-0 text-white-50 text-decoration-none fs-5" 
@@ -53,7 +65,8 @@ export default function Sidebar({
                 &times;
               </Button>
             </ListGroup.Item>
-          ))}
+            );
+          })}
         </ListGroup>
         
         {/* Loading Spinner / Text indicator */}

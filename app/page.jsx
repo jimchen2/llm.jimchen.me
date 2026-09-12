@@ -2,15 +2,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-bootstrap";
+import { Container, Button, Form, InputGroup, Offcanvas, Modal, ButtonGroup, Badge } from "react-bootstrap";
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
+import { DEFAULT_MODE, MODES, MODE_LIST, normalizeMode } from "../lib/modes";
+import { DEV_ACCESS_TOKEN, FALLBACK_MODEL, IS_DEV } from "../lib/config";
 
-const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
-
-const ChatInput = ({ onSend }) => {
+const ChatInput = ({ onSend, placeholder }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
 
@@ -44,7 +43,7 @@ const ChatInput = ({ onSend }) => {
           e.target.style.height = `${e.target.scrollHeight}px`;
         }}
         onKeyDown={handleKeyDown}
-        placeholder="Please only talk about coding"
+        placeholder={placeholder}
       />
       <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={submitMessage}>
         Send
@@ -53,6 +52,36 @@ const ChatInput = ({ onSend }) => {
   );
 };
 
+// Mode switcher. A mode is fixed for the lifetime of a conversation, so this is
+// only interactive while composing a brand new chat.
+const ModePicker = ({ mode, setMode, locked }) => (
+  <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
+    <ButtonGroup size="sm">
+      {MODE_LIST.map((m) => (
+        <Button
+          key={m.id}
+          variant={mode === m.id ? "primary" : "outline-secondary"}
+          onClick={() => !locked && setMode(m.id)}
+          disabled={locked}
+          title={m.hint}
+        >
+          {m.icon} Mode {m.number}: {m.label}
+        </Button>
+      ))}
+    </ButtonGroup>
+    <small className="text-muted">
+      {locked
+        ? "Conversation mode is fixed — start a new chat to switch."
+        : MODES[mode].hint}
+    </small>
+    {IS_DEV && (
+      <Badge bg="warning" text="dark">
+        dev · no API key needed
+      </Badge>
+    )}
+  </div>
+);
+
 export default function App() {
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
@@ -60,6 +89,9 @@ export default function App() {
   const [currentId, setCurrentId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // Mode of the conversation being viewed / composed (defaults to tech mode).
+  const [mode, setMode] = useState(DEFAULT_MODE);
 
   // Authentication Modal State
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -72,14 +104,30 @@ export default function App() {
 
   const isInitializedRef = useRef(false);
 
+  // No API key and no system prompt live in the browser anymore: they are
+  // configured on the server (.env) and only referenced by mode.
   const [settings, setSettings] = useState({
-    apiKey: "",
-    model: "gemini-3.7-flash",
     dbToken: "",
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
+    modelOverride: "",
+    defaultModel: FALLBACK_MODEL,
+    modes: [],
+    defaultMode: DEFAULT_MODE,
+    devMode: IS_DEV,
   });
 
   const endOfMessagesRef = useRef(null);
+  // The edit handler below is registered once, on mount, so it reads the token
+  // from a ref instead of from a stale closure.
+  const dbTokenRef = useRef("");
+
+  const modesById = settings.modes.reduce((acc, m) => ({ ...acc, [m.id]: m }), {});
+  const activeModelName = modesById[mode]?.model || settings.modelOverride || settings.defaultModel;
+
+  const displayNameFor = (msg) => {
+    if (msg.role === "user") return "You";
+    if (msg.model) return `${msg.model} · ${MODES[normalizeMode(msg.mode ?? mode)].label}`;
+    return activeModelName;
+  };
 
   const fetchRemoteSettings = async (token) => {
     try {
@@ -90,14 +138,17 @@ export default function App() {
 
       const data = await res.json();
       if (data.settings) {
-        setSettings({
+        setSettings((prev) => ({
+          ...prev,
           dbToken: token,
-          apiKey: data.settings.apiKey ?? "",
-          model: data.settings.model ?? "gemini-3.7-flash",
-          systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
-        });
+          modelOverride: data.settings.modelOverride ?? "",
+          defaultModel: data.settings.defaultModel ?? FALLBACK_MODEL,
+          modes: data.settings.modes ?? [],
+          defaultMode: normalizeMode(data.settings.defaultMode),
+          devMode: !!data.settings.devMode,
+        }));
       } else {
-        setSettings((prev) => ({ ...prev, dbToken: token, systemPrompt: DEFAULT_SYSTEM_PROMPT }));
+        setSettings((prev) => ({ ...prev, dbToken: token }));
       }
       return true;
     } catch {
@@ -124,10 +175,14 @@ export default function App() {
     }
 
     if (urlId) {
-      loadMessages(token, urlId);
+      openConversation(token, urlId);
     }
     isInitializedRef.current = true;
   };
+
+  useEffect(() => {
+    dbTokenRef.current = settings.dbToken;
+  }, [settings.dbToken]);
 
   useEffect(() => {
     if (document.cookie.split("; ").find((row) => row.startsWith("theme=dark"))) {
@@ -136,7 +191,9 @@ export default function App() {
       });
     }
 
-    const savedToken = localStorage.getItem("db_access_token");
+    // In development the app never asks for a password: it authenticates with
+    // the built-in dev token and the backend serves the fixed mock answers.
+    const savedToken = localStorage.getItem("db_access_token") || (IS_DEV ? DEV_ACCESS_TOKEN : null);
     if (!savedToken) {
       setShowAuthModal(true);
     } else {
@@ -154,7 +211,7 @@ export default function App() {
       const { id, content } = e.detail;
       await fetch("/api/messages", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+        headers: { "Content-Type": "application/json", "x-db-token": dbTokenRef.current },
         body: JSON.stringify({ id, content }),
       });
       setMessages((prev) => ({ ...prev, [id]: { ...prev[id], content } }));
@@ -204,29 +261,40 @@ export default function App() {
       .finally(() => setIsLoadingConv(false));
   };
 
-  const loadMessages = (dbToken, convId) => {
-    fetch(`/api/messages?conversationId=${convId}`, { headers: { "x-db-token": dbToken } })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || data.error) return;
-        const msgMap = {};
-        let lastId = null;
-        data.forEach((m) => {
-          msgMap[m.id] = m;
-          lastId = m.id;
-        });
-        setMessages(msgMap);
-        setCurrentId(lastId);
-        setActiveConversation(convId);
-        setShowMobileMenu(false);
-      })
-      .catch(console.error);
+  // Opening a conversation restores its stored mode: a random conversation is
+  // always a random conversation, a tech conversation is always tech.
+  const openConversation = async (dbToken, convId) => {
+    try {
+      const [convRes, msgsRes] = await Promise.all([
+        fetch(`/api/conversations?id=${convId}`, { headers: { "x-db-token": dbToken } }),
+        fetch(`/api/messages?conversationId=${convId}`, { headers: { "x-db-token": dbToken } }),
+      ]);
+
+      const conv = await convRes.json();
+      const data = await msgsRes.json();
+      if (!data || data.error) return;
+
+      const msgMap = {};
+      let lastId = null;
+      data.forEach((m) => {
+        msgMap[m.id] = m;
+        lastId = m.id;
+      });
+      setMessages(msgMap);
+      setCurrentId(lastId);
+      setActiveConversation(convId);
+      setMode(normalizeMode(conv?.mode));
+      setShowMobileMenu(false);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleNewChat = () => {
     setActiveConversation(null);
     setMessages({});
     setCurrentId(null);
+    setMode(settings.defaultMode || DEFAULT_MODE); // new chats always start in tech mode
     setShowMobileMenu(false);
   };
 
@@ -251,9 +319,7 @@ export default function App() {
           "x-db-token": settings.dbToken,
         },
         body: JSON.stringify({
-          apiKey: settings.apiKey,
-          model: settings.model,
-          systemPrompt: settings.systemPrompt,
+          modelOverride: settings.modelOverride,
         }),
       });
 
@@ -285,8 +351,8 @@ export default function App() {
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
   const sendMessage = async (text = null, parentOverride = null, isBotRetry = false) => {
-    if ((!text?.trim() && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
-      if (!settings.dbToken || !settings.apiKey) alert("Configure API Key in Settings.");
+    if ((!text?.trim() && !isBotRetry) || !settings.dbToken) {
+      if (!settings.dbToken) alert("Access password is required.");
       return;
     }
 
@@ -298,6 +364,9 @@ export default function App() {
       convId = generateId();
     }
 
+    // The mode is decided when the conversation is created and never changes.
+    const convMode = normalizeMode(mode);
+
     const parentId = parentOverride !== null ? parentOverride : currentId;
     const userMsgId = generateId();
     const botMsgId = generateId();
@@ -305,9 +374,16 @@ export default function App() {
     const newMsgs = { ...messages };
 
     if (!isBotRetry) {
-      newMsgs[userMsgId] = { id: userMsgId, parent_id: parentId, role: "user", content };
+      newMsgs[userMsgId] = { id: userMsgId, parent_id: parentId, role: "user", content, mode: convMode };
     }
-    newMsgs[botMsgId] = { id: botMsgId, parent_id: isBotRetry ? parentId : userMsgId, role: "assistant", content: "" };
+    newMsgs[botMsgId] = {
+      id: botMsgId,
+      parent_id: isBotRetry ? parentId : userMsgId,
+      role: "assistant",
+      content: "",
+      mode: convMode,
+      model: modesById[convMode]?.model || activeModelName,
+    };
 
     setMessages(newMsgs);
     setCurrentId(botMsgId);
@@ -315,7 +391,7 @@ export default function App() {
     const title = content ? content.substring(0, 30) + (content.length > 30 ? "..." : "") : "New Chat";
     if (isNewConv) {
       setActiveConversation(convId);
-      setConversations((prev) => [{ id: convId, title }, ...prev]);
+      setConversations((prev) => [{ id: convId, title, mode: convMode }, ...prev]);
     }
 
     const path = [];
@@ -324,30 +400,15 @@ export default function App() {
       path.unshift({ role: newMsgs[curr].role, content: newMsgs[curr].content });
       curr = newMsgs[curr].parent_id;
     }
-
-    // Always fetch latest prompt to ensure expiration fallback is respected
-    let activeSystemPrompt = settings.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT;
-    try {
-      const res = await fetch("/api/settings", { headers: { "x-db-token": settings.dbToken } });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.settings?.systemPrompt) {
-          activeSystemPrompt = data.settings.systemPrompt;
-          setSettings((prev) => ({ ...prev, systemPrompt: activeSystemPrompt }));
-        }
-      }
-    } catch (e) {
-      console.warn("Could not sync fresh prompt status, using client state", e);
-    }
-
-    path.unshift({ role: "system", content: activeSystemPrompt });
+    // No system prompt is added here: the server picks the one that belongs to
+    // the conversation's mode (and mode 2 sends none at all).
 
     try {
       if (isNewConv) {
         await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-          body: JSON.stringify({ id: convId, title }),
+          body: JSON.stringify({ id: convId, title, mode: convMode }),
         });
       }
 
@@ -360,8 +421,8 @@ export default function App() {
           botMsgId,
           parentId,
           conversationId: convId,
-          apiKey: settings.apiKey,
-          model: settings.model,
+          mode: convMode,
+          model: settings.modelOverride || undefined,
         }),
       });
 
@@ -372,7 +433,18 @@ export default function App() {
       const source = new EventSource(`/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`);
 
       source.onmessage = (e) => {
-        const chunk = JSON.parse(e.data);
+        // "[DONE]" is the end-of-answer marker: close the stream ourselves so
+        // the browser does not try to reconnect to a finished answer.
+        if (e.data === "[DONE]") {
+          source.close();
+          return;
+        }
+        let chunk;
+        try {
+          chunk = JSON.parse(e.data);
+        } catch {
+          return;
+        }
         setMessages((prev) => ({
           ...prev,
           [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk },
@@ -419,12 +491,14 @@ export default function App() {
 
     const newConvId = generateId();
     const title = "Branch: " + (conversations.find((c) => c.id === activeConversation)?.title || "New");
+    // Branches inherit the mode of the conversation they were branched from.
+    const branchMode = normalizeMode(messages[msgId]?.mode ?? mode);
 
     try {
       await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id: newConvId, title }),
+        body: JSON.stringify({ id: newConvId, title, mode: branchMode }),
       });
 
       const newMessages = [];
@@ -441,6 +515,8 @@ export default function App() {
           parent_id: m.parent_id ? idMap[m.parent_id] : null,
           role: m.role,
           content: m.content,
+          mode: m.mode ?? branchMode,
+          model: m.model,
           created_at: time++,
         });
         lastNewId = newId;
@@ -452,8 +528,9 @@ export default function App() {
         body: JSON.stringify({ messages: newMessages }),
       });
 
-      setConversations((prev) => [{ id: newConvId, title }, ...prev]);
+      setConversations((prev) => [{ id: newConvId, title, mode: branchMode }, ...prev]);
       setActiveConversation(newConvId);
+      setMode(branchMode);
 
       const msgMap = {};
       newMessages.forEach((m) => (msgMap[m.id] = m));
@@ -560,7 +637,7 @@ export default function App() {
           conversations={conversations}
           activeConversation={activeConversation}
           handleNewChat={handleNewChat}
-          loadMessages={loadMessages}
+          openConversation={openConversation}
           handleDeleteConversation={handleDeleteConversation}
           setShowSettings={handleOpenSettings}
           dbToken={settings.dbToken}
@@ -585,7 +662,7 @@ export default function App() {
             conversations={conversations}
             activeConversation={activeConversation}
             handleNewChat={handleNewChat}
-            loadMessages={loadMessages}
+            openConversation={openConversation}
             handleDeleteConversation={handleDeleteConversation}
             setShowSettings={handleOpenSettings}
             dbToken={settings.dbToken}
@@ -615,8 +692,11 @@ export default function App() {
 
         <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
           {activePath.length === 0 ? (
-            <div className="h-100 d-flex justify-content-center align-items-center">
-              <h3 className="text-muted">Please only talk about coding</h3>
+            <div className="h-100 d-flex flex-column justify-content-center align-items-center">
+              <h3 className="text-muted text-center">{MODES[mode].emptyState}</h3>
+              <small className="text-secondary mt-2">
+                Mode {MODES[mode].number} · {MODES[mode].label} — {MODES[mode].hint}
+              </small>
             </div>
           ) : (
             <Container className="px-0" style={{ maxWidth: "800px" }}>
@@ -633,7 +713,7 @@ export default function App() {
                     handleBranch={handleBranch}
                     handleRetry={handleRetry}
                     deleteMessage={deleteMessage}
-                    modelName={settings.model}
+                    modelName={displayNameFor(msg)}
                   />
                 );
               })}
@@ -644,7 +724,8 @@ export default function App() {
 
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
-            <ChatInput key={activeConversation || "new-chat"} onSend={(text) => sendMessage(text)} />
+            <ModePicker mode={mode} setMode={setMode} locked={!!activeConversation} />
+            <ChatInput key={activeConversation || `new-chat-${mode}`} onSend={(text) => sendMessage(text)} placeholder={MODES[mode].placeholder} />
           </Container>
         </div>
       </div>
