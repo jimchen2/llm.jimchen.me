@@ -198,24 +198,43 @@ export default function App() {
   const loadConversations = (dbToken, offset = 0) => {
     setIsLoadingConv(true);
     fetch(`/api/conversations?offset=${offset}&limit=10`, { headers: { "x-db-token": dbToken } })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.error) {
-          if (offset === 0) {
-            setConversations(data);
-          } else {
-            setConversations((prev) => [...prev, ...data]);
-          }
-          setHasMoreConv(data.length === 10);
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(`Failed to load conversations (${r.status})`);
         }
+        return r.json();
       })
-      .catch(console.error)
+      .then((data) => {
+        // Guard against phantom rows (e.g. conversations whose Redis hash
+        // expired but whose ID lingered in the index).
+        const valid = Array.isArray(data) ? data.filter((c) => c && c.id) : [];
+
+        if (offset === 0) {
+          setConversations(valid);
+        } else {
+          setConversations((prev) => [...prev, ...valid]);
+        }
+        setHasMoreConv(valid.length === 10);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (offset === 0) setHasMoreConv(false);
+      })
       .finally(() => setIsLoadingConv(false));
   };
 
   const loadMessages = (dbToken, convId) => {
     fetch(`/api/messages?conversationId=${convId}`, { headers: { "x-db-token": dbToken } })
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok) {
+          const err = new Error(data?.error || `Failed to load messages (${r.status})`);
+          err.status = r.status;
+          err.conversationExpired = data?.error === "conversation_expired";
+          throw err;
+        }
+        return data;
+      })
       .then((data) => {
         if (!data || data.error) return;
         const msgMap = {};
@@ -229,7 +248,27 @@ export default function App() {
         setActiveConversation(convId);
         setShowMobileMenu(false);
       })
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        // The conversation's data expired server-side: drop the phantom entry
+        // from the sidebar and clear the view instead of showing a stale chat.
+        if (err.conversationExpired || err.status === 404) {
+          setConversations((prev) => prev.filter((c) => c.id !== convId));
+          if (activeConversation === convId) {
+            setActiveConversation(null);
+            setMessages({});
+            setCurrentId(null);
+          }
+          // Clean the expired ID out of the URL as well.
+          if (
+            typeof window !== "undefined" &&
+            (window.location.pathname.startsWith("/chat/") ||
+              new URLSearchParams(window.location.search).get("chat"))
+          ) {
+            window.history.replaceState({}, "", "/");
+          }
+        }
+      });
   };
 
   const handleNewChat = () => {

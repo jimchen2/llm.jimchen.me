@@ -5,6 +5,18 @@ export async function GET(req) {
   const conversationId = req.nextUrl.searchParams.get('conversationId');
   if (!conversationId) return NextResponse.json([]);
 
+  // If the conversation itself has already expired (its hash is gone), tell
+  // the client so it can remove the phantom entry from its sidebar instead of
+  // opening an empty chat. A conversation that exists but simply has no
+  // messages yet is still a valid, empty conversation.
+  const convExists = await redis.exists(`conv:${conversationId}`);
+  if (!convExists) {
+    return NextResponse.json(
+      { error: 'conversation_expired', conversationId },
+      { status: 404 }
+    );
+  }
+
   const rawMessages = await redis.hgetall(`msgs:${conversationId}`);
   if (!rawMessages) return NextResponse.json([]);
 
