@@ -58,29 +58,24 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             <Form.Label className="fw-bold">API Key</Form.Label>
             <Form.Control 
               type="password" 
-              placeholder="API Key" 
+              placeholder={settings.hasServerApiKey ? "Using server key (override here)" : "API Key"} 
               value={settings.apiKey || ''} 
               onChange={e => setSettings({...settings, apiKey: e.target.value})} 
             />
+            {settings.hasServerApiKey && (
+              <Form.Text className="text-muted">
+                Server already has GEMINI_API_KEY configured — only fill this to override it.
+              </Form.Text>
+            )}
           </Form.Group>
           
           <Form.Group className="mb-3">
             <Form.Label className="fw-bold">Model</Form.Label>
             <Form.Control 
               type="text" 
-              placeholder="Model" 
+              placeholder="gemini-3.8-flash" 
               value={settings.model || ''} 
               onChange={e => setSettings({...settings, model: e.target.value})} 
-            />
-          </Form.Group>
-          
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">System Prompt</Form.Label>
-            <Form.Control 
-              as="textarea" 
-              rows={3} 
-              value={settings.systemPrompt} 
-              onChange={e => setSettings({...settings, systemPrompt: e.target.value})} 
             />
           </Form.Group>
         </Form>

@@ -7,10 +7,12 @@ import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 
-const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
+const DEFAULT_MODEL = "gemini-3.8-flash";
+// Two modes: "tech" (server applies the tech system prompt) and
+// "random" (no system prompt at all). New chats default to tech.
+const MODES = { TECH: "tech", RANDOM: "random" };
 
-const ChatInput = ({ onSend }) => {
+const ChatInput = ({ onSend, placeholder }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
 
@@ -44,7 +46,7 @@ const ChatInput = ({ onSend }) => {
           e.target.style.height = `${e.target.scrollHeight}px`;
         }}
         onKeyDown={handleKeyDown}
-        placeholder="Please only talk about coding"
+        placeholder={placeholder}
       />
       <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={submitMessage}>
         Send
@@ -56,6 +58,7 @@ const ChatInput = ({ onSend }) => {
 export default function App() {
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
+  const [mode, setMode] = useState(MODES.TECH);
   const [messages, setMessages] = useState({});
   const [currentId, setCurrentId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -74,9 +77,9 @@ export default function App() {
 
   const [settings, setSettings] = useState({
     apiKey: "",
-    model: "gemini-3.7-flash",
+    model: DEFAULT_MODEL,
     dbToken: "",
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
+    hasServerApiKey: false,
   });
 
   const endOfMessagesRef = useRef(null);
@@ -93,11 +96,11 @@ export default function App() {
         setSettings({
           dbToken: token,
           apiKey: data.settings.apiKey ?? "",
-          model: data.settings.model ?? "gemini-3.7-flash",
-          systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
+          model: data.settings.model ?? DEFAULT_MODEL,
+          hasServerApiKey: data.settings.hasServerApiKey ?? false,
         });
       } else {
-        setSettings((prev) => ({ ...prev, dbToken: token, systemPrompt: DEFAULT_SYSTEM_PROMPT }));
+        setSettings((prev) => ({ ...prev, dbToken: token }));
       }
       return true;
     } catch {
@@ -204,7 +207,31 @@ export default function App() {
       .finally(() => setIsLoadingConv(false));
   };
 
+  const handleModeChange = async (newMode) => {
+    setMode(newMode);
+    if (!activeConversation || !settings.dbToken) return;
+    // Persist the mode on the conversation so it sticks when coming back.
+    try {
+      await fetch("/api/conversations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+        body: JSON.stringify({ id: activeConversation, mode: newMode }),
+      });
+      setConversations((prev) => prev.map((c) => (c.id === activeConversation ? { ...c, mode: newMode } : c)));
+    } catch (e) {
+      console.warn("Could not persist conversation mode", e);
+    }
+  };
+
   const loadMessages = (dbToken, convId) => {
+    // Restore this conversation's mode (tech by default).
+    fetch(`/api/conversations?id=${convId}`, { headers: { "x-db-token": dbToken } })
+      .then((r) => r.json())
+      .then((conv) => {
+        if (conv && conv.mode) setMode(conv.mode);
+      })
+      .catch(console.error);
+
     fetch(`/api/messages?conversationId=${convId}`, { headers: { "x-db-token": dbToken } })
       .then((r) => r.json())
       .then((data) => {
@@ -227,6 +254,7 @@ export default function App() {
     setActiveConversation(null);
     setMessages({});
     setCurrentId(null);
+    setMode(MODES.TECH);
     setShowMobileMenu(false);
   };
 
@@ -253,7 +281,6 @@ export default function App() {
         body: JSON.stringify({
           apiKey: settings.apiKey,
           model: settings.model,
-          systemPrompt: settings.systemPrompt,
         }),
       });
 
@@ -285,8 +312,13 @@ export default function App() {
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
   const sendMessage = async (text = null, parentOverride = null, isBotRetry = false) => {
-    if ((!text?.trim() && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
-      if (!settings.dbToken || !settings.apiKey) alert("Configure API Key in Settings.");
+    if ((!text?.trim() && !isBotRetry) || !settings.dbToken) {
+      if (!settings.dbToken) alert("Missing access token. Please re-authenticate.");
+      return;
+    }
+    // The server key (GEMINI_API_KEY env) covers this when no client key is set.
+    if (!settings.apiKey && !settings.hasServerApiKey) {
+      alert("Configure API Key in Settings (or set GEMINI_API_KEY on the server).");
       return;
     }
 
@@ -315,7 +347,7 @@ export default function App() {
     const title = content ? content.substring(0, 30) + (content.length > 30 ? "..." : "") : "New Chat";
     if (isNewConv) {
       setActiveConversation(convId);
-      setConversations((prev) => [{ id: convId, title }, ...prev]);
+      setConversations((prev) => [{ id: convId, title, mode }, ...prev]);
     }
 
     const path = [];
@@ -325,33 +357,18 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    // Always fetch latest prompt to ensure expiration fallback is respected
-    let activeSystemPrompt = settings.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT;
-    try {
-      const res = await fetch("/api/settings", { headers: { "x-db-token": settings.dbToken } });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.settings?.systemPrompt) {
-          activeSystemPrompt = data.settings.systemPrompt;
-          setSettings((prev) => ({ ...prev, systemPrompt: activeSystemPrompt }));
-        }
-      }
-    } catch (e) {
-      console.warn("Could not sync fresh prompt status, using client state", e);
-    }
-
-    path.unshift({ role: "system", content: activeSystemPrompt });
-
+    // No client-side system prompt anymore: the /api/chat/:mode endpoint
+    // applies the tech prompt server-side (random mode uses none).
     try {
       if (isNewConv) {
         await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-          body: JSON.stringify({ id: convId, title }),
+          body: JSON.stringify({ id: convId, title, mode }),
         });
       }
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`/api/chat/${mode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
         body: JSON.stringify({
@@ -424,7 +441,7 @@ export default function App() {
       await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id: newConvId, title }),
+        body: JSON.stringify({ id: newConvId, title, mode }),
       });
 
       const newMessages = [];
@@ -452,7 +469,7 @@ export default function App() {
         body: JSON.stringify({ messages: newMessages }),
       });
 
-      setConversations((prev) => [{ id: newConvId, title }, ...prev]);
+      setConversations((prev) => [{ id: newConvId, title, mode }, ...prev]);
       setActiveConversation(newConvId);
 
       const msgMap = {};
@@ -616,7 +633,9 @@ export default function App() {
         <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
-              <h3 className="text-muted">Please only talk about coding</h3>
+              <h3 className="text-muted">
+                {mode === MODES.RANDOM ? "Talk about anything" : "Please only talk about coding"}
+              </h3>
             </div>
           ) : (
             <Container className="px-0" style={{ maxWidth: "800px" }}>
@@ -644,7 +663,30 @@ export default function App() {
 
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
-            <ChatInput key={activeConversation || "new-chat"} onSend={(text) => sendMessage(text)} />
+            <div className="d-flex gap-2 mb-2 align-items-center">
+              <Button
+                size="sm"
+                variant={mode === MODES.TECH ? "primary" : "outline-secondary"}
+                onClick={() => handleModeChange(MODES.TECH)}
+              >
+                🔧 Tech
+              </Button>
+              <Button
+                size="sm"
+                variant={mode === MODES.RANDOM ? "primary" : "outline-secondary"}
+                onClick={() => handleModeChange(MODES.RANDOM)}
+              >
+                🎲 Random
+              </Button>
+              <small className="text-muted ms-1">
+                {mode === MODES.RANDOM ? "Talk about anything" : "Math & CS only"}
+              </small>
+            </div>
+            <ChatInput
+              key={activeConversation || "new-chat"}
+              onSend={(text) => sendMessage(text)}
+              placeholder={mode === MODES.RANDOM ? "Talk about anything..." : "Please only talk about coding"}
+            />
           </Container>
         </div>
       </div>

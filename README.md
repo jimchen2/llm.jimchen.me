@@ -6,3 +6,5 @@
   - Retry: Retrying means first deleting the message, before invoking the LLM again
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
+- Two modes, stored per conversation (new chats default to tech): tech mode applies the `TECH_SYSTEM_PROMPT` env var server-side via `POST /api/chat/tech`, random mode uses no system prompt at all via `POST /api/chat/random`
+- Server config lives in env (see `.env.example`, exported from `lib/config.js`): `GEMINI_API_KEY` (used when the client sets no key), `DEFAULT_MODEL` (`gemini-3.8-flash`), `TECH_SYSTEM_PROMPT`
