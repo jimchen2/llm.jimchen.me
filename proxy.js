@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
-export function middleware(req) {
+// Next.js 16 "proxy" convention (formerly middleware).
+export function proxy(req) {
   const token = req.headers.get('x-db-token') || req.nextUrl.searchParams.get('dbToken');
-  const validToken = process.env.APP_PASSWORD; 
+  const validToken = process.env.APP_PASSWORD;
 
   if (!token || token !== validToken) {
     return new NextResponse(

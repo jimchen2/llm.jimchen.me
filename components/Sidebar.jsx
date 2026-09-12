@@ -44,7 +44,10 @@ export default function Sidebar({
               }`}
               style={{ cursor: 'pointer' }}
             >
-              <span className="text-truncate flex-grow-1 me-2">{c.title}</span>
+              <span className="text-truncate flex-grow-1 me-2">
+                {c.mode === 'random' && <span title="Random conversation" className="me-1">🎲</span>}
+                {c.title}
+              </span>
               <Button 
                 variant="link" 
                 className="p-0 text-white-50 text-decoration-none fs-5" 

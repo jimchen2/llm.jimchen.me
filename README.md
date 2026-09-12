@@ -1,8 +1,47 @@
-- A separate file to call the LLM, minimal and fast interface
-- User can set a default model, no default system instructions. User provides the API, but all the endpoints are in the backend, enter sends the message in the frontend, autofocus on page load, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
-- User can copy (purely on frontend), edit, branch, and delete any messages by user or bot, user can "retry" for every previous bot message, based on messages before that, user can copy the specific code snippets
-  - Delete: Delete means deleting only the one message and not deleting anything else
-  - Branch: Branch means duplicating the entire message so far and not having any more relationships
-  - Retry: Retrying means first deleting the message, before invoking the LLM again
-  - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
-- All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
+# LLM Chat (llm.jimchen.me)
+
+Minimal, fast single-user chat interface for Gemini.
+
+- Messages are streamed (SSE) and persisted server-side in Redis
+- Single password authentication
+- Copy, edit, branch, delete any message; retry bot messages
+- Markdown + KaTeX rendering via `vscode/markdown-it-katex`
+
+## Modes
+
+There are two conversation modes, and the mode **belongs to the conversation**:
+
+| Mode | System prompt | Gemini API key |
+| --- | --- | --- |
+| 🛠 **Tech** (default) | `TECH_MODE_SYSTEM_PROMPT` (math/cs assistant) | `TECH_MODE_API_KEY` |
+| 🎲 **Random** | none — talk about anything | `RANDOM_MODE_API_KEY` |
+
+- New chats start in **Tech** mode. Switching the mode on an open conversation persists it, so a
+  random conversation always comes back as a random conversation.
+- Each mode has its own Gemini API key so usage is billed/tracked separately per mode. Keys and
+  system prompts are resolved in the backend only — the frontend never handles API keys.
+
+## Configuration
+
+All secrets/prompts live in env vars — see `.env.example`:
+
+```
+REDIS_URL, APP_PASSWORD, DEFAULT_MODEL,
+TECH_MODE_API_KEY, RANDOM_MODE_API_KEY, TECH_MODE_SYSTEM_PROMPT,
+MOCK_LLM (optional)
+```
+
+## Development test mode
+
+Outside production (`NODE_ENV !== 'production'`) the LLM is **mocked**: every message gets a fixed
+reply ("You are in Mode 1 (Tech)" / "You are in Mode 2 (Random)") and no API keys are needed.
+Set `MOCK_LLM=false` to make real Gemini calls during development.
+
+## Run
+
+```bash
+npm install
+cp .env.example .env   # fill in values
+npm run dev            # test run (mocked LLM)
+npm run build && npm start   # production (real LLM)
+```

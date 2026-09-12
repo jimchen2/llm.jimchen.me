@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
 import { callLLM } from "@/lib/llm";
+import { getModeConfig, MODES, VALID_MODES } from "@/lib/config";
 
 export async function POST(req) {
-  const { messages, userMsgId, botMsgId, parentId, conversationId, apiKey, model } = await req.json();
+  const { messages, userMsgId, botMsgId, parentId, conversationId, model, mode } = await req.json();
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
+
+  // The mode lives on the conversation itself, so it persists across visits.
+  // Falls back to the mode sent with the request, then to tech (the default).
+  const storedMode = await redis.hget(`conv:${conversationId}`, 'mode');
+  const activeMode = VALID_MODES.includes(storedMode)
+    ? storedMode
+    : (VALID_MODES.includes(mode) ? mode : MODES.TECH);
+
+  // Backend picks the API key + system prompt per mode (separate billing per mode).
+  // The frontend never handles API keys.
+  const { apiKey, systemPrompt } = getModeConfig(activeMode);
 
   const pipeline = redis.pipeline();
 
@@ -25,11 +37,11 @@ export async function POST(req) {
   };
   pipeline.hset(msgKey, botMsgId, JSON.stringify(botPayload));
   pipeline.expire(msgKey, CACHE_TTL_SECONDS);
-  
+
   // Extend conversation index expiration
   pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
   pipeline.expire(`conv:${conversationId}`, CACHE_TTL_SECONDS);
-  
+
   await pipeline.exec();
 
   // Background processing
@@ -39,6 +51,8 @@ export async function POST(req) {
       apiKey,
       model,
       messages,
+      systemPrompt,
+      mode: activeMode,
       onChunk: async (chunk) => {
         finalContent += chunk;
         await redis.publish(`msg:${botMsgId}:channel`, JSON.stringify(chunk));
