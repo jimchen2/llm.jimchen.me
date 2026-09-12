@@ -217,16 +217,18 @@ export default function App() {
     fetch(`/api/messages?conversationId=${convId}`, { headers: { "x-db-token": dbToken } })
       .then((r) => r.json())
       .then((data) => {
-        if (!data || data.error) return;
+        if (!data || data.error || !data.messages) return;
         const msgMap = {};
         let lastId = null;
-        data.forEach((m) => {
+        data.messages.forEach((m) => {
           msgMap[m.id] = m;
           lastId = m.id;
         });
         setMessages(msgMap);
         setCurrentId(lastId);
         setActiveConversation(convId);
+        // Continue this conversation in the mode it was created with.
+        setSettings((prev) => ({ ...prev, mode: data.mode || "default" }));
         setShowMobileMenu(false);
       })
       .catch(console.error);
