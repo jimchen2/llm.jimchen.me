@@ -25,8 +25,8 @@ export async function GET(request) {
 
     return NextResponse.json({
       settings: {
-        apiKey: config.apiKey ?? '',
-        model: config.model ?? 'gemini-3.7-flash',
+        apiKey: config.apiKey ?? process.env.GEMINI_API_KEY ?? '',
+        model: config.model ?? process.env.DEFAULT_MODEL ?? 'gemini-3.8-flash',
         systemPrompt: customPrompt !== null ? customPrompt : DEFAULT_SYSTEM_PROMPT,
       },
     });
