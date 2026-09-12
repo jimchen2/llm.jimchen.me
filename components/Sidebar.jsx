@@ -12,7 +12,8 @@ export default function Sidebar({
   dbToken,
   loadMore,
   hasMore,
-  isLoading
+  isLoading,
+  defaultMode
 }) {
 
   // Infinite scroll trigger function
@@ -31,7 +32,7 @@ export default function Sidebar({
           + New Chat
         </Button>
         <div className="text-center text-secondary mt-2" style={{ fontSize: '0.75rem' }}>
-          New chats default to 🧮 tech mode
+          New chats start in {normalizeMode(defaultMode) === MODE_RANDOM ? '🎲 random' : '🧮 tech'} mode
         </div>
       </div>
       

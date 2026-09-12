@@ -2,11 +2,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Container, Button, Form, InputGroup, Offcanvas, Modal, ButtonGroup } from "react-bootstrap";
+import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-bootstrap";
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
-import { DEFAULT_MODEL, DEFAULT_MODE, MODE_TECH, MODE_RANDOM, normalizeMode } from "@/lib/constants";
+import { DEFAULT_MODEL, DEFAULT_MODE, MODE_RANDOM, normalizeMode } from "@/lib/constants";
 
 // Development test runs: no access password and no API keys required.
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -81,6 +81,7 @@ export default function App() {
 
   const [settings, setSettings] = useState({
     model: DEFAULT_MODEL,
+    defaultMode: DEFAULT_MODE,
     dbToken: "",
   });
 
@@ -99,10 +100,14 @@ export default function App() {
 
       const data = await res.json();
       if (data.settings) {
+        const serverDefaultMode = normalizeMode(data.settings.defaultMode);
         setSettings((prev) => ({
           dbToken: token,
           model: data.settings.model || DEFAULT_MODEL,
+          defaultMode: serverDefaultMode,
         }));
+        // The saved default mode applies to the next new conversation.
+        setNewChatMode(serverDefaultMode);
       } else {
         setSettings((prev) => ({ ...prev, dbToken: token }));
       }
@@ -242,9 +247,9 @@ export default function App() {
     setActiveConversation(null);
     setMessages({});
     setCurrentId(null);
-    // New conversations always default to a tech conversation.
+    // New conversations use the default mode saved in Settings (tech by default).
     setConvMode(null);
-    setNewChatMode(DEFAULT_MODE);
+    setNewChatMode(normalizeMode(settings.defaultMode));
     setShowMobileMenu(false);
   };
 
@@ -260,6 +265,13 @@ export default function App() {
     if (activeConversation === id) handleNewChat();
   };
 
+  // The mode picker lives in Settings: on a new chat it chooses (and becomes)
+  // the default mode for new conversations; an open conversation is locked.
+  const handleModeChange = (m) => {
+    setNewChatMode(m);
+    setSettings((prev) => ({ ...prev, defaultMode: m }));
+  };
+
   const saveSettings = async () => {
     try {
       const res = await fetch("/api/settings", {
@@ -270,6 +282,7 @@ export default function App() {
         },
         body: JSON.stringify({
           model: settings.model,
+          defaultMode: settings.defaultMode,
         }),
       });
 
@@ -576,6 +589,7 @@ export default function App() {
           loadMore={() => loadConversations(settings.dbToken, conversations.length)}
           hasMore={hasMoreConv}
           isLoading={isLoadingConv}
+          defaultMode={settings.defaultMode}
         />
       </div>
 
@@ -601,6 +615,7 @@ export default function App() {
             loadMore={() => loadConversations(settings.dbToken, conversations.length)}
             hasMore={hasMoreConv}
             isLoading={isLoadingConv}
+            defaultMode={settings.defaultMode}
           />
         </Offcanvas.Body>
       </Offcanvas>
@@ -611,6 +626,9 @@ export default function App() {
         settings={settings}
         setSettings={setSettings}
         onSave={saveSettings}
+        mode={activeMode}
+        modeLocked={modeLocked}
+        onModeChange={handleModeChange}
       />
 
       {/* Main Area */}
@@ -634,6 +652,11 @@ export default function App() {
                     ? "Random conversation — no system prompt"
                     : "Tech conversation — math & CS assistant"}
                 </div>
+                {!modeLocked && (
+                  <div className="text-muted mt-1" style={{ fontSize: "0.85rem" }}>
+                    ⚙ Pick the mode for this chat in Settings
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -662,33 +685,6 @@ export default function App() {
 
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <ButtonGroup size="sm" aria-label="Conversation mode">
-                <Button
-                  variant={activeMode === MODE_TECH ? "primary" : "outline-secondary"}
-                  onClick={() => setNewChatMode(MODE_TECH)}
-                  disabled={modeLocked}
-                  title={modeLocked ? "Mode is fixed per conversation" : "Mode 1: tech assistant with the tech system prompt"}
-                >
-                  🧮 Tech
-                </Button>
-                <Button
-                  variant={activeMode === MODE_RANDOM ? "warning" : "outline-secondary"}
-                  onClick={() => setNewChatMode(MODE_RANDOM)}
-                  disabled={modeLocked}
-                  title={modeLocked ? "Mode is fixed per conversation" : "Mode 2: no system prompt, talk about anything"}
-                >
-                  🎲 Random
-                </Button>
-              </ButtonGroup>
-              <small className="text-muted">
-                {modeLocked
-                  ? `🔒 ${activeMode === MODE_RANDOM ? "Random" : "Tech"} conversation — mode is fixed`
-                  : activeMode === MODE_RANDOM
-                    ? "Mode 2 — no system prompt, talk about anything"
-                    : "Mode 1 — system prompt: math & CS only"}
-              </small>
-            </div>
             <ChatInput
               key={activeConversation || "new-chat"}
               onSend={(text) => sendMessage(text)}

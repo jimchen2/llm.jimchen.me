@@ -1,7 +1,7 @@
 // app/api/settings/route.js
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
-import { DEFAULT_MODEL } from '@/lib/constants';
+import { DEFAULT_MODEL, normalizeMode } from '@/lib/constants';
 
 // Development test runs are open: no access password required.
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -29,6 +29,9 @@ export async function GET(request) {
     return NextResponse.json({
       settings: {
         model: config.model ?? DEFAULT_MODEL,
+        // Default mode for NEW conversations (tech | random); each existing
+        // conversation keeps its own stored mode.
+        defaultMode: normalizeMode(config.defaultMode),
       },
     });
   } catch (err) {
@@ -43,9 +46,12 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { model } = body;
+    const { model, defaultMode } = body;
 
-    await redis.set('app_llm_settings', JSON.stringify({ model: model || DEFAULT_MODEL }));
+    await redis.set(
+      'app_llm_settings',
+      JSON.stringify({ model: model || DEFAULT_MODEL, defaultMode: normalizeMode(defaultMode) })
+    );
 
     return NextResponse.json({ success: true });
   } catch (err) {

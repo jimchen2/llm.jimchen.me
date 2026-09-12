@@ -2,7 +2,7 @@
 - Two conversation modes, each with its own Gemini API key so usage is calculated and billed separately in the backend (the frontend never sees the keys, it only knows the mode):
   - Mode 1 **tech** (default) — runs with the `SYSTEM_PROMPT_TECH` prompt from `.env` (math/CS assistant)
   - Mode 2 **random** — no system prompt at all, talk about anything
-- The mode is set per conversation and never expires: a random conversation is always random when you come back to it, and new conversations default to tech
+- The mode is set per conversation and never expires: a random conversation is always random when you come back to it, and new conversations default to tech — the mode picker lives in Settings (⚙) next to the model, and locks to the conversation's mode once it exists
 - The prompts and both API keys live in `.env` (see `.env.example` — every line is `export`-prefixed so the file can also be `source`d), user can set a default model (`gemini-3.8-flash`), enter sends the message in the frontend, autofocus on page load, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
 - User can copy (purely on frontend), edit, branch, and delete any messages by user or bot, user can "retry" for every previous bot message, based on messages before that, user can copy the specific code snippets
   - Delete: Delete means deleting only the one message and not deleting anything else
