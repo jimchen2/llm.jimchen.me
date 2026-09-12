@@ -65,13 +65,17 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
           </Form.Group>
           
           <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">System Prompt</Form.Label>
-            <Form.Control 
-              as="textarea" 
-              rows={3} 
-              value={settings.systemPrompt} 
-              onChange={e => setSettings({...settings, systemPrompt: e.target.value})} 
-            />
+            <Form.Label className="fw-bold">Mode</Form.Label>
+            <Form.Select 
+              value={settings.mode || 'default'}
+              onChange={e => setSettings({...settings, mode: e.target.value})} 
+            >
+              <option value="default">Default mode</option>
+              <option value="random">Random mode</option>
+            </Form.Select>
+            <Form.Text className="text-muted">
+              Each mode uses its own API key and system prompt, configured via environment variables.
+            </Form.Text>
           </Form.Group>
         </Form>
       </Modal.Body>

@@ -1,9 +1,7 @@
 // app/api/settings/route.js
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
-
-export const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
+import { MODES, DEFAULT_MODE, normalizeMode } from '@/lib/modes';
 
 function isAuthorized(request) {
   const token = request.headers.get('x-db-token');
@@ -20,13 +18,11 @@ export async function GET(request) {
     const rawConfig = await redis.get('app_llm_settings');
     const config = rawConfig ? JSON.parse(rawConfig) : {};
 
-    // Check if custom prompt is still alive in Redis (expires after 3 minutes)
-    const customPrompt = await redis.get('app_llm_temp_system_prompt');
-
     return NextResponse.json({
       settings: {
         model: config.model ?? process.env.DEFAULT_MODEL ?? 'gemini-3.8-flash',
-        systemPrompt: customPrompt !== null ? customPrompt : DEFAULT_SYSTEM_PROMPT,
+        mode: normalizeMode(config.mode),
+        modes: MODES,
       },
     });
   } catch (err) {
@@ -41,19 +37,14 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { model, systemPrompt } = body;
+    const { model, mode } = body;
 
-    // 1. Save general settings persistently
-    await redis.set('app_llm_settings', JSON.stringify({ model }));
-
-    // 2. Handle 3-minute temporary system prompt
-    if (systemPrompt && systemPrompt.trim() !== '' && systemPrompt.trim() !== DEFAULT_SYSTEM_PROMPT) {
-      // Set key with 180 seconds (3 minutes) TTL
-      await redis.set('app_llm_temp_system_prompt', systemPrompt.trim(), 'EX', 180);
-    } else {
-      // If cleared or reset to default, delete the temporary key immediately
-      await redis.del('app_llm_temp_system_prompt');
-    }
+    // Save general settings persistently (mode only, not system prompts —
+    // those live in the environment, never in Redis).
+    await redis.set(
+      'app_llm_settings',
+      JSON.stringify({ model, mode: normalizeMode(mode || DEFAULT_MODE) })
+    );
 
     return NextResponse.json({ success: true });
   } catch (err) {
