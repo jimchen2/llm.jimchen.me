@@ -89,7 +89,7 @@ export default function App() {
         setSettings({
           dbToken: token,
           model: data.settings.model ?? "gemini-3.8-flash",
-          mode: data.settings.mode ?? "default",
+          mode: "default",
         });
       } else {
         setSettings((prev) => ({ ...prev, dbToken: token, mode: "default" }));
@@ -102,7 +102,21 @@ export default function App() {
 
   const handleOpenSettings = async () => {
     if (settings.dbToken) {
-      await fetchRemoteSettings(settings.dbToken);
+      // Refresh model from server, but don't reset mode — mode is per-conversation
+      // and only resets on page refresh or new chat.
+      try {
+        const res = await fetch("/api/settings", {
+          headers: { "x-db-token": settings.dbToken },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings?.model) {
+            setSettings((prev) => ({ ...prev, model: data.settings.model }));
+          }
+        }
+      } catch {
+        // ignore — just show modal with current settings
+      }
     }
     setShowSettings(true);
   };
@@ -223,6 +237,7 @@ export default function App() {
     setMessages({});
     setCurrentId(null);
     setShowMobileMenu(false);
+    setSettings((prev) => ({ ...prev, mode: "default" }));
   };
 
   const handleDeleteConversation = async (e, id) => {
@@ -307,9 +322,15 @@ export default function App() {
     setCurrentId(botMsgId);
 
     const title = content ? content.substring(0, 30) + (content.length > 30 ? "..." : "") : "New Chat";
+    // Determine the mode for this conversation:
+    // - New conversations get the current settings.mode (which defaults to "default" on refresh/new chat).
+    // - Existing conversations keep the mode they were created with.
+    const conversationMode = isNewConv
+      ? settings.mode
+      : (conversations.find((c) => c.id === convId)?.mode || "default");
     if (isNewConv) {
       setActiveConversation(convId);
-      setConversations((prev) => [{ id: convId, title }, ...prev]);
+      setConversations((prev) => [{ id: convId, title, mode: conversationMode }, ...prev]);
     }
 
     const path = [];
@@ -324,7 +345,7 @@ export default function App() {
         await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-          body: JSON.stringify({ id: convId, title }),
+          body: JSON.stringify({ id: convId, title, mode: conversationMode }),
         });
       }
 
@@ -338,7 +359,7 @@ export default function App() {
           parentId,
           conversationId: convId,
           model: settings.model,
-          mode: settings.mode,
+          mode: conversationMode,
         }),
       });
 
@@ -395,13 +416,15 @@ export default function App() {
     }
 
     const newConvId = generateId();
-    const title = "Branch: " + (conversations.find((c) => c.id === activeConversation)?.title || "New");
+    const sourceConv = conversations.find((c) => c.id === activeConversation);
+    const title = "Branch: " + (sourceConv?.title || "New");
+    const branchMode = sourceConv?.mode || "default";
 
     try {
       await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id: newConvId, title }),
+        body: JSON.stringify({ id: newConvId, title, mode: branchMode }),
       });
 
       const newMessages = [];
@@ -429,7 +452,7 @@ export default function App() {
         body: JSON.stringify({ messages: newMessages }),
       });
 
-      setConversations((prev) => [{ id: newConvId, title }, ...prev]);
+      setConversations((prev) => [{ id: newConvId, title, mode: branchMode }, ...prev]);
       setActiveConversation(newConvId);
 
       const msgMap = {};

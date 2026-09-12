@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
+import { DEFAULT_MODE, normalizeMode } from '@/lib/modes';
 
 export async function GET(req) {
   const url = new URL(req.url);
@@ -15,17 +16,21 @@ export async function GET(req) {
   convIds.forEach(id => pipeline.hgetall(`conv:${id}`));
   const results = await pipeline.exec();
 
-  const rows = results.map(([err, data]) => data).filter(Boolean);
+  const rows = results
+    .map(([err, data]) => data)
+    .filter(Boolean)
+    .map((row) => ({ ...row, mode: normalizeMode(row.mode) }));
   return NextResponse.json(rows);
 }
 
 export async function POST(req) {
-  const { id, title } = await req.json();
+  const { id, title, mode } = await req.json();
   const now = Date.now();
+  const resolvedMode = normalizeMode(mode || DEFAULT_MODE);
 
   const pipeline = redis.pipeline();
   pipeline.zadd('conversations:index', now, id);
-  pipeline.hset(`conv:${id}`, { id, title: title || 'New Conversation', created_at: now });
+  pipeline.hset(`conv:${id}`, { id, title: title || 'New Conversation', created_at: now, mode: resolvedMode });
   
   // Set expiration
   pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
