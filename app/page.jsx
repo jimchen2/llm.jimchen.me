@@ -73,7 +73,6 @@ export default function App() {
   const isInitializedRef = useRef(false);
 
   const [settings, setSettings] = useState({
-    apiKey: "",
     model: "gemini-3.7-flash",
     dbToken: "",
     systemPrompt: DEFAULT_SYSTEM_PROMPT,
@@ -92,7 +91,6 @@ export default function App() {
       if (data.settings) {
         setSettings({
           dbToken: token,
-          apiKey: data.settings.apiKey ?? "",
           model: data.settings.model ?? "gemini-3.8-flash",
           systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
         });
@@ -251,7 +249,6 @@ export default function App() {
           "x-db-token": settings.dbToken,
         },
         body: JSON.stringify({
-          apiKey: settings.apiKey,
           model: settings.model,
           systemPrompt: settings.systemPrompt,
         }),
@@ -285,8 +282,8 @@ export default function App() {
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
   const sendMessage = async (text = null, parentOverride = null, isBotRetry = false) => {
-    if ((!text?.trim() && !isBotRetry) || !settings.apiKey || !settings.dbToken) {
-      if (!settings.dbToken || !settings.apiKey) alert("Configure API Key in Settings.");
+    if ((!text?.trim() && !isBotRetry) || !settings.dbToken) {
+      if (!settings.dbToken) alert("Please authenticate first.");
       return;
     }
 
@@ -360,7 +357,6 @@ export default function App() {
           botMsgId,
           parentId,
           conversationId: convId,
-          apiKey: settings.apiKey,
           model: settings.model,
         }),
       });
