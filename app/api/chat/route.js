@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
-import { callLLM } from "@/lib/llm";
+import { callLLM, getModeConfig } from "@/lib/llm";
 
 export async function POST(req) {
-  const { messages, userMsgId, botMsgId, parentId, conversationId, model } = await req.json();
+  const { messages, userMsgId, botMsgId, parentId, conversationId, model, mode } = await req.json();
+  // Resolve the selected mode's API key and system prompt from the env
+  const { apiKey, systemPrompt } = getModeConfig(mode);
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
 
@@ -38,6 +40,8 @@ export async function POST(req) {
     await callLLM({
       model,
       messages,
+      apiKey,
+      systemPrompt,
       onChunk: async (chunk) => {
         finalContent += chunk;
         await redis.publish(`msg:${botMsgId}:channel`, JSON.stringify(chunk));

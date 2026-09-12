@@ -7,9 +7,6 @@ import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 
-const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
-
 const ChatInput = ({ onSend }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
@@ -75,7 +72,7 @@ export default function App() {
   const [settings, setSettings] = useState({
     model: "gemini-3.7-flash",
     dbToken: "",
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
+    mode: "default",
   });
 
   const endOfMessagesRef = useRef(null);
@@ -92,10 +89,10 @@ export default function App() {
         setSettings({
           dbToken: token,
           model: data.settings.model ?? "gemini-3.8-flash",
-          systemPrompt: data.settings.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
+          mode: data.settings.mode ?? "default",
         });
       } else {
-        setSettings((prev) => ({ ...prev, dbToken: token, systemPrompt: DEFAULT_SYSTEM_PROMPT }));
+        setSettings((prev) => ({ ...prev, dbToken: token }));
       }
       return true;
     } catch {
@@ -250,7 +247,7 @@ export default function App() {
         },
         body: JSON.stringify({
           model: settings.model,
-          systemPrompt: settings.systemPrompt,
+          mode: settings.mode,
         }),
       });
 
@@ -322,23 +319,6 @@ export default function App() {
       curr = newMsgs[curr].parent_id;
     }
 
-    // Always fetch latest prompt to ensure expiration fallback is respected
-    let activeSystemPrompt = settings.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT;
-    try {
-      const res = await fetch("/api/settings", { headers: { "x-db-token": settings.dbToken } });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.settings?.systemPrompt) {
-          activeSystemPrompt = data.settings.systemPrompt;
-          setSettings((prev) => ({ ...prev, systemPrompt: activeSystemPrompt }));
-        }
-      }
-    } catch (e) {
-      console.warn("Could not sync fresh prompt status, using client state", e);
-    }
-
-    path.unshift({ role: "system", content: activeSystemPrompt });
-
     try {
       if (isNewConv) {
         await fetch("/api/conversations", {
@@ -358,6 +338,7 @@ export default function App() {
           parentId,
           conversationId: convId,
           model: settings.model,
+          mode: settings.mode,
         }),
       });
 

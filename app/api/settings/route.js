@@ -2,9 +2,6 @@
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
 
-export const DEFAULT_SYSTEM_PROMPT =
-  "You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries.";
-
 function isAuthorized(request) {
   const token = request.headers.get('x-db-token');
   const validToken = process.env.APP_PASSWORD || 'your-default-password';
@@ -20,13 +17,11 @@ export async function GET(request) {
     const rawConfig = await redis.get('app_llm_settings');
     const config = rawConfig ? JSON.parse(rawConfig) : {};
 
-    // Check if custom prompt is still alive in Redis (expires after 3 minutes)
-    const customPrompt = await redis.get('app_llm_temp_system_prompt');
-
+    // Only the mode name is stored; system prompts and API keys come from the env.
     return NextResponse.json({
       settings: {
         model: config.model ?? process.env.DEFAULT_MODEL ?? 'gemini-3.8-flash',
-        systemPrompt: customPrompt !== null ? customPrompt : DEFAULT_SYSTEM_PROMPT,
+        mode: config.mode === 'random' ? 'random' : 'default',
       },
     });
   } catch (err) {
@@ -41,19 +36,16 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { model, systemPrompt } = body;
+    const { model, mode } = body;
 
-    // 1. Save general settings persistently
-    await redis.set('app_llm_settings', JSON.stringify({ model }));
-
-    // 2. Handle 3-minute temporary system prompt
-    if (systemPrompt && systemPrompt.trim() !== '' && systemPrompt.trim() !== DEFAULT_SYSTEM_PROMPT) {
-      // Set key with 180 seconds (3 minutes) TTL
-      await redis.set('app_llm_temp_system_prompt', systemPrompt.trim(), 'EX', 180);
-    } else {
-      // If cleared or reset to default, delete the temporary key immediately
-      await redis.del('app_llm_temp_system_prompt');
-    }
+    // Do not persist prompts: a mode is resolved from the env on every request.
+    await redis.set(
+      'app_llm_settings',
+      JSON.stringify({
+        model,
+        mode: mode === 'random' ? 'random' : 'default',
+      })
+    );
 
     return NextResponse.json({ success: true });
   } catch (err) {
