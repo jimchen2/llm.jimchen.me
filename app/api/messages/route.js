@@ -1,18 +1,24 @@
 import { NextResponse } from 'next/server';
 import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
+import { normalizeMode } from '@/lib/modes';
 
 export async function GET(req) {
   const conversationId = req.nextUrl.searchParams.get('conversationId');
-  if (!conversationId) return NextResponse.json([]);
+  if (!conversationId) return NextResponse.json({ messages: [], mode: normalizeMode(null) });
 
-  const rawMessages = await redis.hgetall(`msgs:${conversationId}`);
-  if (!rawMessages) return NextResponse.json([]);
+  const [rawMessages, conv] = await Promise.all([
+    redis.hgetall(`msgs:${conversationId}`),
+    redis.hgetall(`conv:${conversationId}`),
+  ]);
 
-  const rows = Object.values(rawMessages)
-    .map(m => typeof m === 'string' ? JSON.parse(m) : m)
-    .sort((a, b) => a.created_at - b.created_at);
+  const rows = rawMessages
+    ? Object.values(rawMessages)
+        .map(m => typeof m === 'string' ? JSON.parse(m) : m)
+        .sort((a, b) => a.created_at - b.created_at)
+    : [];
 
-  return NextResponse.json(rows);
+  // Include the conversation's mode so the client continues it in that mode.
+  return NextResponse.json({ messages: rows, mode: normalizeMode(conv?.mode) });
 }
 
 export async function DELETE(req) {

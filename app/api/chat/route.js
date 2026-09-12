@@ -1,16 +1,34 @@
 import { NextResponse } from "next/server";
 import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
 import { callLLM } from "@/lib/llm";
-import { getModeConfig } from "@/lib/modes";
+import { getModeConfig, normalizeMode } from "@/lib/modes";
 
 export async function POST(req) {
-  const { messages, userMsgId, botMsgId, parentId, conversationId, model, mode } = await req.json();
+  const { messages, userMsgId, botMsgId, parentId, conversationId, model, mode: requestedMode } = await req.json();
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
+
+  // A conversation always continues in the mode it was created with (stored on
+  // the conversation record). Only conversations without a stored mode yet fall
+  // back to the requested mode — and that mode is then locked in.
+  let mode = normalizeMode(requestedMode);
+  let lockMode = false;
+  if (conversationId) {
+    const storedMode = await redis.hget(`conv:${conversationId}`, "mode");
+    if (storedMode) {
+      mode = normalizeMode(storedMode);
+    } else {
+      lockMode = true;
+    }
+  }
 
   const { apiKey, systemPrompt } = getModeConfig(mode);
 
   const pipeline = redis.pipeline();
+
+  if (lockMode) {
+    pipeline.hset(`conv:${conversationId}`, { mode });
+  }
 
   // Save User Message
   if (userMsg && userMsg.role === "user" && userMsgId) {
