@@ -3,7 +3,7 @@ import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
 import { callLLM } from "@/lib/llm";
 
 export async function POST(req) {
-  const { messages, userMsgId, botMsgId, parentId, conversationId, apiKey, model } = await req.json();
+  const { messages, userMsgId, botMsgId, parentId, conversationId, model } = await req.json();
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
 
@@ -36,7 +36,6 @@ export async function POST(req) {
   process.nextTick(async () => {
     let finalContent = "";
     await callLLM({
-      apiKey,
       model,
       messages,
       onChunk: async (chunk) => {

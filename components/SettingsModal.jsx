@@ -55,16 +55,6 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
           </Form.Group>
           
           <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">API Key</Form.Label>
-            <Form.Control 
-              type="password" 
-              placeholder="API Key" 
-              value={settings.apiKey || ''} 
-              onChange={e => setSettings({...settings, apiKey: e.target.value})} 
-            />
-          </Form.Group>
-          
-          <Form.Group className="mb-3">
             <Form.Label className="fw-bold">Model</Form.Label>
             <Form.Control 
               type="text" 

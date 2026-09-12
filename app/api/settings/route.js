@@ -25,7 +25,6 @@ export async function GET(request) {
 
     return NextResponse.json({
       settings: {
-        apiKey: config.apiKey ?? process.env.GEMINI_API_KEY ?? '',
         model: config.model ?? process.env.DEFAULT_MODEL ?? 'gemini-3.8-flash',
         systemPrompt: customPrompt !== null ? customPrompt : DEFAULT_SYSTEM_PROMPT,
       },
@@ -42,10 +41,10 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { apiKey, model, systemPrompt } = body;
+    const { model, systemPrompt } = body;
 
     // 1. Save general settings persistently
-    await redis.set('app_llm_settings', JSON.stringify({ apiKey, model }));
+    await redis.set('app_llm_settings', JSON.stringify({ model }));
 
     // 2. Handle 3-minute temporary system prompt
     if (systemPrompt && systemPrompt.trim() !== '' && systemPrompt.trim() !== DEFAULT_SYSTEM_PROMPT) {
