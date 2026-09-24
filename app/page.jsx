@@ -1,11 +1,12 @@
 // app/page.jsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-bootstrap";
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
+import { buildMessageTreeIndex, getActivePath, getChildren, getDescendantLeaf, getSiblings } from "../lib/messageTree.mjs";
 
 const ChatInput = ({ onSend }) => {
   const [input, setInput] = useState("");
@@ -76,6 +77,18 @@ export default function App() {
   });
 
   const endOfMessagesRef = useRef(null);
+  const dbTokenRef = useRef("");
+  const activeConversationRef = useRef(null);
+  const pendingStreamChunksRef = useRef({});
+  const streamFlushHandleRef = useRef(null);
+
+  useEffect(() => {
+    dbTokenRef.current = settings.dbToken;
+  }, [settings.dbToken]);
+
+  useEffect(() => {
+    activeConversationRef.current = activeConversation;
+  }, [activeConversation]);
 
   const fetchRemoteSettings = async (token) => {
     try {
@@ -160,11 +173,11 @@ export default function App() {
     }
 
     const handleSaveEdit = async (e) => {
-      const { id, content } = e.detail;
+      const { id, conversationId, content } = e.detail;
       await fetch("/api/messages", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id, content }),
+        headers: { "Content-Type": "application/json", "x-db-token": dbTokenRef.current },
+        body: JSON.stringify({ id, conversationId: conversationId || activeConversationRef.current, content }),
       });
       setMessages((prev) => ({ ...prev, [id]: { ...prev[id], content } }));
     };
@@ -315,14 +328,44 @@ export default function App() {
     }
   };
 
-  const getActivePath = () => {
-    const path = [];
-    let curr = currentId;
-    while (curr && messages[curr]) {
-      path.unshift(messages[curr]);
-      curr = messages[curr].parent_id;
+  const messageTreeIndex = useMemo(() => buildMessageTreeIndex(messages), [messages]);
+  const activePath = useMemo(() => getActivePath(messages, currentId), [messages, currentId]);
+
+  const flushStreamChunks = (onlyBotMsgId = null) => {
+    if (onlyBotMsgId === null) {
+      streamFlushHandleRef.current = null;
     }
-    return path;
+
+    const pendingEntries = Object.entries(pendingStreamChunksRef.current).filter(
+      ([botMsgId]) => onlyBotMsgId === null || botMsgId === onlyBotMsgId
+    );
+    if (pendingEntries.length === 0) return;
+
+    for (const [botMsgId] of pendingEntries) {
+      delete pendingStreamChunksRef.current[botMsgId];
+    }
+
+    setMessages((prev) => {
+      const next = { ...prev };
+      for (const [botMsgId, pending] of pendingEntries) {
+        next[botMsgId] = {
+          ...next[botMsgId],
+          content: (next[botMsgId]?.content || "") + pending,
+        };
+      }
+      return next;
+    });
+  };
+
+  const queueStreamChunk = (botMsgId, chunk) => {
+    pendingStreamChunksRef.current[botMsgId] = (pendingStreamChunksRef.current[botMsgId] || "") + chunk;
+    if (streamFlushHandleRef.current) return;
+
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      streamFlushHandleRef.current = window.requestAnimationFrame(() => flushStreamChunks());
+    } else {
+      streamFlushHandleRef.current = setTimeout(() => flushStreamChunks(), 16);
+    }
   };
 
   const scrollToBottom = () => endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -410,14 +453,12 @@ export default function App() {
 
       source.onmessage = (e) => {
         const chunk = JSON.parse(e.data);
-        setMessages((prev) => ({
-          ...prev,
-          [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk },
-        }));
+        queueStreamChunk(botMsgId, chunk);
       };
 
       source.onerror = () => {
         source.close();
+        flushStreamChunks(botMsgId);
         setMessages((prev) => {
           const currentContent = prev[botMsgId]?.content || "";
           if (!currentContent) {
@@ -513,18 +554,16 @@ export default function App() {
       await fetch("/api/messages", {
         method: "DELETE",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
-        body: JSON.stringify({ id: msgId }),
+        body: JSON.stringify({ id: msgId, conversationId: activeConversation }),
       });
     } catch (error) {
       console.warn("Local deletion only:", error);
     }
 
     const newMsgs = { ...messages };
-    Object.values(newMsgs).forEach((m) => {
-      if (m.parent_id === msgId) {
-        m.parent_id = parentId;
-      }
-    });
+    for (const child of getChildren(messageTreeIndex, msgId)) {
+      newMsgs[child.id] = { ...child, parent_id: parentId };
+    }
 
     delete newMsgs[msgId];
     setMessages(newMsgs);
@@ -545,23 +584,9 @@ export default function App() {
     sendMessage(null, parentId, true);
   };
 
-  const getSiblings = (msgId, parentId) => {
-    const siblings = Object.values(messages).filter((m) => m.parent_id === parentId);
-    return { siblings, index: siblings.findIndex((m) => m.id === msgId) };
-  };
-
   const switchBranch = (siblingId) => {
-    let leaf = siblingId,
-      found = true;
-    while (found) {
-      const child = Object.values(messages).find((m) => m.parent_id === leaf);
-      if (child) leaf = child.id;
-      else found = false;
-    }
-    setCurrentId(leaf);
+    setCurrentId(getDescendantLeaf(messageTreeIndex, siblingId));
   };
-
-  const activePath = getActivePath();
 
   return (
     <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: "100dvh" }}>
@@ -660,7 +685,7 @@ export default function App() {
           ) : (
             <Container className="px-0" style={{ maxWidth: "800px" }}>
               {activePath.map((msg) => {
-                const { siblings, index } = getSiblings(msg.id, msg.parent_id);
+                const { siblings, index } = getSiblings(messageTreeIndex, msg.id, msg.parent_id);
                 return (
                   <MessageNode
                     key={msg.id}

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Card, Button, ButtonGroup, Form } from 'react-bootstrap';
 import MarkdownIt from 'markdown-it';
 import mk from '@vscode/markdown-it-katex';
@@ -16,12 +16,12 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
   // Encode the raw code to attach it safely as a dataset attribute
   const encodedCode = encodeURIComponent(token.content);
   const rendered = defaultRender(tokens, idx, options, env, self);
-  
+
   // Wrap the output in a relative container with the copy button already inside
   return `
     <div class="position-relative mt-2 mb-3">
-      <button 
-        class="copy-code-btn btn btn-dark btn-sm position-absolute top-0 end-0 m-1 opacity-75" 
+      <button
+        class="copy-code-btn btn btn-dark btn-sm position-absolute top-0 end-0 m-1 opacity-75"
         data-code="${encodedCode}"
       >Copy</button>
       ${rendered}
@@ -29,16 +29,16 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
   `;
 };
 
-export default function MessageNode({ 
-  msg, siblings, index, switchBranch, handleCopy, 
+function MessageNode({
+  msg, siblings, index, switchBranch, handleCopy,
   handleBranch, handleRetry, deleteMessage, modelName
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(msg.content);
 
   const saveEdit = async () => {
-    window.dispatchEvent(new CustomEvent('save-message-edit', { 
-      detail: { id: msg.id, content: editContent } 
+    window.dispatchEvent(new CustomEvent('save-message-edit', {
+      detail: { id: msg.id, conversationId: msg.conversation_id, content: editContent }
     }));
     setIsEditing(false);
   };
@@ -48,9 +48,9 @@ export default function MessageNode({
     if (e.target && e.target.classList.contains('copy-code-btn')) {
       const btn = e.target;
       const codeToCopy = decodeURIComponent(btn.getAttribute('data-code') || '');
-      
+
       navigator.clipboard.writeText(codeToCopy);
-      
+
       btn.innerText = 'Copied!';
       setTimeout(() => {
         // Double check if element still exists
@@ -59,11 +59,16 @@ export default function MessageNode({
     }
   };
 
+  const renderedHtml = useMemo(
+    () => md.render(msg.content || '*(typing...)*'),
+    [msg.content]
+  );
+
   return (
     <Card className={`mb-4 border-0 shadow-sm ${msg.role === 'user' ? 'bg-white' : 'bg-transparent shadow-none'}`}>
       <Card.Header className="d-flex justify-content-between align-items-center bg-transparent border-0 pt-3 pb-0">
         <strong className="text-secondary">{msg.role === 'user' ? 'You' : modelName}</strong>
-        
+
         {siblings.length > 1 && (
           <ButtonGroup size="sm">
             <Button variant="outline-secondary" disabled={index === 0} onClick={() => switchBranch(siblings[index - 1].id)}>&#8592;</Button>
@@ -72,7 +77,7 @@ export default function MessageNode({
           </ButtonGroup>
         )}
       </Card.Header>
-      
+
       <Card.Body onClick={handleMarkdownClick}>
         {isEditing ? (
           <div className="d-flex flex-column gap-2">
@@ -83,10 +88,10 @@ export default function MessageNode({
             </div>
           </div>
         ) : (
-          <div 
-            className="markdown-body fs-5" 
+          <div
+            className="markdown-body fs-5"
             style={{ fontSize: '1.1rem' }}
-            dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }} 
+            dangerouslySetInnerHTML={{ __html: renderedHtml }}
           />
         )}
       </Card.Body>
@@ -104,3 +109,5 @@ export default function MessageNode({
     </Card>
   );
 }
+
+export default memo(MessageNode);
