@@ -5,33 +5,37 @@ import { DEFAULT_MODE, normalizeMode } from '@/lib/modes';
 export async function GET(req) {
   const url = new URL(req.url);
   const offset = parseInt(url.searchParams.get('offset') || '0', 10);
-  const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '10', 10), 50);
 
-  // "conversations:index" is a sorted set of conversation IDs (newest first).
-  // Each conversation's data lives in `conv:{id}` with its own TTL, while the
-  // index TTL is refreshed by *any* chat activity — so the index can contain
-  // IDs whose hash has already expired. Hydrate every ID and drop the stale
-  // ones so the frontend never receives phantom conversations.
-  const convIds = await redis.zrevrange('conversations:index', 0, -1);
-
-  if (convIds.length === 0) return NextResponse.json([]);
+  // Optimized: windowed pagination instead of full ZRANGE 0 -1.
+  // Previously we fetched the entire sorted set (O(N)) then hydrated all IDs
+  // even though the client only needed `limit` rows. Now we page directly on
+  // the sorted set with ZREVRANGE offset windows O(log(N)+M) and hydrate at
+  // most limit + stale slack rows.
+  const total = await redis.zcard('conversations:index');
+  if (total === 0) return NextResponse.json([]);
 
   const rows = [];
   const staleIds = [];
   let skip = offset;
-  const CHUNK_SIZE = 50; // hydrate in chunks so we don't build one giant pipeline
+  const CHUNK_SIZE = 50;
+  let windowsScanned = 0;
+  const maxWindows = Math.ceil(total / CHUNK_SIZE) + 2;
 
-  for (let i = 0; i < convIds.length && rows.length < limit; i += CHUNK_SIZE) {
-    const chunkIds = convIds.slice(i, i + CHUNK_SIZE);
+  for (let start = 0; start < total && rows.length < limit && windowsScanned < maxWindows; start += CHUNK_SIZE) {
+    // Windowed ZREVRANGE: O(log(N)+CHUNK_SIZE) instead of O(N)
+    const chunkIds = await redis.zrevrange('conversations:index', start, start + CHUNK_SIZE - 1);
+    if (chunkIds.length === 0) break;
+    windowsScanned++;
+
     const pipeline = redis.pipeline();
     chunkIds.forEach((id) => pipeline.hgetall(`conv:${id}`));
     const results = await pipeline.exec();
 
     for (let j = 0; j < chunkIds.length; j++) {
       const [err, data] = results[j] || [];
-      if (err) continue; // Redis error — skip this row, don't delete anything
+      if (err) continue;
 
-      // An expired (or missing) hash returns {} — its ID lingers in the index.
       if (!data || !data.id) {
         staleIds.push(chunkIds[j]);
         continue;
@@ -43,15 +47,17 @@ export async function GET(req) {
       }
 
       rows.push({ ...data, mode: normalizeMode(data.mode) });
+      if (rows.length >= limit) break;
     }
   }
 
-  // Remove expired conversations from the index (and their leftover messages)
-  // so they can't come back as phantom rows on later requests.
+  // Lazy cleanup: remove stale IDs discovered in scanned windows.
   if (staleIds.length > 0) {
     const pipeline = redis.pipeline();
-    pipeline.zrem('conversations:index', ...staleIds);
-    staleIds.forEach((id) => pipeline.del(`msgs:${id}`));
+    for (let i = 0; i < staleIds.length; i += 100) {
+      pipeline.zrem('conversations:index', ...staleIds.slice(i, i + 100));
+    }
+    for (const id of staleIds) pipeline.del(`msgs:${id}`);
     await pipeline.exec();
   }
 
