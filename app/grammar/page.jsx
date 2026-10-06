@@ -44,6 +44,15 @@ function normalizeDemoText(text) {
   return text.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
+// Russian needs three plural forms: 1 абзац, 2 абзаца, 5 абзацев.
+function pluralizeRu(count, one, few, many) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
 // Split on explicit line breaks, preserving each paragraph's offset in the
 // editable document. Blank lines are kept in the editor but are not checked.
 function splitParagraphs(text) {
@@ -208,7 +217,7 @@ function renderHighlightedText(text, issues, activeIssueId, issueRefs, handlers)
         onMouseLeave={() => handlers.onMarkLeave(issue.id)}
         onMouseDown={(event) => event.preventDefault()}
         onClick={(event) => handlers.onMarkClick(event, issue)}
-        title={`Suggested: ${issue.suggestion}`}
+        title={`Подсказка: ${issue.suggestion}`}
       >
         {mark}
       </span>
@@ -362,7 +371,7 @@ export default function GrammarPage() {
 
     const task = (async () => {
       if (paragraph.length > MAX_PARAGRAPH_CHARS) {
-        throw new Error("A paragraph is too long to check (30,000 characters max).");
+        throw new Error("Абзац слишком длинный для проверки (максимум 30 000 символов).");
       }
 
       const response = await fetch("/api/grammar", {
@@ -381,15 +390,15 @@ export default function GrammarPage() {
       if (response.status === 401) {
         localStorage.removeItem("db_access_token");
         window.location.replace("/");
-        throw new Error("Your session expired. Please sign in again.");
+        throw new Error("Сессия истекла. Войдите снова.");
       }
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error || `Request failed (${response.status})`);
+        throw new Error(data.error || `Ошибка запроса (${response.status})`);
       }
       if (typeof data.corrected !== "string") {
-        throw new Error("The grammar service returned an invalid response.");
+        throw new Error("Служба проверки грамматики вернула некорректный ответ.");
       }
 
       const entry = {
@@ -419,7 +428,7 @@ export default function GrammarPage() {
           (item) => item.text === paragraph
         );
         if (paragraphStillVisible) {
-          setRequestError(error.message || "The paragraph could not be checked.");
+          setRequestError(error.message || "Не удалось проверить абзац.");
         }
         throw error;
       })
@@ -640,7 +649,7 @@ export default function GrammarPage() {
     try {
       await navigator.clipboard.writeText(applySuggestions(text, issues));
     } catch {
-      setRequestError("Clipboard access was blocked by the browser.");
+      setRequestError("Браузер заблокировал доступ к буферу обмена.");
     }
   };
 
@@ -687,10 +696,10 @@ export default function GrammarPage() {
       return (
         <div className="gram-empty-state">
           <div className="gram-empty-icon">Aa</div>
-          <strong>Your suggestions will appear here</strong>
-          <p>Write or paste text on the left. Each paragraph is checked on its own.</p>
+          <strong>Здесь появятся ваши подсказки</strong>
+          <p>Напишите или вставьте текст слева. Каждый абзац проверяется отдельно.</p>
           <button className="gram-text-action" type="button" onClick={handleTryDemo}>
-            Try the demo corrections
+            Посмотреть примеры исправлений
           </button>
         </div>
       );
@@ -700,8 +709,8 @@ export default function GrammarPage() {
       return (
         <div className="gram-empty-state">
           <span className="gram-spinner" aria-hidden="true" />
-          <strong>Checking paragraphs…</strong>
-          <p>Each paragraph is sent separately. You can keep writing while checks finish.</p>
+          <strong>Проверяем абзацы…</strong>
+          <p>Каждый абзац отправляется отдельно. Вы можете продолжать писать, пока идёт проверка.</p>
         </div>
       );
     }
@@ -710,10 +719,10 @@ export default function GrammarPage() {
       return (
         <div className="gram-empty-state">
           <div className="gram-empty-icon gram-error-icon">!</div>
-          <strong>Some paragraphs could not be checked</strong>
+          <strong>Некоторые абзацы не удалось проверить</strong>
           <p>{requestError}</p>
           <button className="gram-text-action" type="button" onClick={() => checkDocument(text)}>
-            Retry checks
+            Повторить проверку
           </button>
         </div>
       );
@@ -723,8 +732,8 @@ export default function GrammarPage() {
       return (
         <div className="gram-empty-state">
           <div className="gram-empty-icon">✦</div>
-          <strong>Ready when you are</strong>
-          <p>Pause briefly after a paragraph and its suggestions will show up here.</p>
+          <strong>Можно начинать</strong>
+          <p>Сделайте небольшую паузу после абзаца — подсказки появятся здесь.</p>
         </div>
       );
     }
@@ -732,8 +741,8 @@ export default function GrammarPage() {
     return (
       <div className="gram-empty-state gram-all-clear">
         <div className="gram-empty-icon">✓</div>
-        <strong>No suggestions</strong>
-        <p>All checked paragraphs look good.</p>
+        <strong>Подсказок нет</strong>
+        <p>Все проверенные абзацы выглядят хорошо.</p>
       </div>
     );
   };
@@ -742,7 +751,7 @@ export default function GrammarPage() {
     return (
       <div className="gram-loading-screen">
         <span className="gram-spinner" aria-hidden="true" />
-        <span>Opening your writing space…</span>
+        <span>Открываем редактор…</span>
       </div>
     );
   }
@@ -750,13 +759,13 @@ export default function GrammarPage() {
   return (
     <div className="gram-page">
       <header className="gram-topbar">
-        <a className="gram-back-link" href="/" aria-label="Back to chat">
+        <a className="gram-back-link" href="/" aria-label="Вернуться в чат">
           <span aria-hidden="true">←</span>
-          <span>Back</span>
+          <span>Назад</span>
         </a>
         <div className="gram-brand">
           <span className="gram-brand-icon">Aa</span>
-          <span>Grammar</span>
+          <span>Грамматика</span>
         </div>
         <div className="gram-topbar-meta">
           {model && <span className="gram-model-pill">{model}</span>}
@@ -764,23 +773,24 @@ export default function GrammarPage() {
             {pendingCount > 0 ? (
               <>
                 <span className="gram-spinner" aria-hidden="true" />
-                Checking {pendingCount} {pendingCount === 1 ? "paragraph" : "paragraphs"}
+                Проверяем {pendingCount}{" "}
+                {pluralizeRu(pendingCount, "абзац", "абзаца", "абзацев")}
               </>
             ) : paragraphs.length > 0 ? (
-              `${checkedParagraphCount} of ${paragraphs.length} paragraphs checked`
+              `Проверено ${checkedParagraphCount} из ${paragraphs.length} ${pluralizeRu(paragraphs.length, "абзаца", "абзацев", "абзацев")}`
             ) : (
-              "Ready to check"
+              "Готово к проверке"
             )}
           </span>
         </div>
       </header>
 
       <main className="gram-layout">
-        <section className="gram-editor-card" aria-label="Writing editor">
+        <section className="gram-editor-card" aria-label="Редактор текста">
           <div className="gram-editor-heading">
             <div>
-              <div className="gram-section-kicker">YOUR DOCUMENT</div>
-              <h1>Write with confidence</h1>
+              <div className="gram-section-kicker">ВАШ ДОКУМЕНТ</div>
+              <h1>Пишите уверенно</h1>
             </div>
             <div className="gram-editor-actions">
               <button
@@ -788,7 +798,7 @@ export default function GrammarPage() {
                 type="button"
                 onClick={handleTryDemo}
               >
-                Try demo
+                Пример
               </button>
               <button
                 className="gram-button gram-button-quiet"
@@ -796,7 +806,7 @@ export default function GrammarPage() {
                 onClick={handleClear}
                 disabled={!text}
               >
-                Clear
+                Очистить
               </button>
               <button
                 className="gram-button gram-button-primary"
@@ -804,7 +814,7 @@ export default function GrammarPage() {
                 onClick={handleCopyCorrected}
                 disabled={!text}
               >
-                Copy corrected
+                Копировать с правками
               </button>
             </div>
           </div>
@@ -825,9 +835,9 @@ export default function GrammarPage() {
               onClick={handleEditorSelection}
               onKeyUp={handleEditorSelection}
               onSelect={handleEditorSelection}
-              placeholder="Start writing or paste your text here…\n\nEach paragraph is checked separately."
+              placeholder="Начните писать или вставьте текст сюда…\n\nКаждый абзац проверяется отдельно."
               spellCheck={false}
-              aria-label="Document text"
+              aria-label="Текст документа"
             />
             {activeIssue && popoverPosition && (
               <div
@@ -839,7 +849,7 @@ export default function GrammarPage() {
                 }}
                 onMouseLeave={() => scheduleHoverClear(activeIssue.id)}
               >
-                <div className="gram-hover-card-label">SUGGESTED CORRECTION</div>
+                <div className="gram-hover-card-label">ПРЕДЛАГАЕМОЕ ИСПРАВЛЕНИЕ</div>
                 <div className="gram-hover-card-diff">
                   <del>{activeIssue.original}</del>
                   <span aria-hidden="true">→</span>
@@ -850,7 +860,7 @@ export default function GrammarPage() {
                   className="gram-hover-accept"
                   onClick={() => handleAccept(activeIssue)}
                 >
-                  Accept correction
+                  Принять исправление
                 </button>
               </div>
             )}
@@ -858,17 +868,20 @@ export default function GrammarPage() {
 
           <div className="gram-editor-footer">
             <span>
-              Paragraphs are checked separately. Checked paragraphs are cached on this device.
+              Абзацы проверяются по отдельности. Проверенные абзацы кэшируются на этом устройстве.
             </span>
-            <span>{text.length.toLocaleString()} characters</span>
+            <span>
+              {text.length.toLocaleString()}{" "}
+              {pluralizeRu(text.length, "символ", "символа", "символов")}
+            </span>
           </div>
         </section>
 
-        <aside className="gram-suggestions-panel" aria-label="Grammar suggestions">
+        <aside className="gram-suggestions-panel" aria-label="Подсказки по грамматике">
           <div className="gram-panel-heading">
             <div>
-              <div className="gram-section-kicker">WRITING ASSISTANT</div>
-              <h2>Suggestions</h2>
+              <div className="gram-section-kicker">ПОМОЩНИК ПО ПИСЬМУ</div>
+              <h2>Подсказки</h2>
             </div>
             <span className={`gram-issue-count${issues.length ? " has-issues" : ""}`}>
               {issues.length}
@@ -877,18 +890,18 @@ export default function GrammarPage() {
 
           <div className="gram-panel-summary">
             {issues.length > 0
-              ? `${issues.length} ${issues.length === 1 ? "suggestion" : "suggestions"} in ${new Set(issues.map((item) => item.paragraphNumber)).size} ${new Set(issues.map((item) => item.paragraphNumber)).size === 1 ? "paragraph" : "paragraphs"}`
-              : `${checkedParagraphCount} of ${paragraphs.length} paragraphs checked`}
+              ? `${issues.length} ${pluralizeRu(issues.length, "подсказка", "подсказки", "подсказок")} в ${new Set(issues.map((item) => item.paragraphNumber)).size} ${pluralizeRu(new Set(issues.map((item) => item.paragraphNumber)).size, "абзаце", "абзацах", "абзацах")}`
+              : `Проверено ${checkedParagraphCount} из ${paragraphs.length} ${pluralizeRu(paragraphs.length, "абзаца", "абзацев", "абзацев")}`}
           </div>
 
           {requestError && (
             <div className="gram-error-banner" role="alert">
               <div>
-                <strong>Check failed</strong>
+                <strong>Проверка не удалась</strong>
                 <span>{requestError}</span>
               </div>
               <button type="button" onClick={() => checkDocument(text)}>
-                Retry
+                Повторить
               </button>
             </div>
           )}
@@ -911,15 +924,15 @@ export default function GrammarPage() {
                     onClick={() => focusIssue(issue)}
                   >
                     <span className="gram-suggestion-meta">
-                      <span>GRAMMAR · PARAGRAPH {issue.paragraphNumber}</span>
-                      {issue.source === "demo" && <span className="gram-demo-tag">DEMO</span>}
+                      <span>ГРАММАТИКА · АБЗАЦ {issue.paragraphNumber}</span>
+                      {issue.source === "demo" && <span className="gram-demo-tag">ПРИМЕР</span>}
                     </span>
                     <span className="gram-suggestion-diff">
                       <del>{issue.original}</del>
                       <span className="gram-diff-arrow" aria-hidden="true">→</span>
                       <strong>{issue.suggestion}</strong>
                     </span>
-                    <span className="gram-suggestion-index">Suggestion {index + 1}</span>
+                    <span className="gram-suggestion-index">Подсказка {index + 1}</span>
                   </button>
                   <div className="gram-suggestion-actions">
                     <button
@@ -927,14 +940,14 @@ export default function GrammarPage() {
                       type="button"
                       onClick={() => handleAccept(issue)}
                     >
-                      Accept
+                      Принять
                     </button>
                     <button
                       className="gram-ignore-button"
                       type="button"
                       onClick={() => handleIgnore(issue)}
                     >
-                      Ignore
+                      Пропустить
                     </button>
                   </div>
                 </article>
@@ -946,7 +959,7 @@ export default function GrammarPage() {
 
           <div className="gram-panel-footer">
             <span className="gram-cache-dot" />
-            <span>Paragraph cache is local to this browser</span>
+            <span>Кэш абзацев хранится локально в этом браузере</span>
           </div>
         </aside>
       </main>
