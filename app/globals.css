@@ -120,3 +120,48 @@ p:has(.katex-display) {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ==================================================== */
+/* GRAMMAR PAGE (/grammar)                              */
+/* ==================================================== */
+
+/* Corrected text: struck-through original + bold replacement, colour-coded. */
+.grammar-preview {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.grammar-preview p {
+  margin-bottom: 0.6rem;
+}
+
+.grammar-preview s,
+.grammar-preview del {
+  color: #c62828;
+  background: rgba(198, 40, 40, 0.08);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.grammar-preview strong {
+  color: #17693c;
+  background: rgba(23, 105, 60, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+
+/* "Clean" view: final text without any markup. */
+.grammar-clean {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
