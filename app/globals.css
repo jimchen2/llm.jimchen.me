@@ -120,3 +120,64 @@ p:has(.katex-display) {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ==================================================== */
+/* GRAMMAR PAGE                                         */
+/* ==================================================== */
+
+.gram-textarea {
+  display: block;
+  width: 100%;
+  min-height: 45vh;
+  font-size: 1.15rem;
+  line-height: 1.8;
+  border: none;
+  border-radius: 0;
+  box-shadow: none !important;
+  background: transparent;
+  resize: none;
+  padding: 0.5rem 0.25rem;
+  overflow-y: auto;
+}
+
+.gram-textarea:focus,
+.gram-textarea:focus-visible {
+  border: none;
+  box-shadow: none !important;
+  outline: none;
+}
+
+.gram-textarea::placeholder {
+  color: #adb5bd;
+}
+
+/* Grammarly-style marks: ~~wrong~~ red strikethrough, **right** green bold */
+.gram-del {
+  text-decoration: line-through;
+  text-decoration-color: #dc3545;
+  text-decoration-thickness: 2px;
+  color: #dc3545;
+  opacity: 0.85;
+}
+
+.gram-add {
+  font-weight: 700;
+  color: #198754;
+}
+
+.gram-preview p {
+  margin: 0 0 0.75rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.gram-preview p:last-child {
+  margin-bottom: 0;
+}
+
+.gram-tail {
+  color: #adb5bd;
+  line-height: 1.8;
+  margin-top: 0.25rem;
+}
