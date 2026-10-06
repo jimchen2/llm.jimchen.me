@@ -233,7 +233,7 @@ export default function GrammarPage() {
       } catch (err) {
         busyRef.current = false;
         setStatus("error");
-        setStatusMsg(err.message || "Check failed");
+        setStatusMsg(err.message || "Проверка не удалась");
         // Retry a few times on the next polls, then stop until the text
         // changes again (avoids hammering a broken backend).
         if (failCountRef.current < 3) {
@@ -290,7 +290,7 @@ export default function GrammarPage() {
         className="d-flex align-items-center justify-content-center bg-light"
         style={{ height: "100dvh" }}
       >
-        <span className="text-muted">Loading…</span>
+        <span className="text-muted">Загрузка…</span>
       </div>
     );
   }
@@ -301,9 +301,9 @@ export default function GrammarPage() {
     <div className="d-flex flex-column bg-light" style={{ height: "100dvh" }}>
       {/* Header */}
       <div className="bg-white border-bottom px-3 py-2 d-flex align-items-center gap-3 flex-wrap">
-        <span className="fw-bold fs-5">Grammar</span>
+        <span className="fw-bold fs-5">Грамматика</span>
         <span className="text-muted small">
-          corrections appear automatically, sentence by sentence
+          исправления появляются автоматически, предложение за предложением
         </span>
         <div className="ms-auto d-flex align-items-center gap-2">
           {model && <span className="text-muted small text-nowrap">{model}</span>}
@@ -314,11 +314,11 @@ export default function GrammarPage() {
                 role="status"
                 aria-hidden="true"
               />
-              Checking…
+              Проверка…
             </Badge>
           )}
-          {status === "error" && <Badge bg="danger">Error: {statusMsg}</Badge>}
-          {status === "idle" && corrected && <Badge bg="success">✓ checked</Badge>}
+          {status === "error" && <Badge bg="danger">Ошибка: {statusMsg}</Badge>}
+          {status === "idle" && corrected && <Badge bg="success">✓ проверено</Badge>}
         </div>
       </div>
 
@@ -334,7 +334,7 @@ export default function GrammarPage() {
                 failCountRef.current = 0;
                 setText(e.target.value);
               }}
-              placeholder="Start typing — text is checked automatically once you finish a sentence…"
+              placeholder="Начните печатать — текст проверяется автоматически, как только вы закончите предложение…"
               spellCheck={false}
             />
           </div>
@@ -342,13 +342,13 @@ export default function GrammarPage() {
           {/* Corrected preview */}
           <Card className="mt-3 border-0 shadow-sm">
             <Card.Header className="d-flex align-items-center gap-2 py-2">
-              <strong className="text-secondary">Corrected</strong>
+              <strong className="text-secondary">Исправленный текст</strong>
               <div className="ms-auto d-flex gap-2">
                 <Button size="sm" variant="outline-secondary" onClick={handleCopy} disabled={!corrected}>
-                  Copy
+                  Копировать
                 </Button>
                 <Button size="sm" variant="outline-danger" onClick={handleClear} disabled={!text}>
-                  Clear
+                  Очистить
                 </Button>
               </div>
             </Card.Header>
@@ -367,7 +367,7 @@ export default function GrammarPage() {
                 </>
               ) : (
                 <span className="text-muted">
-                  Corrected text will appear here{tail ? " as soon as the first sentence is complete." : " once you finish a sentence."}
+                  Исправленный текст появится здесь{tail ? ", как только будет закончено первое предложение." : ", когда вы закончите предложение."}
                 </span>
               )}
             </Card.Body>
