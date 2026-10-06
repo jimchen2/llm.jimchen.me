@@ -25,9 +25,18 @@ export default function Sidebar({
 
   return (
     <div className="d-flex flex-column h-100 bg-dark text-light border-end border-secondary">
-      <div className="p-3 border-bottom border-secondary">
+      <div className="p-3 border-bottom border-secondary d-grid gap-2">
         <Button variant="outline-light" className="w-100 fw-bold" onClick={handleNewChat}>
           + New Chat
+        </Button>
+        <Button
+          variant="outline-light"
+          className="w-100"
+          onClick={() => {
+            window.location.href = "/grammar";
+          }}
+        >
+          <span className="me-1">Aa</span> Grammar
         </Button>
       </div>
       
