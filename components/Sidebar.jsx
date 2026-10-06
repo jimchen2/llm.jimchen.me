@@ -64,7 +64,15 @@ export default function Sidebar({
         )}
       </div>
       
-      <div className="p-3 border-top border-secondary">
+      <div className="p-3 border-top border-secondary d-flex flex-column gap-2">
+        <Button
+          as="a"
+          href="/grammar"
+          variant="outline-light"
+          className="w-100 text-start"
+        >
+          ✓ Grammar checker
+        </Button>
         <Button variant="dark" className="w-100 text-start" onClick={() => setShowSettings(true)}>
           ⚙ Settings
         </Button>
