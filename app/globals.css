@@ -122,62 +122,818 @@ p:has(.katex-display) {
 }
 
 /* ==================================================== */
-/* GRAMMAR PAGE                                         */
+/* GRAMMAR PAGE — inline document editor                */
 /* ==================================================== */
 
+.gram-page {
+  --gram-ink: #202a39;
+  --gram-muted: #738094;
+  --gram-border: #e6eaf0;
+  --gram-blue: #3759d7;
+  --gram-red: #c9494d;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  color: var(--gram-ink);
+  background: #f3f5f8;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.gram-loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100dvh;
+  color: #667085;
+  background: #f3f5f8;
+  font-size: 0.95rem;
+}
+
+.gram-topbar {
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  min-height: 68px;
+  padding: 0 25px;
+  gap: 25px;
+  background: #fff;
+  border-bottom: 1px solid var(--gram-border);
+}
+
+.gram-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #647086;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.gram-back-link:hover {
+  color: var(--gram-blue);
+}
+
+.gram-back-link span:first-child {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.gram-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 1.02rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.gram-brand-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  color: #fff;
+  background: #4364e8;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.gram-topbar-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 13px;
+  margin-left: auto;
+  color: var(--gram-muted);
+  font-size: 0.8rem;
+}
+
+.gram-model-pill {
+  max-width: 210px;
+  overflow: hidden;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--gram-border);
+  border-radius: 999px;
+  color: #6b7586;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gram-live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.gram-live-status.is-checking {
+  color: #5266c5;
+}
+
+.gram-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(65, 91, 203, 0.2);
+  border-top-color: #5266d3;
+  border-radius: 50%;
+  animation: gram-spin 0.75s linear infinite;
+}
+
+@keyframes gram-spin {
+  to { transform: rotate(360deg); }
+}
+
+.gram-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 18px;
+  padding: 20px 22px 22px;
+  overflow: auto;
+}
+
+.gram-editor-card,
+.gram-suggestions-panel {
+  min-width: 0;
+  border: 1px solid var(--gram-border);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(22, 35, 57, 0.045);
+}
+
+.gram-editor-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.gram-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 82px;
+  padding: 16px 22px;
+  gap: 18px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.gram-section-kicker {
+  margin-bottom: 0.3rem;
+  color: #8a95a6;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+}
+
+.gram-editor-heading h1,
+.gram-panel-heading h2 {
+  margin: 0;
+  color: var(--gram-ink);
+  font-size: 1.1rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.gram-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.gram-button {
+  min-height: 34px;
+  padding: 0.38rem 0.75rem;
+  border: 1px solid #e1e6ee;
+  border-radius: 8px;
+  color: #4c596c;
+  background: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.gram-button:hover:not(:disabled) {
+  border-color: #bdc7d6;
+  background: #f8f9fb;
+}
+
+.gram-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.gram-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.gram-button-primary {
+  border-color: var(--gram-blue);
+  color: #fff;
+  background: var(--gram-blue);
+}
+
+.gram-button-primary:hover:not(:disabled) {
+  border-color: #2f4dc4;
+  color: #fff;
+  background: #2f4dc4;
+}
+
+.gram-editor-shell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.gram-text-mirror,
 .gram-textarea {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  min-height: 45vh;
-  font-size: 1.15rem;
-  line-height: 1.8;
-  border: none;
+  height: 100%;
+  margin: 0;
+  padding: 30px 34px 40px;
+  border: 0;
   border-radius: 0;
-  box-shadow: none !important;
-  background: transparent;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.18rem;
+  font-weight: 400;
+  line-height: 1.9;
+  letter-spacing: normal;
+  tab-size: 4;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.gram-text-mirror {
+  z-index: 2;
+  overflow: hidden;
+  color: #273345;
+  pointer-events: none;
+  scrollbar-width: none;
+}
+
+.gram-text-mirror::-webkit-scrollbar {
+  display: none;
+}
+
+.gram-textarea {
+  z-index: 1;
   resize: none;
-  padding: 0.5rem 0.25rem;
-  overflow-y: auto;
+  overflow: auto;
+  scrollbar-width: none;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  caret-color: #202a39;
+  background: transparent;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gram-textarea::-webkit-scrollbar {
+  display: none;
 }
 
 .gram-textarea:focus,
 .gram-textarea:focus-visible {
-  border: none;
+  border: 0;
+  outline: none !important;
   box-shadow: none !important;
-  outline: none;
 }
 
 .gram-textarea::placeholder {
-  color: #adb5bd;
+  color: #a4adba;
+  -webkit-text-fill-color: #a4adba;
+  opacity: 1;
 }
 
-/* Grammarly-style marks: ~~wrong~~ red strikethrough, **right** green bold */
-.gram-del {
-  text-decoration: line-through;
-  text-decoration-color: #dc3545;
+.gram-textarea::selection {
+  color: #202a39;
+  -webkit-text-fill-color: #202a39;
+  background: rgba(91, 120, 238, 0.2);
+}
+
+.gram-inline-mark {
+  position: relative;
+  border-radius: 3px;
+  color: inherit;
+  background: rgba(240, 93, 99, 0.12);
+  text-decoration: underline wavy var(--gram-red);
+  text-decoration-thickness: 1.3px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 120ms ease;
+}
+
+.gram-inline-mark:hover,
+.gram-inline-mark.is-active {
+  background: rgba(240, 93, 99, 0.23);
   text-decoration-thickness: 2px;
-  color: #dc3545;
-  opacity: 0.85;
 }
 
-.gram-add {
-  font-weight: 700;
-  color: #198754;
+.gram-hover-card {
+  position: absolute;
+  z-index: 5;
+  width: min(300px, calc(100% - 20px));
+  padding: 13px;
+  border: 1px solid #e0e5ed;
+  border-radius: 11px;
+  color: var(--gram-ink);
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(27, 39, 62, 0.17);
 }
 
-.gram-preview p {
-  margin: 0 0 0.75rem;
-  line-height: 1.8;
+.gram-hover-card-label {
+  margin-bottom: 8px;
+  color: #8994a5;
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+}
+
+.gram-hover-card-diff {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   overflow-wrap: anywhere;
-  word-break: break-word;
+  font-size: 0.92rem;
 }
 
-.gram-preview p:last-child {
-  margin-bottom: 0;
+.gram-hover-card-diff del {
+  color: #bd555a;
+  text-decoration-thickness: 1.5px;
 }
 
-.gram-tail {
-  color: #adb5bd;
-  line-height: 1.8;
-  margin-top: 0.25rem;
+.gram-hover-card-diff strong {
+  color: #21835b;
+  font-weight: 700;
+}
+
+.gram-hover-card-diff > span {
+  color: #9ba4b2;
+}
+
+.gram-hover-accept {
+  margin-top: 11px;
+  padding: 0;
+  border: 0;
+  color: #3759d7;
+  background: none;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.gram-hover-accept:hover {
+  color: #263fa8;
+  text-decoration: underline;
+}
+
+.gram-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 8px 20px;
+  gap: 12px;
+  border-top: 1px solid #edf0f4;
+  color: #8b95a5;
+  font-size: 0.7rem;
+}
+
+.gram-editor-footer span:last-child {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.gram-suggestions-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.gram-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 19px 19px 12px;
+}
+
+.gram-panel-heading h2 {
+  font-size: 1.04rem;
+}
+
+.gram-issue-count {
+  display: grid;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  place-items: center;
+  border-radius: 999px;
+  color: #6e7b8e;
+  background: #f1f3f6;
+  font-size: 0.78rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.gram-issue-count.has-issues {
+  color: #ad3e46;
+  background: #fff0f0;
+}
+
+.gram-panel-summary {
+  padding: 0 19px 14px;
+  color: #8b95a5;
+  font-size: 0.75rem;
+}
+
+.gram-suggestion-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 12px 12px;
+  scrollbar-color: #cbd2dd transparent;
+  scrollbar-width: thin;
+}
+
+.gram-suggestion-card {
+  margin-bottom: 9px;
+  overflow: hidden;
+  border: 1px solid #e7eaf0;
+  border-radius: 11px;
+  background: #fff;
+  transition: border-color 130ms ease, box-shadow 130ms ease, background 130ms ease;
+}
+
+.gram-suggestion-card:hover,
+.gram-suggestion-card.is-active {
+  border-color: #cbd4f2;
+  background: #fdfdff;
+  box-shadow: 0 4px 14px rgba(47, 70, 143, 0.07);
+}
+
+.gram-suggestion-main {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 13px 13px 10px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gram-suggestion-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #8a95a6;
+  font-size: 0.61rem;
+  font-weight: 750;
+  letter-spacing: 0.065em;
+}
+
+.gram-demo-tag {
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #4e60bd;
+  background: #edf0ff;
+  font-size: 0.56rem;
+  letter-spacing: 0.045em;
+}
+
+.gram-suggestion-diff {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.gram-suggestion-diff del {
+  color: #bd555a;
+  text-decoration-thickness: 1.5px;
+}
+
+.gram-suggestion-diff strong {
+  color: #21835b;
+  font-weight: 700;
+}
+
+.gram-diff-arrow {
+  flex: 0 0 auto;
+  color: #a3acb8;
+  font-size: 0.82rem;
+}
+
+.gram-suggestion-index {
+  color: #98a1af;
+  font-size: 0.68rem;
+}
+
+.gram-suggestion-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 13px 12px;
+}
+
+.gram-accept-button,
+.gram-ignore-button,
+.gram-text-action {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.gram-accept-button {
+  color: #3155d4;
+}
+
+.gram-accept-button:hover,
+.gram-text-action:hover {
+  color: #263fa8;
+  text-decoration: underline;
+}
+
+.gram-ignore-button {
+  color: #8a94a4;
+}
+
+.gram-ignore-button:hover {
+  color: #4d596b;
+  text-decoration: underline;
+}
+
+.gram-empty-state {
+  display: flex;
+  min-height: 250px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 22px 18px;
+  color: #798598;
+  text-align: center;
+}
+
+.gram-empty-state strong {
+  margin-top: 10px;
+  color: #465367;
+  font-size: 0.88rem;
+  font-weight: 720;
+}
+
+.gram-empty-state p {
+  max-width: 250px;
+  margin: 6px 0 0;
+  color: #929cab;
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.gram-empty-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  color: #5168d5;
+  background: #f0f2ff;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.gram-error-icon {
+  color: #bd4d54;
+  background: #fff0f0;
+}
+
+.gram-text-action {
+  margin-top: 13px;
+  color: #3759d7;
+}
+
+.gram-all-clear .gram-empty-icon {
+  color: #21835b;
+  background: #eaf7f0;
+}
+
+.gram-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 12px 12px;
+  padding: 10px 11px;
+  gap: 10px;
+  border: 1px solid #f4d7d8;
+  border-radius: 9px;
+  color: #9b454a;
+  background: #fff8f8;
+  font-size: 0.7rem;
+}
+
+.gram-error-banner > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gram-error-banner span {
+  overflow-wrap: anywhere;
+  color: #a66c70;
+}
+
+.gram-error-banner button {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 0;
+  color: #ae3f47;
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.gram-panel-footer {
+  display: flex;
+  align-items: center;
+  min-height: 39px;
+  padding: 0 17px;
+  gap: 7px;
+  border-top: 1px solid #edf0f4;
+  color: #98a1af;
+  font-size: 0.67rem;
+}
+
+.gram-cache-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #55a67c;
+}
+
+@media (max-width: 980px) {
+  .gram-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .gram-text-mirror,
+  .gram-textarea {
+    padding: 26px 26px 34px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .gram-page {
+    height: 100dvh;
+  }
+
+  .gram-topbar {
+    min-height: 58px;
+    padding: 0 14px;
+    gap: 14px;
+  }
+
+  .gram-topbar-meta {
+    gap: 8px;
+    font-size: 0.7rem;
+  }
+
+  .gram-model-pill {
+    display: none;
+  }
+
+  .gram-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .gram-editor-card {
+    min-height: 68vh;
+    flex: 0 0 68vh;
+  }
+
+  .gram-editor-heading {
+    min-height: 72px;
+    padding: 13px 14px;
+    gap: 10px;
+  }
+
+  .gram-editor-heading h1 {
+    font-size: 0.98rem;
+  }
+
+  .gram-section-kicker {
+    font-size: 0.58rem;
+  }
+
+  .gram-editor-actions {
+    gap: 5px;
+  }
+
+  .gram-button {
+    min-height: 32px;
+    padding: 0.32rem 0.5rem;
+    font-size: 0.69rem;
+  }
+
+  .gram-text-mirror,
+  .gram-textarea {
+    padding: 21px 17px 30px;
+    font-size: 1.03rem;
+    line-height: 1.8;
+  }
+
+  .gram-editor-footer {
+    padding: 8px 12px;
+    font-size: 0.62rem;
+  }
+
+  .gram-editor-footer span:first-child {
+    max-width: 76%;
+  }
+
+  .gram-suggestions-panel {
+    min-height: 340px;
+    max-height: none;
+    flex: 0 0 auto;
+  }
+
+  .gram-suggestion-list {
+    flex: 0 0 auto;
+    max-height: 58vh;
+  }
+
+  .gram-hover-card {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .gram-back-link span:last-child {
+    display: none;
+  }
+
+  .gram-topbar {
+    gap: 10px;
+  }
+
+  .gram-brand {
+    font-size: 0.93rem;
+  }
+
+  .gram-live-status {
+    max-width: 135px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .gram-editor-heading {
+    align-items: flex-start;
+  }
+
+  .gram-editor-actions {
+    flex-wrap: wrap;
+  }
+
+  .gram-editor-heading h1 {
+    max-width: 145px;
+    line-height: 1.2;
+  }
 }
