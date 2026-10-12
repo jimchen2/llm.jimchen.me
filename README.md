@@ -6,3 +6,4 @@
   - Retry: Retrying means first deleting the message, before invoking the LLM again
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
+- Retention: conversations and messages live in Redis indefinitely; set `CACHE_TTL_SECONDS` (seconds) to expire a conversation after that much inactivity instead
