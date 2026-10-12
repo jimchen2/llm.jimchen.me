@@ -77,27 +77,34 @@ export default function App() {
 
   const endOfMessagesRef = useRef(null);
 
-  const fetchRemoteSettings = async (token) => {
+  // Checks the access password against the server. Returns one of:
+  //   "ok"      – password accepted (model is included when the server sent one)
+  //   "invalid" – server answered 401/403, so the password is really wrong
+  //   "error"   – network failure, timeout, or 5xx (e.g. Redis briefly down).
+  // Only "invalid" may discard a saved password; "error" says nothing about it.
+  const checkAccess = async (token) => {
     try {
       const res = await fetch("/api/settings", {
         headers: { "x-db-token": token },
+        signal: AbortSignal.timeout(10000),
       });
-      if (!res.ok) throw new Error("Invalid password");
+      if (res.status === 401 || res.status === 403) return { status: "invalid" };
+      if (!res.ok) return { status: "error" };
 
       const data = await res.json();
-      if (data.settings) {
-        setSettings({
-          dbToken: token,
-          model: data.settings.model ?? "gemini-3.8-flash",
-          mode: "default",
-        });
-      } else {
-        setSettings((prev) => ({ ...prev, dbToken: token, mode: "default" }));
-      }
-      return true;
+      return { status: "ok", model: data.settings?.model };
     } catch {
-      return false;
+      return { status: "error" };
     }
+  };
+
+  const applyAccess = (token, model) => {
+    setSettings((prev) => ({
+      ...prev,
+      dbToken: token,
+      model: model ?? prev.model ?? "gemini-3.8-flash",
+      mode: "default",
+    }));
   };
 
   const handleOpenSettings = async () => {
@@ -149,14 +156,27 @@ export default function App() {
     if (!savedToken) {
       setShowAuthModal(true);
     } else {
-      fetchRemoteSettings(savedToken).then((success) => {
-        if (success) {
-          initializeApp(savedToken);
-        } else {
+      (async () => {
+        let result = await checkAccess(savedToken);
+        // Retry transient failures before deciding anything.
+        for (const delay of [2000, 4000]) {
+          if (result.status !== "error") break;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          result = await checkAccess(savedToken);
+        }
+
+        if (result.status === "invalid") {
           localStorage.removeItem("db_access_token");
           setShowAuthModal(true);
+          return;
         }
-      });
+
+        // "ok", or the server is still unreachable: keep the saved password so
+        // a temporary outage doesn't log the user out. Open the app; data
+        // requests will show their own errors until the server is back.
+        applyAccess(savedToken, result.model);
+        initializeApp(savedToken);
+      })();
     }
 
     const handleSaveEdit = async (e) => {
@@ -175,13 +195,16 @@ export default function App() {
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError("");
-    const success = await fetchRemoteSettings(inputPassword);
-    if (success) {
+    const result = await checkAccess(inputPassword);
+    if (result.status === "ok") {
       localStorage.setItem("db_access_token", inputPassword);
+      applyAccess(inputPassword, result.model);
       setShowAuthModal(false);
       initializeApp(inputPassword);
-    } else {
+    } else if (result.status === "invalid") {
       setAuthError("Invalid access password");
+    } else {
+      setAuthError("Couldn't reach the server. Please try again.");
     }
   };
 
