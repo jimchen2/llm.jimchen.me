@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
+import { redis, applyCacheLifetime } from "@/lib/redis";
 import { callLLM } from "@/lib/llm";
 import { getModeConfig } from "@/lib/modes";
 
@@ -27,12 +27,11 @@ export async function POST(req) {
     role: "assistant", content: "", created_at: Date.now() + 1
   };
   pipeline.hset(msgKey, botMsgId, JSON.stringify(botPayload));
-  pipeline.expire(msgKey, CACHE_TTL_SECONDS);
-  
-  // Extend conversation index expiration
-  pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
-  pipeline.expire(`conv:${conversationId}`, CACHE_TTL_SECONDS);
-  
+
+  // Keep the conversation, its messages and the index alive (no-op by default,
+  // which keeps everything indefinitely).
+  applyCacheLifetime(pipeline, [msgKey, 'conversations:index', `conv:${conversationId}`]);
+
   await pipeline.exec();
 
   // Background processing

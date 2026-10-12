@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
+import { redis, applyCacheLifetime } from '@/lib/redis';
 import { DEFAULT_MODE, normalizeMode } from '@/lib/modes';
 
 export async function GET(req) {
@@ -67,9 +67,9 @@ export async function POST(req) {
   pipeline.zadd('conversations:index', now, id);
   pipeline.hset(`conv:${id}`, { id, title: title || 'New Conversation', created_at: now, mode: resolvedMode });
   
-  // Set expiration
-  pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
-  pipeline.expire(`conv:${id}`, CACHE_TTL_SECONDS);
+  // Retention: keys are kept indefinitely by default, or pruned after
+  // CACHE_TTL_SECONDS of inactivity when that is configured.
+  applyCacheLifetime(pipeline, ['conversations:index', `conv:${id}`]);
   
   await pipeline.exec();
   return NextResponse.json({ success: true });
