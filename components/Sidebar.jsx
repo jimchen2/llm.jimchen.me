@@ -36,7 +36,7 @@ export default function Sidebar({
             window.location.href = "/grammar";
           }}
         >
-          <span className="me-1">Aa</span> Grammar
+           Grammar
         </Button>
         <Button
           as="a"
@@ -44,7 +44,7 @@ export default function Sidebar({
           variant="outline-light"
           className="w-100"
         >
-          🎲 Random mode ↗
+          Random mode 
         </Button>
       </div>
       
