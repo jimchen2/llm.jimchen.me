@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button } from 'react-bootstrap';
 
-export default function SettingsModal({ show, onHide, settings, setSettings, onSave }) {
+export default function SettingsModal({ show, onHide, settings, setSettings, onSave, routeMode = 'default' }) {
   const [isDark, setIsDark] = useState(false);
 
   // Dynamically check if Dark Reader is enabled when modal opens
@@ -68,10 +68,20 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             <Form.Label className="fw-bold">Mode</Form.Label>
             <Form.Select 
               value={settings.mode || 'default'}
-              onChange={e => setSettings({...settings, mode: e.target.value})} 
+              onChange={(e) => {
+                if (e.target.value === 'random') {
+                  window.location.href = 'https://llm.jimchen.me/random';
+                  return;
+                }
+                if (routeMode === 'random') {
+                  window.location.href = 'https://llm.jimchen.me/';
+                  return;
+                }
+                setSettings({ ...settings, mode: 'default' });
+              }}
             >
               <option value="default">Default mode</option>
-              <option value="random">Random mode</option>
+              <option value="random">Random mode ↗</option>
             </Form.Select>
             <Form.Text className="text-muted">
               Each mode uses its own API key and system prompt, configured via environment variables.

@@ -7,7 +7,7 @@ import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 
-const ChatInput = ({ onSend }) => {
+const ChatInput = ({ onSend, placeholder }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
 
@@ -41,7 +41,7 @@ const ChatInput = ({ onSend }) => {
           e.target.style.height = `${e.target.scrollHeight}px`;
         }}
         onKeyDown={handleKeyDown}
-        placeholder="Please only talk about coding"
+        placeholder={placeholder}
       />
       <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={submitMessage}>
         Send
@@ -50,7 +50,7 @@ const ChatInput = ({ onSend }) => {
   );
 };
 
-export default function App() {
+export default function App({ routeMode = "default" }) {
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
   const [messages, setMessages] = useState({});
@@ -72,8 +72,14 @@ export default function App() {
   const [settings, setSettings] = useState({
     model: "gemini-3.7-flash",
     dbToken: "",
-    mode: "default",
+    mode: routeMode,
   });
+
+  const homePath = routeMode === "random" ? "/random" : "/";
+  const getConversationMode = (id) =>
+    conversations.find((conversation) => conversation.id === id)?.mode || routeMode;
+  const chatPath = (id, mode = routeMode) =>
+    mode === "random" ? `/random/chat/${id}` : `/chat/${id}`;
 
   const endOfMessagesRef = useRef(null);
 
@@ -89,10 +95,10 @@ export default function App() {
         setSettings({
           dbToken: token,
           model: data.settings.model ?? "gemini-3.8-flash",
-          mode: "default",
+          mode: routeMode,
         });
       } else {
-        setSettings((prev) => ({ ...prev, dbToken: token, mode: "default" }));
+        setSettings((prev) => ({ ...prev, dbToken: token, mode: routeMode }));
       }
       return true;
     } catch {
@@ -128,7 +134,9 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     let urlId = params.get("chat");
 
-    if (pathname.startsWith("/chat/")) {
+    if (pathname.startsWith("/random/chat/")) {
+      urlId = pathname.split("/random/chat/")[1];
+    } else if (pathname.startsWith("/chat/")) {
       urlId = pathname.split("/chat/")[1];
     }
 
@@ -189,11 +197,15 @@ export default function App() {
     if (!isInitializedRef.current) return;
 
     if (activeConversation) {
-      window.history.pushState({}, "", `/chat/${activeConversation}`);
+      window.history.pushState(
+        {},
+        "",
+        chatPath(activeConversation, getConversationMode(activeConversation))
+      );
     } else {
-      window.history.pushState({}, "", `/`);
+      window.history.pushState({}, "", homePath);
     }
-  }, [activeConversation]);
+  }, [activeConversation, conversations]);
 
   const loadConversations = (dbToken, offset = 0) => {
     setIsLoadingConv(true);
@@ -263,9 +275,10 @@ export default function App() {
           if (
             typeof window !== "undefined" &&
             (window.location.pathname.startsWith("/chat/") ||
+              window.location.pathname.startsWith("/random/chat/") ||
               new URLSearchParams(window.location.search).get("chat"))
           ) {
-            window.history.replaceState({}, "", "/");
+            window.history.replaceState({}, "", homePath);
           }
         }
       });
@@ -276,7 +289,7 @@ export default function App() {
     setMessages({});
     setCurrentId(null);
     setShowMobileMenu(false);
-    setSettings((prev) => ({ ...prev, mode: "default" }));
+    setSettings((prev) => ({ ...prev, mode: routeMode }));
   };
 
   const handleDeleteConversation = async (e, id) => {
@@ -365,8 +378,8 @@ export default function App() {
     // - New conversations get the current settings.mode (which defaults to "default" on refresh/new chat).
     // - Existing conversations keep the mode they were created with.
     const conversationMode = isNewConv
-      ? settings.mode
-      : (conversations.find((c) => c.id === convId)?.mode || "default");
+      ? (routeMode === "random" ? "random" : settings.mode)
+      : (conversations.find((c) => c.id === convId)?.mode || routeMode);
     if (isNewConv) {
       setActiveConversation(convId);
       setConversations((prev) => [{ id: convId, title, mode: conversationMode }, ...prev]);
@@ -641,6 +654,7 @@ export default function App() {
         settings={settings}
         setSettings={setSettings}
         onSave={saveSettings}
+        routeMode={routeMode}
       />
 
       {/* Main Area */}
@@ -655,7 +669,9 @@ export default function App() {
         <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
-              <h3 className="text-muted">Please only talk about coding</h3>
+              <h3 className="text-muted">
+                {routeMode === "random" ? "Random mode — ask anything" : "Please only talk about coding"}
+              </h3>
             </div>
           ) : (
             <Container className="px-0" style={{ maxWidth: "800px" }}>
@@ -683,7 +699,11 @@ export default function App() {
 
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
-            <ChatInput key={activeConversation || "new-chat"} onSend={(text) => sendMessage(text)} />
+            <ChatInput
+              key={activeConversation || "new-chat"}
+              onSend={(text) => sendMessage(text)}
+              placeholder={routeMode === "random" ? "Ask anything" : "Please only talk about coding"}
+            />
           </Container>
         </div>
       </div>
