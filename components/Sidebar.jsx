@@ -38,6 +38,14 @@ export default function Sidebar({
         >
           <span className="me-1">Aa</span> Grammar
         </Button>
+        <Button
+          as="a"
+          href="https://llm.jimchen.me/random"
+          variant="outline-light"
+          className="w-100"
+        >
+          🎲 Random mode ↗
+        </Button>
       </div>
       
       <div className="flex-grow-1 overflow-auto p-2" onScroll={handleScroll}>
