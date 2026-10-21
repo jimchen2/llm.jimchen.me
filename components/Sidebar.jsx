@@ -29,15 +29,6 @@ export default function Sidebar({
         <Button variant="outline-light" className="w-100 fw-bold" onClick={handleNewChat}>
           + New Chat
         </Button>
-        <Button
-          variant="outline-light"
-          className="w-100"
-          onClick={() => {
-            window.location.href = "/grammar";
-          }}
-        >
-           Grammar
-        </Button>
       </div>
       
       <div className="flex-grow-1 overflow-auto p-2" onScroll={handleScroll}>
