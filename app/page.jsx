@@ -75,11 +75,11 @@ export default function App({ routeMode = "default" }) {
     mode: routeMode,
   });
 
-  const homePath = routeMode === "random" ? "/random" : "/";
+  const homePath = routeMode === "default" ? "/" : `/${routeMode}`;
   const getConversationMode = (id) =>
     conversations.find((conversation) => conversation.id === id)?.mode || routeMode;
   const chatPath = (id, mode = routeMode) =>
-    mode === "random" ? `/random/chat/${id}` : `/chat/${id}`;
+    mode === "default" ? `/chat/${id}` : `/${mode}/chat/${id}`;
 
   const endOfMessagesRef = useRef(null);
 
@@ -136,6 +136,8 @@ export default function App({ routeMode = "default" }) {
 
     if (pathname.startsWith("/random/chat/")) {
       urlId = pathname.split("/random/chat/")[1];
+    } else if (pathname.startsWith("/grammar/chat/")) {
+      urlId = pathname.split("/grammar/chat/")[1];
     } else if (pathname.startsWith("/chat/")) {
       urlId = pathname.split("/chat/")[1];
     }
@@ -276,6 +278,7 @@ export default function App({ routeMode = "default" }) {
             typeof window !== "undefined" &&
             (window.location.pathname.startsWith("/chat/") ||
               window.location.pathname.startsWith("/random/chat/") ||
+              window.location.pathname.startsWith("/grammar/chat/") ||
               new URLSearchParams(window.location.search).get("chat"))
           ) {
             window.history.replaceState({}, "", homePath);
@@ -378,7 +381,7 @@ export default function App({ routeMode = "default" }) {
     // - New conversations get the current settings.mode (which defaults to "default" on refresh/new chat).
     // - Existing conversations keep the mode they were created with.
     const conversationMode = isNewConv
-      ? (routeMode === "random" ? "random" : settings.mode)
+      ? (routeMode !== "default" ? routeMode : settings.mode)
       : (conversations.find((c) => c.id === convId)?.mode || routeMode);
     if (isNewConv) {
       setActiveConversation(convId);
@@ -670,7 +673,11 @@ export default function App({ routeMode = "default" }) {
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
               <h3 className="text-muted">
-                {routeMode === "random" ? "Random mode — ask anything" : "Please only talk about coding"}
+                {routeMode === "random"
+                  ? "Random mode — ask anything"
+                  : routeMode === "grammar"
+                    ? "Grammar mode — исправьте грамматику"
+                    : "Please only talk about coding"}
               </h3>
             </div>
           ) : (
@@ -702,7 +709,13 @@ export default function App({ routeMode = "default" }) {
             <ChatInput
               key={activeConversation || "new-chat"}
               onSend={(text) => sendMessage(text)}
-              placeholder={routeMode === "random" ? "Ask anything" : "Please only talk about coding"}
+              placeholder={
+                routeMode === "random"
+                  ? "Ask anything"
+                  : routeMode === "grammar"
+                    ? "Введите текст для исправления"
+                    : "Please only talk about coding"
+              }
             />
           </Container>
         </div>

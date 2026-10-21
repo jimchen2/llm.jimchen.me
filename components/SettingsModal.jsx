@@ -73,7 +73,11 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
                   window.location.href = 'https://llm.jimchen.me/random';
                   return;
                 }
-                if (routeMode === 'random') {
+                if (e.target.value === 'grammar') {
+                  window.location.href = 'https://llm.jimchen.me/grammar';
+                  return;
+                }
+                if (routeMode !== 'default') {
                   window.location.href = 'https://llm.jimchen.me/';
                   return;
                 }
@@ -82,6 +86,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             >
               <option value="default">Default mode</option>
               <option value="random">Random mode ↗</option>
+              <option value="grammar">Grammar mode ↗</option>
             </Form.Select>
             <Form.Text className="text-muted">
               Each mode uses its own API key and system prompt, configured via environment variables.
