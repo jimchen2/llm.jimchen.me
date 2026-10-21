@@ -6,3 +6,19 @@
   - Retry: Retrying means first deleting the message, before invoking the LLM again
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
+
+## Configuration
+
+Copy `.env.example` to `.env` and fill in:
+
+| Variable | Purpose |
+| --- | --- |
+| `REDIS_URL` | Redis connection string used for message/stream storage |
+| `APP_PASSWORD` | The single app password, sent as `x-db-token` |
+| `API_KEY` | Gemini API key — one key for **all** modes |
+| `DEFAULT_MODEL` | Model used by **all** modes |
+| `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |
+
+Modes (`default`, `random`, `grammar`) differ only by their system prompt.
+There are no per-mode API keys or models; `GEMINI_API_KEY` and the legacy
+`DEFAULT_MODE_API_KEY` are still accepted as aliases of `API_KEY`.
