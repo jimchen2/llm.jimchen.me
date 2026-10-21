@@ -430,82 +430,75 @@ p:has(.katex-display) {
   background: rgba(91, 120, 238, 0.2);
 }
 
+/* Underline shown while the user is typing: purely visual (clicks fall
+   through to the textarea) so caret and click positions stay aligned. */
 .gram-inline-mark {
-  position: relative;
   border-radius: 3px;
   color: inherit;
-  background: rgba(240, 93, 99, 0.12);
+  background: rgba(240, 93, 99, 0.1);
   text-decoration: underline wavy var(--gram-red);
   text-decoration-thickness: 1.3px;
   text-underline-offset: 3px;
-  cursor: pointer;
+  pointer-events: none;
+}
+
+.gram-ins-anchor {
+  display: inline-block;
+  width: 0;
+  height: 1em;
+  vertical-align: -0.15em;
+  pointer-events: none;
+}
+
+/* Inline tracked-changes view (shown when the user is not typing): the
+   correction is visible directly in the text — no hover needed. Click the
+   green insertion to accept a fix, the red deletion to dismiss it. */
+.gram-change {
+  border-radius: 4px;
+}
+
+.gram-del,
+.gram-ins {
+  border-radius: 3px;
   pointer-events: auto;
-  transition: background 120ms ease;
-}
-
-.gram-inline-mark:hover,
-.gram-inline-mark.is-active {
-  background: rgba(240, 93, 99, 0.23);
-  text-decoration-thickness: 2px;
-}
-
-.gram-hover-card {
-  position: absolute;
-  z-index: 5;
-  width: min(300px, calc(100% - 20px));
-  padding: 13px;
-  border: 1px solid #e0e5ed;
-  border-radius: 11px;
-  color: var(--gram-ink);
-  background: #fff;
-  box-shadow: 0 12px 34px rgba(27, 39, 62, 0.17);
-}
-
-.gram-hover-card-label {
-  margin-bottom: 8px;
-  color: #8994a5;
-  font-size: 0.62rem;
-  font-weight: 750;
-  letter-spacing: 0.09em;
-}
-
-.gram-hover-card-diff {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  overflow-wrap: anywhere;
-  font-size: 0.92rem;
-}
-
-.gram-hover-card-diff del {
-  color: #bd555a;
-  text-decoration-thickness: 1.5px;
-}
-
-.gram-hover-card-diff strong {
-  color: #21835b;
-  font-weight: 700;
-}
-
-.gram-hover-card-diff > span {
-  color: #9ba4b2;
-}
-
-.gram-hover-accept {
-  margin-top: 11px;
-  padding: 0;
-  border: 0;
-  color: #3759d7;
-  background: none;
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 750;
   cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
-.gram-hover-accept:hover {
-  color: #263fa8;
+.gram-del {
+  color: #bb464c;
+  background: rgba(240, 93, 99, 0.13);
+  text-decoration: line-through;
+  text-decoration-color: rgba(195, 60, 66, 0.8);
+  text-decoration-thickness: 1.4px;
+}
+
+.gram-del:hover {
+  background: rgba(240, 93, 99, 0.24);
+}
+
+.gram-ins {
+  color: #177a4f;
+  background: rgba(46, 160, 102, 0.14);
   text-decoration: underline;
+  text-decoration-color: rgba(23, 122, 79, 0.55);
+  text-decoration-thickness: 1.4px;
+  text-underline-offset: 2.5px;
+}
+
+.gram-change .gram-del + .gram-ins {
+  margin-left: 4px;
+}
+
+.gram-ins:hover {
+  background: rgba(46, 160, 102, 0.26);
+}
+
+.gram-diff-insert-hint,
+.gram-diff-delete-hint {
+  color: #98a1af;
+  font-size: 0.72rem;
+  font-style: italic;
 }
 
 .gram-editor-footer {
@@ -898,10 +891,6 @@ p:has(.katex-display) {
   .gram-suggestion-list {
     flex: 0 0 auto;
     max-height: 58vh;
-  }
-
-  .gram-hover-card {
-    display: none;
   }
 }
 

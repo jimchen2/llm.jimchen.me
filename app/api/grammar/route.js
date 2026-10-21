@@ -24,6 +24,17 @@ function cleanOutput(raw) {
   return t;
 }
 
+// When the model fails to produce a usable correction (empty answer, or it
+// truncated the text), fall back to the original so the page just shows no
+// changes instead of a bogus "delete everything" diff.
+function sanitizedCorrection(original, corrected) {
+  if (!corrected) return original;
+  if (corrected.length < original.trim().length * 0.5 && original.trim().length > 40) {
+    return original;
+  }
+  return corrected;
+}
+
 export async function POST(req) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -77,5 +88,7 @@ export async function POST(req) {
     );
   }
 
-  return NextResponse.json({ corrected: cleanOutput(corrected) });
+  return NextResponse.json({
+    corrected: sanitizedCorrection(text, cleanOutput(corrected)),
+  });
 }
