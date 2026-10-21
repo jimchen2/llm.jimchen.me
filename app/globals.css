@@ -443,69 +443,27 @@ p:has(.katex-display) {
   transition: background 120ms ease;
 }
 
-.gram-inline-mark:hover,
 .gram-inline-mark.is-active {
   background: rgba(240, 93, 99, 0.23);
   text-decoration-thickness: 2px;
 }
 
-.gram-hover-card {
-  position: absolute;
-  z-index: 5;
-  width: min(300px, calc(100% - 20px));
-  padding: 13px;
-  border: 1px solid #e0e5ed;
-  border-radius: 11px;
-  color: var(--gram-ink);
-  background: #fff;
-  box-shadow: 0 12px 34px rgba(27, 39, 62, 0.17);
-}
-
-.gram-hover-card-label {
-  margin-bottom: 8px;
-  color: #8994a5;
-  font-size: 0.62rem;
-  font-weight: 750;
-  letter-spacing: 0.09em;
-}
-
-.gram-hover-card-diff {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  overflow-wrap: anywhere;
-  font-size: 0.92rem;
-}
-
-.gram-hover-card-diff del {
-  color: #bd555a;
-  text-decoration-thickness: 1.5px;
-}
-
-.gram-hover-card-diff strong {
-  color: #21835b;
-  font-weight: 700;
-}
-
-.gram-hover-card-diff > span {
-  color: #9ba4b2;
-}
-
-.gram-hover-accept {
-  margin-top: 11px;
-  padding: 0;
-  border: 0;
-  color: #3759d7;
+/* Added punctuation has no original characters to underline. Show a narrow
+   insertion marker without changing the textarea/mirror text metrics. */
+.gram-inline-mark.is-insertion {
   background: none;
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 750;
-  cursor: pointer;
+  text-decoration: none;
 }
 
-.gram-hover-accept:hover {
-  color: #263fa8;
-  text-decoration: underline;
+.gram-inline-mark.is-insertion::after {
+  position: absolute;
+  top: 0.15em;
+  bottom: 0.15em;
+  left: -1px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--gram-red);
+  content: "";
 }
 
 .gram-editor-footer {
@@ -651,6 +609,11 @@ p:has(.katex-display) {
   flex: 0 0 auto;
   color: #a3acb8;
   font-size: 0.82rem;
+}
+
+.gram-diff-empty {
+  color: #98a1af;
+  font-weight: 600;
 }
 
 .gram-suggestion-index {
@@ -898,10 +861,6 @@ p:has(.katex-display) {
   .gram-suggestion-list {
     flex: 0 0 auto;
     max-height: 58vh;
-  }
-
-  .gram-hover-card {
-    display: none;
   }
 }
 

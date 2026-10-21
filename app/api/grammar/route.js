@@ -15,13 +15,18 @@ function isAuthorized(request) {
   return Boolean(token) && token === validToken;
 }
 
-// The model occasionally wraps the answer in a code fence — strip it.
-function cleanOutput(raw) {
+// The model occasionally wraps the answer in a code fence — strip it. Keep the
+// author's original outer whitespace so trimming a model response does not
+// become a phantom diff (or move punctuation across trailing spaces).
+function cleanOutput(raw, input) {
   let t = (raw || "").trim();
   if (t.startsWith("```")) {
     t = t.replace(/^```[a-zA-Z]*\s*/, "").replace(/```\s*$/, "").trim();
   }
-  return t;
+
+  const leading = input.match(/^\s*/)?.[0] || "";
+  const trailing = input.match(/\s*$/)?.[0] || "";
+  return `${leading}${t}${trailing}`;
 }
 
 export async function POST(req) {
@@ -77,5 +82,5 @@ export async function POST(req) {
     );
   }
 
-  return NextResponse.json({ corrected: cleanOutput(corrected) });
+  return NextResponse.json({ corrected: cleanOutput(corrected, text) });
 }
