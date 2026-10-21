@@ -8,7 +8,7 @@ export async function POST(req) {
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
 
-  const { apiKey, systemPrompt } = getModeConfig(mode);
+  const { apiKey, systemPrompt, mode: resolvedMode } = getModeConfig(mode);
 
   const pipeline = redis.pipeline();
 
@@ -49,6 +49,7 @@ export async function POST(req) {
       model,
       messages: llmMessages,
       apiKey,
+      mode: resolvedMode,
       onChunk: async (chunk) => {
         finalContent += chunk;
         await redis.publish(`msg:${botMsgId}:channel`, JSON.stringify(chunk));
