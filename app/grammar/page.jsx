@@ -4,14 +4,15 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { applyTextChanges, findTextChanges } from "@/lib/grammarDiff";
 
 const DRAFT_KEY = "grammar_draft";
-const CACHE_KEY = "grammar_paragraph_cache_v1";
+// v2 stores plain corrected paragraphs instead of the old ~~old~~ **new** markup.
+const CACHE_KEY = "grammar_paragraph_cache_v2";
 const PARAGRAPH_CHECK_DELAY_MS = 900;
 const MAX_CACHE_ENTRIES = 100;
 const MAX_CACHE_CHARS = 1_200_000;
@@ -25,15 +26,13 @@ const DEMO_TEXT =
 // These examples are deliberately available without an API call so the inline
 // suggestions can be tried immediately, even in a local setup without an LLM key.
 const DEMO_CORRECTIONS = {
-  "I has a apple.": "I ~~has~~ **have** ~~a~~ **an** apple.",
-  "She go to school every day.": "She ~~go~~ **goes** to school every day.",
-  "We was very happy.": "We ~~was~~ **were** very happy.",
-  "Yesterday I go to the store.":
-    "Yesterday I ~~go~~ **went** to the store.",
-  "They is ready for the test.":
-    "They ~~is~~ **are** ready for the test.",
+  "I has a apple.": "I have an apple.",
+  "She go to school every day.": "She goes to school every day.",
+  "We was very happy.": "We were very happy.",
+  "Yesterday I go to the store.": "Yesterday I went to the store.",
+  "They is ready for the test.": "They are ready for the test.",
   "Я пошла в магазине и купила хлеб а потом пошла спать.":
-    "Я ~~пошла~~ **пошёл** в ~~магазине~~ **магазин** и ~~купила~~ **купил** хлеб, а потом ~~пошла~~ **пошёл** спать.",
+    "Я пошла в магазин и купила хлеб, а потом пошла спать.",
 };
 
 function cacheKey(input, model) {
@@ -68,57 +67,6 @@ function splitParagraphs(text) {
   }
 
   return paragraphs;
-}
-
-// The model marks edits as ~~original~~ **replacement**. Convert those marks
-// into offsets in the original paragraph for the editor overlay and issue list.
-function parseMarkedCorrections(input, output) {
-  const issues = [];
-  const pattern = /~~([^~\n]+)~~\s*\*\*([^*\n]+)\*\*/g;
-  let sourceCursor = 0;
-  let match;
-
-  while ((match = pattern.exec(output || "")) !== null) {
-    const original = match[1];
-    const suggestion = match[2];
-    let start = input.indexOf(original, sourceCursor);
-
-    // A model can occasionally repeat or lightly reformat a phrase. Fall back
-    // to the first occurrence rather than dropping a useful suggestion.
-    if (start < 0) start = input.indexOf(original);
-    if (start < 0) continue;
-
-    issues.push({
-      start,
-      end: start + original.length,
-      original,
-      suggestion,
-    });
-    sourceCursor = start + original.length;
-  }
-
-  return issues;
-}
-
-function acceptMarkedSuggestion(input, output, targetStart, targetOriginal, targetSuggestion) {
-  const pattern = /~~([^~\n]+)~~\s*\*\*([^*\n]+)\*\*/g;
-  let sourceCursor = 0;
-
-  return (output || "").replace(pattern, (whole, original, suggestion) => {
-    let start = input.indexOf(original, sourceCursor);
-    if (start < 0) start = input.indexOf(original);
-    if (start < 0) return whole;
-
-    sourceCursor = start + original.length;
-    if (
-      start === targetStart &&
-      original === targetOriginal &&
-      suggestion === targetSuggestion
-    ) {
-      return suggestion;
-    }
-    return whole;
-  });
 }
 
 function getDemoEntry(paragraph, demoCache) {
@@ -190,7 +138,7 @@ function persistCorrectionCache(cache) {
       totalChars -= removed.input.length + removed.output.length;
     }
 
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ version: 1, entries: selected }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ version: 2, entries: selected }));
   } catch {
     // Storage can be disabled or full; the in-memory cache still works.
   }
@@ -212,12 +160,9 @@ function renderHighlightedText(text, issues, activeIssueId, issueRefs, handlers)
           if (node) issueRefs.current.set(issue.id, node);
           else issueRefs.current.delete(issue.id);
         }}
-        className={`gram-inline-mark${activeIssueId === issue.id ? " is-active" : ""}`}
-        onMouseEnter={() => handlers.onMarkEnter(issue.id)}
-        onMouseLeave={() => handlers.onMarkLeave(issue.id)}
+        className={`gram-inline-mark${activeIssueId === issue.id ? " is-active" : ""}${issue.start === issue.end ? " is-insertion" : ""}`}
         onMouseDown={(event) => event.preventDefault()}
         onClick={(event) => handlers.onMarkClick(event, issue)}
-        title={`Подсказка: ${issue.suggestion}`}
       >
         {mark}
       </span>
@@ -230,18 +175,7 @@ function renderHighlightedText(text, issues, activeIssueId, issueRefs, handlers)
 }
 
 function applySuggestions(text, issues) {
-  let result = text;
-  const ordered = [...issues].sort((a, b) => b.start - a.start);
-
-  for (const issue of ordered) {
-    if (result.slice(issue.start, issue.end) !== issue.original) continue;
-    result =
-      result.slice(0, issue.start) +
-      issue.suggestion +
-      result.slice(issue.end);
-  }
-
-  return result;
+  return applyTextChanges(text, issues);
 }
 
 export default function GrammarPage() {
@@ -253,8 +187,6 @@ export default function GrammarPage() {
   const [requestError, setRequestError] = useState("");
   const [ignoredIssues, setIgnoredIssues] = useState(() => new Set());
   const [pinnedIssueId, setPinnedIssueId] = useState(null);
-  const [hoveredIssueId, setHoveredIssueId] = useState(null);
-  const [popoverPosition, setPopoverPosition] = useState(null);
 
   const taRef = useRef(null);
   const mirrorRef = useRef(null);
@@ -263,7 +195,6 @@ export default function GrammarPage() {
   const cacheRef = useRef(new Map());
   const demoCacheRef = useRef(new Map());
   const pendingRef = useRef(new Map());
-  const hoverTimerRef = useRef(null);
   const modelRef = useRef("");
 
   const paragraphs = useMemo(() => splitParagraphs(text), [text]);
@@ -277,7 +208,7 @@ export default function GrammarPage() {
         cacheRef.current.get(cacheKey(paragraph.text, selectedModel));
       if (!entry) continue;
 
-      for (const parsed of parseMarkedCorrections(paragraph.text, entry.output)) {
+      for (const parsed of findTextChanges(paragraph.text, entry.output)) {
         const id = [
           paragraph.start,
           parsed.start,
@@ -317,8 +248,7 @@ export default function GrammarPage() {
     return count;
   }, [paragraphs, model, cacheVersion]);
 
-  const activeIssueId = hoveredIssueId || pinnedIssueId;
-  const activeIssue = issues.find((issue) => issue.id === activeIssueId) || null;
+  const activeIssueId = pinnedIssueId;
 
   /* ---------------- auth and local cache ---------------- */
   useEffect(() => {
@@ -397,7 +327,7 @@ export default function GrammarPage() {
       if (!response.ok) {
         throw new Error(data.error || `Ошибка запроса (${response.status})`);
       }
-      if (typeof data.corrected !== "string") {
+      if (typeof data.corrected !== "string" || !data.corrected.trim()) {
         throw new Error("Служба проверки грамматики вернула некорректный ответ.");
       }
 
@@ -491,76 +421,21 @@ export default function GrammarPage() {
     return () => window.clearTimeout(timer);
   }, [ready, text, checkDocument]);
 
-  /* ---------------- editor selection, hover, and popup ---------------- */
-  const updatePopoverPosition = useCallback((issueId) => {
-    if (!issueId) {
-      setPopoverPosition(null);
-      return;
-    }
-
-    const marker = issueRefs.current.get(issueId);
-    const shell = editorShellRef.current;
-    if (!marker || !shell) return;
-
-    const markerRect = marker.getBoundingClientRect();
-    const shellRect = shell.getBoundingClientRect();
-    const cardWidth = Math.min(300, shellRect.width - 20);
-    const left = Math.max(
-      10,
-      Math.min(markerRect.left - shellRect.left, shellRect.width - cardWidth - 10)
-    );
-    const below = markerRect.bottom - shellRect.top + 8;
-    const top =
-      below + 150 < shellRect.height
-        ? below
-        : Math.max(8, markerRect.top - shellRect.top - 150);
-
-    setPopoverPosition({ left, top });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!activeIssue) {
-      setPopoverPosition(null);
-      return;
-    }
-    updatePopoverPosition(activeIssue.id);
-  }, [activeIssue, updatePopoverPosition]);
-
-  useEffect(
-    () => () => {
-      if (hoverTimerRef.current) window.clearTimeout(hoverTimerRef.current);
-    },
-    []
-  );
-
+  /* ---------------- editor and always-visible suggestion list ---------------- */
   useEffect(() => {
     const availableIds = new Set(issues.map((issue) => issue.id));
     if (pinnedIssueId && !availableIds.has(pinnedIssueId)) setPinnedIssueId(null);
-    if (hoveredIssueId && !availableIds.has(hoveredIssueId)) setHoveredIssueId(null);
-  }, [issues, pinnedIssueId, hoveredIssueId]);
-
-  const cancelHoverClear = () => {
-    if (hoverTimerRef.current) window.clearTimeout(hoverTimerRef.current);
-  };
-
-  const scheduleHoverClear = (issueId) => {
-    cancelHoverClear();
-    hoverTimerRef.current = window.setTimeout(() => {
-      setHoveredIssueId((current) => (current === issueId ? null : current));
-    }, 180);
-  };
+  }, [issues, pinnedIssueId]);
 
   const syncEditorScroll = () => {
     if (taRef.current && mirrorRef.current) {
       mirrorRef.current.scrollTop = taRef.current.scrollTop;
       mirrorRef.current.scrollLeft = taRef.current.scrollLeft;
     }
-    if (activeIssueId) updatePopoverPosition(activeIssueId);
   };
 
   const focusIssue = (issue) => {
     setPinnedIssueId(issue.id);
-    setHoveredIssueId(null);
 
     const editor = taRef.current;
     if (!editor) return;
@@ -606,20 +481,13 @@ export default function GrammarPage() {
       getDemoEntry(issue.paragraphText, demoCacheRef.current) ||
       cacheRef.current.get(cacheKey(issue.paragraphText, selectedModel));
 
-    // Keep the other suggestions from this paragraph visible while the user
-    // accepts fixes one by one. The accepted correction becomes plain text in
-    // the cached output, and the new paragraph version is cached immediately.
+    // Diff the partially corrected paragraph against the same clean model
+    // output. This keeps every remaining suggestion without asking the model
+    // to rewrite the paragraph again after each accepted edit.
     if (oldEntry) {
-      const nextOutput = acceptMarkedSuggestion(
-        issue.paragraphText,
-        oldEntry.output,
-        localStart,
-        issue.original,
-        issue.suggestion
-      );
       const nextEntry = {
         input: nextParagraph,
-        output: nextOutput,
+        output: oldEntry.output,
         model: selectedModel,
         source: oldEntry.source,
       };
@@ -636,13 +504,11 @@ export default function GrammarPage() {
       text.slice(issue.end);
     setText(nextText);
     setPinnedIssueId(null);
-    setHoveredIssueId(null);
   };
 
   const handleIgnore = (issue) => {
     setIgnoredIssues((current) => new Set(current).add(issue.id));
     setPinnedIssueId(null);
-    setHoveredIssueId(null);
   };
 
   const handleCopyCorrected = async () => {
@@ -657,7 +523,6 @@ export default function GrammarPage() {
     setText("");
     setIgnoredIssues(new Set());
     setPinnedIssueId(null);
-    setHoveredIssueId(null);
     setRequestError("");
     try {
       localStorage.removeItem(DRAFT_KEY);
@@ -671,15 +536,9 @@ export default function GrammarPage() {
     setText(DEMO_TEXT);
     setIgnoredIssues(new Set());
     setPinnedIssueId(null);
-    setHoveredIssueId(null);
   };
 
   const issueRenderHandlers = {
-    onMarkEnter: (id) => {
-      cancelHoverClear();
-      setHoveredIssueId(id);
-    },
-    onMarkLeave: scheduleHoverClear,
     onMarkClick: handleMarkClick,
   };
 
@@ -839,36 +698,11 @@ export default function GrammarPage() {
               spellCheck={false}
               aria-label="Текст документа"
             />
-            {activeIssue && popoverPosition && (
-              <div
-                className="gram-hover-card"
-                style={{ left: popoverPosition.left, top: popoverPosition.top }}
-                onMouseEnter={() => {
-                  cancelHoverClear();
-                  setHoveredIssueId(activeIssue.id);
-                }}
-                onMouseLeave={() => scheduleHoverClear(activeIssue.id)}
-              >
-                <div className="gram-hover-card-label">ПРЕДЛАГАЕМОЕ ИСПРАВЛЕНИЕ</div>
-                <div className="gram-hover-card-diff">
-                  <del>{activeIssue.original}</del>
-                  <span aria-hidden="true">→</span>
-                  <strong>{activeIssue.suggestion}</strong>
-                </div>
-                <button
-                  type="button"
-                  className="gram-hover-accept"
-                  onClick={() => handleAccept(activeIssue)}
-                >
-                  Принять исправление
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="gram-editor-footer">
             <span>
-              Абзацы проверяются по отдельности. Проверенные абзацы кэшируются на этом устройстве.
+              Минимальные правки. Исправленный текст сравнивается с оригиналом в браузере.
             </span>
             <span>
               {text.length.toLocaleString()}{" "}
@@ -912,11 +746,6 @@ export default function GrammarPage() {
                 <article
                   className={`gram-suggestion-card${activeIssueId === issue.id ? " is-active" : ""}`}
                   key={issue.id}
-                  onMouseEnter={() => {
-                    cancelHoverClear();
-                    setHoveredIssueId(issue.id);
-                  }}
-                  onMouseLeave={() => scheduleHoverClear(issue.id)}
                 >
                   <button
                     className="gram-suggestion-main"
@@ -928,9 +757,17 @@ export default function GrammarPage() {
                       {issue.source === "demo" && <span className="gram-demo-tag">ПРИМЕР</span>}
                     </span>
                     <span className="gram-suggestion-diff">
-                      <del>{issue.original}</del>
+                      {issue.original ? (
+                        <del>{issue.original}</del>
+                      ) : (
+                        <span className="gram-diff-empty" aria-label="Ничего">∅</span>
+                      )}
                       <span className="gram-diff-arrow" aria-hidden="true">→</span>
-                      <strong>{issue.suggestion}</strong>
+                      {issue.suggestion ? (
+                        <strong>{issue.suggestion}</strong>
+                      ) : (
+                        <span className="gram-diff-empty" aria-label="Удалить">∅</span>
+                      )}
                     </span>
                     <span className="gram-suggestion-index">Подсказка {index + 1}</span>
                   </button>
