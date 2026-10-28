@@ -6,6 +6,16 @@ import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-boo
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
+import { getModeMemory, applyMemoryWindow } from "../lib/modes";
+
+// Memory window (in previous exchanges) for a mode. `serverModes` is whatever
+// /api/settings resolved from the environment; the static per-mode default is
+// used until that response lands (and in local builds without the API).
+const resolveMemory = (mode, serverModes) => {
+  const fromServer = serverModes?.[mode]?.memory;
+  if (typeof fromServer === "number") return fromServer;
+  return getModeMemory(mode);
+};
 
 const ChatInput = ({ onSend, placeholder }) => {
   const [input, setInput] = useState("");
@@ -68,6 +78,7 @@ export default function App({ routeMode = "default" }) {
   const [isLoadingConv, setIsLoadingConv] = useState(false);
 
   const isInitializedRef = useRef(false);
+  const modeMemoryRef = useRef({});
 
   const [settings, setSettings] = useState({
     model: "gemini-3.7-flash",
@@ -91,6 +102,9 @@ export default function App({ routeMode = "default" }) {
       if (!res.ok) throw new Error("Invalid password");
 
       const data = await res.json();
+      if (data.settings?.modes) {
+        modeMemoryRef.current = data.settings.modes;
+      }
       if (data.settings) {
         setSettings({
           dbToken: token,
@@ -116,6 +130,9 @@ export default function App({ routeMode = "default" }) {
         });
         if (res.ok) {
           const data = await res.json();
+          if (data.settings?.modes) {
+            modeMemoryRef.current = data.settings.modes;
+          }
           if (data.settings?.model) {
             setSettings((prev) => ({ ...prev, model: data.settings.model }));
           }
@@ -395,6 +412,10 @@ export default function App({ routeMode = "default" }) {
       curr = newMsgs[curr].parent_id;
     }
 
+    // One-off modes (random: memory = 1) only get the last exchange as context.
+    // The full chain stays saved locally so you can still read/edit/retry it.
+    const llmPath = applyMemoryWindow(path, resolveMemory(conversationMode, modeMemoryRef.current));
+
     try {
       if (isNewConv) {
         await fetch("/api/conversations", {
@@ -408,7 +429,7 @@ export default function App({ routeMode = "default" }) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
         body: JSON.stringify({
-          messages: path,
+          messages: llmPath,
           userMsgId: isBotRetry ? null : userMsgId,
           botMsgId,
           parentId,
@@ -674,7 +695,7 @@ export default function App({ routeMode = "default" }) {
             <div className="h-100 d-flex justify-content-center align-items-center">
               <h3 className="text-muted">
                 {routeMode === "random"
-                  ? "Random mode — ask anything"
+                  ? "Random mode — ask anything (one-off: only the previous exchange is remembered)"
                   : routeMode === "grammar"
                     ? "Grammar mode — исправьте грамматику"
                     : "Please only talk about coding"}

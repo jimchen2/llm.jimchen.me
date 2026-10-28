@@ -1,7 +1,7 @@
 // app/api/settings/route.js
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
-import { MODES, DEFAULT_MODE, normalizeMode } from '@/lib/modes';
+import { DEFAULT_MODE, normalizeMode, getPublicModeConfigs } from '@/lib/modes';
 
 function isAuthorized(request) {
   const token = request.headers.get('x-db-token');
@@ -22,7 +22,9 @@ export async function GET(request) {
       settings: {
         model: config.model ?? process.env.DEFAULT_MODEL ?? 'gemini-3.8-flash',
         mode: normalizeMode(config.mode),
-        modes: MODES,
+        // Public per-mode info (label + memory window) so the client trims the
+        // history it sends exactly like the server would.
+        modes: getPublicModeConfigs(),
       },
     });
   } catch (err) {

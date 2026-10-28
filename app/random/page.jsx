@@ -1,6 +1,6 @@
 'use client';
 
-import App from '../page';
+import App from '@/app/page';
 
 export default function RandomModePage() {
   return <App routeMode="random" />;

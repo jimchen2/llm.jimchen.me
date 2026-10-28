@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
 import { callLLM } from "@/lib/llm";
-import { getModeConfig } from "@/lib/modes";
+import { getModeConfig, applyMemoryWindow } from "@/lib/modes";
 
 export async function POST(req) {
   const { messages, userMsgId, botMsgId, parentId, conversationId, model, mode } = await req.json();
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
 
-  const { systemPrompt } = getModeConfig(mode);
+  const { systemPrompt, memory } = getModeConfig(mode);
 
   const pipeline = redis.pipeline();
 
@@ -39,11 +39,14 @@ export async function POST(req) {
   process.nextTick(async () => {
     let finalContent = "";
 
-    // Prepend the mode's system prompt (from env) when configured.
+    // Honor the mode's memory window: random mode is one-off (memory = 1), so
+    // only the previous exchange is sent along with the new message instead of
+    // the whole chain. Then prepend the mode's system prompt (from env).
+    const windowed = applyMemoryWindow(messages, memory);
     const llmMessages =
       systemPrompt && systemPrompt.length > 0
-        ? [{ role: "system", content: systemPrompt }, ...messages]
-        : messages;
+        ? [{ role: "system", content: systemPrompt }, ...windowed]
+        : windowed;
 
     await callLLM({
       model,

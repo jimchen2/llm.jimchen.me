@@ -18,7 +18,21 @@ Copy `.env.example` to `.env` and fill in:
 | `API_KEY` | Gemini API key — one key for **all** modes |
 | `DEFAULT_MODEL` | Model used by **all** modes |
 | `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |
+| `*_MODE_MEMORY` | Optional per-mode history window (see below) |
 
-Modes (`default`, `random`, `grammar`) differ only by their system prompt.
-There are no per-mode API keys or models; `GEMINI_API_KEY` and the legacy
-`DEFAULT_MODE_API_KEY` are still accepted as aliases of `API_KEY`.
+Modes (`default`, `random`, `grammar`) differ only by their system prompt and
+by how much history the model is allowed to see. There are no per-mode API keys
+or models; `GEMINI_API_KEY` and the legacy `DEFAULT_MODE_API_KEY` are still
+accepted as aliases of `API_KEY`.
+
+## Memory (history window) per mode
+
+`*_MODE_MEMORY` is the number of *previous exchanges* (a user prompt plus its
+reply) sent to the model before the message being answered: `-1` (default) keeps
+the whole chain, `1` remembers only the previous exchange, `0` is strictly
+one-off (the new message alone).
+
+`random` mode ships with `memory = 1`, i.e. one-off mode: every turn is
+answered from the previous exchange only, so an old message cannot be used to
+keep a long conversation going. Messages are still saved in full — you can read,
+edit, branch, delete and retry them — the window only limits what the LLM sees.
