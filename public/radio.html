@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Российские радиостанции — онлайн</title>
+<style>
+:root{--bg:#0f1115;--panel:#181b22;--panel-2:#20242d;--border:#2a2f3a;--text:#e8eaf0;--muted:#8a92a3;--accent:#ff6b35;--accent-2:#ffb24d;--ok:#3ecf8e;--bad:#ef5b5b}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}body{min-height:100vh;padding-bottom:160px}
+header{position:sticky;top:0;z-index:10;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:18px 24px 14px}.title-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}h1 span{color:var(--accent)}.count{color:var(--muted);font-size:14px}.controls{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}.search{flex:1 1 260px;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;outline:none}.search:focus{border-color:var(--accent)}.custom{display:flex;gap:8px;flex:2 1 420px}.custom input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:14px;outline:none}.custom input:focus{border-color:var(--accent)}.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}.btn:hover{filter:brightness(1.08)}
+main{padding:20px 24px}.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))}.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;transition:border-color .15s,background .15s;cursor:pointer;user-select:none;color:inherit;font:inherit;text-align:left}.card:hover{border-color:#3a4150;background:var(--panel-2)}.card.active{border-color:var(--accent);background:var(--panel-2)}.card.off{opacity:.45;cursor:not-allowed}.card.off:hover{border-color:var(--border);background:var(--panel)}.play-ico{flex:0 0 44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;font-size:16px}.card.off .play-ico{background:var(--border)}.info{min-width:0;flex:1}.name{font-size:15px;font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.meta{margin-top:4px;font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}.tag{background:#262b36;border-radius:6px;padding:2px 7px;color:#b5bccb}.eq{display:none;gap:2px;align-items:flex-end;height:14px;margin-left:auto}.card.active.playing .eq{display:inline-flex}.eq i{display:block;width:3px;background:var(--accent);border-radius:2px;animation:eq 1s infinite ease-in-out}.eq i:nth-child(1){height:60%;animation-delay:-.2s}.eq i:nth-child(2){height:100%;animation-delay:-.5s}.eq i:nth-child(3){height:40%;animation-delay:-.8s}@keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}.empty{color:var(--muted);padding:40px 0;text-align:center;grid-column:1/-1}
+.player{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(24,27,34,.97);border-top:1px solid var(--border);backdrop-filter:blur(8px);display:flex;align-items:center;gap:16px;padding:14px 24px;flex-wrap:wrap}.player .now{flex:1 1 260px;min-width:0}.player .now .t{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player .now .s{font-size:12px;color:var(--muted);margin-top:3px}.player .s.ok{color:var(--ok)}.player .s.err{color:var(--bad)}.toggle{width:52px;height:52px;border-radius:50%;border:0;cursor:pointer;background:var(--accent);color:#fff;font-size:20px;display:grid;place-items:center;flex:0 0 auto}.toggle:disabled{background:var(--border);cursor:default}.vol{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;flex:0 0 auto}.vol input{width:160px;accent-color:var(--accent)}@media(max-width:560px){header,main{padding-left:14px;padding-right:14px}.player{padding:12px 14px}.vol input{width:110px}}
+</style>
+</head>
+<body>
+<header><div class="title-row"><h1><span>●</span> Российские радиостанции</h1><div class="count" id="count"></div></div><div class="controls"><input class="search" id="search" type="search" aria-label="Поиск по названию или городу" placeholder="Поиск по названию или городу…"><div class="custom"><input id="customUrl" type="url" aria-label="Свой поток" placeholder="Свой поток: вставьте ссылку на аудиопоток (mp3/aac)"><button class="btn" id="customBtn">Слушать</button></div></div></header>
+<main><div class="grid" id="grid"></div></main>
+<div class="player"><div class="now"><div class="t" id="nowTitle">Выберите станцию</div><div class="s" id="nowStatus" role="status">Нажмите на карточку, чтобы начать прослушивание</div></div><button class="toggle" id="toggle" disabled aria-label="Пуск/пауза">▶</button><div class="vol">🔊<input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" aria-label="Громкость"></div></div>
+<audio id="audio" preload="none"></audio>
+<script>
+const STATIONS = [
+['Говорит Москва','Москва','https://media.govoritmoskva.ru/radio/ru64.mp3'],
+['Комсомольская Правда','Москва','https://kpradio.hostingradio.ru:8000/russia.radiokp128.mp3'],
+['Радио Звезда','Москва','https://zvezda-radio128.mediacdn.ru/radio/zvezda/zvezda_128'],
+['Радио Культура','Москва','https://icecast-vgtrk.cdnvideo.ru/kulturafm'],
+['Радио 1','Москва',null],
+['Радио России','Москва','https://icecast-vgtrk.cdnvideo.ru/rrzonam_mp3_128kbps'],
+['Радио Маяк','Москва','https://icecast-vgtrk.cdnvideo.ru/mayakfm_mp3_192kbps'],
+['Вести FM','Москва','https://icecast-vgtrk.cdnvideo.ru/vestifm'],
+['Коммерсантъ FM','Москва','https://kommersant77.hostingradio.ru:8085/kommersant128.mp3'],
+['Бизнес FM','Москва','https://bfm.hostingradio.ru:9075/fm'],
+['Москва FM','Москва','https://icecast-vgtrk.cdnvideo.ru/moscowfm128'],
+['Радонеж','Москва','https://icecast-radonezh.cdnvideo.ru/rad128'],
+['Радиокнига','Москва',null],
+['Радио Спутник. Россия Сегодня','Москва','https://icecast-rian.cdnvideo.ru/voicerus'],
+['Радио Москвы','Москва','https://icecast-vgtrk.cdnvideo.ru/moscowtalk128'],
+['Радио Фантастики','Москва','https://listen9.myradio24.com/55699'],
+['Радио Вера','Москва','http://77.39.8.49:8000/vera_air_96'],
+['Davidzon Radio','США (Нью-Джерси)','http://radioserver.abinet.com:8800/dr.aac'],
+['Радио России (Нижний Новгород)','Нижний Новгород','https://icecast-vgtrk.cdnvideo.ru/russiafm_nn'],
+['Старое радио','Москва','http://195.91.237.50:8000/ices128'],
+['Радио Маяк (Нижний Новгород)','Нижний Новгород','https://icecast-vgtrk.cdnvideo.ru/mayak_nn'],
+['Радио России (Санкт-Петербург)','Санкт-Петербург','https://radio.rtr.spb.ru/live1'],
+['Благовещение','Москва',null],
+['Модель для сборки','Москва','http://mds-station.com:8000/mds'],
+['Радио Зенит','Санкт-Петербург',null],
+['Радио России (Пермь)','Пермь',null],
+['Маяк (Самара)','Самара',null],
+['Радио России (Самара)','Самара',null],
+['Бизнес FM (Санкт-Петербург)','Санкт-Петербург','https://bfmreg.hostingradio.ru/spb.bfm128.mp3'],
+['Маяк (Барнаул)','Барнаул','http://gtrk22.ru:8000/mayak22'],
+['Радио Всероссийского общества слепых (ВОС)','Москва','http://radiovos.ru:9000/radiovos-128'],
+['Радио Справедливая Россия','Москва','https://spravedlivo.hostingradio.ru:8022/spravedlivo128.mp3'],
+['Комсомольская Правда (Санкт-Петербург)','Санкт-Петербург','https://kpradio.hostingradio.ru:8000/spb.radiokp128.mp3'],
+['Комсомольская Правда (Новосибирск)','Новосибирск',null],
+['Радио Музком','Москва','https://geshou.s02.radio-tochka.com:5005/stream'],
+['Радио России (Иваново)','Иваново',null],
+['Радио Воскресенье','Екатеринбург','http://217.24.181.164:8000/stream.mp3'],
+['Бизнес FM (Нижний Новгород)','Нижний Новгород','https://online-2.gkvr.ru:8000/bfm_nno_64.aac'],
+['Коммерсантъ FM (Нижний Новгород)','Нижний Новгород',null],
+['Комсомольская правда (Екатеринбург)','Екатеринбург',null],
+['Радио России (Пенза)','Пенза',null]
+].map(([n,r,u])=>({n,r,u}));
+const $=id=>document.getElementById(id);
+const audio=$('audio'),grid=$('grid'),search=$('search'),countEl=$('count'),toggle=$('toggle'),nowTitle=$('nowTitle'),nowStatus=$('nowStatus'),volume=$('volume'),customUrl=$('customUrl'),customBtn=$('customBtn');
+audio.volume=.8;
+let currentIdx=null,current=null,requestId=0;
+function setStatus(text,cls){nowStatus.textContent=text;nowStatus.className='s'+(cls?' '+cls:'');}
+function markActive(){grid.querySelectorAll('.card').forEach(c=>{const active=currentIdx!==null&&Number(c.dataset.idx)===currentIdx;c.classList.toggle('active',active);c.classList.toggle('playing',active&&!audio.paused);});}
+function renderList(){const q=search.value.trim().toLowerCase();grid.replaceChildren();let shown=0;STATIONS.forEach((s,i)=>{if(q&&!(s.n.toLowerCase().includes(q)||s.r.toLowerCase().includes(q)))return;shown++;const card=document.createElement('button');card.type='button';card.className='card'+(s.u?'':' off');card.disabled=!s.u;card.dataset.idx=i;const ico=document.createElement('span');ico.className='play-ico';ico.textContent=s.u?'▶':'✕';ico.setAttribute('aria-hidden','true');const info=document.createElement('span');info.className='info';const name=document.createElement('span');name.className='name';name.textContent=s.n;const meta=document.createElement('span');meta.className='meta';const tag=document.createElement('span');tag.className='tag';tag.textContent=s.r;meta.append(tag);if(!s.u){const off=document.createElement('span');off.textContent='поток не найден';meta.append(off);}info.append(name,meta);const eq=document.createElement('span');eq.className='eq';eq.innerHTML='<i></i><i></i><i></i>';eq.setAttribute('aria-hidden','true');card.append(ico,info,eq);if(s.u)card.addEventListener('click',()=>playStation(s,i));grid.append(card);});if(!shown){const e=document.createElement('div');e.className='empty';e.textContent='Ничего не найдено';grid.append(e);}countEl.textContent=`Доступно: ${STATIONS.filter(s=>s.u).length} из ${STATIONS.length}`;markActive();}
+function startStream(){const id=++requestId;setStatus('Подключение…');audio.src=current.u;audio.play().catch(()=>{if(id!==requestId)return;setStatus('Не удалось воспроизвести поток','err');toggle.textContent='▶';markActive();});}
+function playStation(s,idx){if(!s||!s.u)return;if(current===s&&!audio.paused){audio.pause();return;}current=s;currentIdx=idx===undefined?null:idx;nowTitle.textContent=s.n;toggle.disabled=false;startStream();markActive();}
+toggle.addEventListener('click',()=>{if(!current)return;if(audio.paused)startStream();else audio.pause();});
+audio.addEventListener('playing',()=>{setStatus('В эфире','ok');toggle.textContent='⏸';markActive();});
+audio.addEventListener('waiting',()=>setStatus('Буферизация…'));
+audio.addEventListener('pause',()=>{if(current)setStatus('Пауза');toggle.textContent='▶';markActive();});
+audio.addEventListener('error',()=>{if(!current)return;setStatus('Ошибка потока: станция недоступна или ссылка устарела','err');toggle.textContent='▶';markActive();});
+audio.addEventListener('ended',()=>{setStatus('Поток завершён','err');toggle.textContent='▶';markActive();});
+volume.addEventListener('input',()=>{audio.volume=Number(volume.value);});search.addEventListener('input',renderList);
+customBtn.addEventListener('click',()=>{let url;try{url=new URL(customUrl.value.trim());if(!['http:','https:'].includes(url.protocol))throw new Error();}catch{setStatus('Введите корректную ссылку, начинающуюся с http:// или https://','err');return;}playStation({n:'Свой поток',r:'вручную',u:url.href});});
+customUrl.addEventListener('keydown',e=>{if(e.key==='Enter')customBtn.click();});
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.target.closest('input,textarea,select,button,[contenteditable]')&&!toggle.disabled){e.preventDefault();toggle.click();}});
+renderList();
+</script>
+</body>
+</html>
