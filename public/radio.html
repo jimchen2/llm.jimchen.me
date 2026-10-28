@@ -19,11 +19,11 @@ main{padding:20px 24px}.grid{display:grid;gap:12px;grid-template-columns:repeat(
 <audio id="audio" preload="none"></audio>
 <script>
 const STATIONS = [
-['Говорит Москва','Москва','https://media.govoritmoskva.ru/radio/ru64.mp3'],
+['Говорит Москва','Москва','https://media.govoritmoskva.ru/ru64.mp3'],
 ['Комсомольская Правда','Москва','https://kpradio.hostingradio.ru:8000/russia.radiokp128.mp3'],
 ['Радио Звезда','Москва','https://zvezda-radio128.mediacdn.ru/radio/zvezda/zvezda_128'],
 ['Радио Культура','Москва','https://icecast-vgtrk.cdnvideo.ru/kulturafm'],
-['Радио 1','Москва',null],
+['Радио 1','Москва','https://stream.radio1.ru/memfs/49dee7fe-77ba-4e6b-8cdc-fa840535b242.m3u8'],
 ['Радио России','Москва','https://icecast-vgtrk.cdnvideo.ru/rrzonam_mp3_128kbps'],
 ['Радио Маяк','Москва','https://icecast-vgtrk.cdnvideo.ru/mayakfm_mp3_192kbps'],
 ['Вести FM','Москва','https://icecast-vgtrk.cdnvideo.ru/vestifm'],
@@ -31,7 +31,7 @@ const STATIONS = [
 ['Бизнес FM','Москва','https://bfm.hostingradio.ru:9075/fm'],
 ['Москва FM','Москва','https://icecast-vgtrk.cdnvideo.ru/moscowfm128'],
 ['Радонеж','Москва','https://icecast-radonezh.cdnvideo.ru/rad128'],
-['Радиокнига','Москва',null],
+['Радиокнига','Москва','https://bookradio.hostingradio.ru:8069/fm'],
 ['Радио Спутник. Россия Сегодня','Москва','https://icecast-rian.cdnvideo.ru/voicerus'],
 ['Радио Москвы','Москва','https://icecast-vgtrk.cdnvideo.ru/moscowtalk128'],
 ['Радио Фантастики','Москва','https://listen9.myradio24.com/55699'],
@@ -41,34 +41,40 @@ const STATIONS = [
 ['Старое радио','Москва','http://195.91.237.50:8000/ices128'],
 ['Радио Маяк (Нижний Новгород)','Нижний Новгород','https://icecast-vgtrk.cdnvideo.ru/mayak_nn'],
 ['Радио России (Санкт-Петербург)','Санкт-Петербург','https://radio.rtr.spb.ru/live1'],
-['Благовещение','Москва',null],
+['Благовещение','Москва','https://radio-blagoveshchenie.ru:10005/stream'],
 ['Модель для сборки','Москва','http://mds-station.com:8000/mds'],
-['Радио Зенит','Санкт-Петербург',null],
-['Радио России (Пермь)','Пермь',null],
-['Маяк (Самара)','Самара',null],
-['Радио России (Самара)','Самара',null],
+['Радио Зенит','Санкт-Петербург','https://radiozenit.hostingradio.ru/radiozenit256.mp3'],
+['Радио России (Пермь)','Пермь','https://podcast-gtrk.smotrim.ru/vgtrk/perm/radio_russia/index.m3u8'],
+['Маяк (Самара)','Самара','https://podcast-gtrk.smotrim.ru/vgtrk/samara/mayak/index.m3u8'],
+['Радио России (Самара)','Самара','https://podcast-gtrk.smotrim.ru/vgtrk/samara/radio_russia/index.m3u8'],
 ['Бизнес FM (Санкт-Петербург)','Санкт-Петербург','https://bfmreg.hostingradio.ru/spb.bfm128.mp3'],
 ['Маяк (Барнаул)','Барнаул','http://gtrk22.ru:8000/mayak22'],
 ['Радио Всероссийского общества слепых (ВОС)','Москва','http://radiovos.ru:9000/radiovos-128'],
 ['Радио Справедливая Россия','Москва','https://spravedlivo.hostingradio.ru:8022/spravedlivo128.mp3'],
 ['Комсомольская Правда (Санкт-Петербург)','Санкт-Петербург','https://kpradio.hostingradio.ru:8000/spb.radiokp128.mp3'],
-['Комсомольская Правда (Новосибирск)','Новосибирск',null],
+['Комсомольская Правда (Новосибирск)','Новосибирск','https://kpradio.hostingradio.ru:8000/novosibirsk.radiokp128.mp3'],
 ['Радио Музком','Москва','https://geshou.s02.radio-tochka.com:5005/stream'],
-['Радио России (Иваново)','Иваново',null],
+['Радио России (Иваново)','Иваново','https://podcast-gtrk.smotrim.ru/vgtrk/ivanovo/radio_russia/index.m3u8'],
 ['Радио Воскресенье','Екатеринбург','http://217.24.181.164:8000/stream.mp3'],
 ['Бизнес FM (Нижний Новгород)','Нижний Новгород','https://online-2.gkvr.ru:8000/bfm_nno_64.aac'],
-['Коммерсантъ FM (Нижний Новгород)','Нижний Новгород',null],
-['Комсомольская правда (Екатеринбург)','Екатеринбург',null],
-['Радио России (Пенза)','Пенза',null]
+['Коммерсантъ FM (Нижний Новгород)','Нижний Новгород','https://kommersant77.hostingradio.ru:8085/kommersant128.mp3'],
+['Комсомольская правда (Екатеринбург)','Екатеринбург','https://kpradio.hostingradio.ru:8000/ekaterinburg.radiokp128.mp3'],
+['Радио России (Пенза)','Пенза','https://icecast-vgtrk.cdnvideo.ru/rr_penza_aac']
 ].map(([n,r,u])=>({n,r,u}));
 const $=id=>document.getElementById(id);
 const audio=$('audio'),grid=$('grid'),search=$('search'),countEl=$('count'),toggle=$('toggle'),nowTitle=$('nowTitle'),nowStatus=$('nowStatus'),volume=$('volume'),customUrl=$('customUrl'),customBtn=$('customBtn');
 audio.volume=.8;
 let currentIdx=null,current=null,requestId=0;
+let hls=null,hlsLibPromise=null;
+function isHls(url){return /\.m3u8($|\?)/i.test(url||'');}
+function destroyHls(){if(hls){try{hls.destroy();}catch(e){}hls=null;}}
+function loadHlsLib(){if(window.Hls)return Promise.resolve();if(!hlsLibPromise){hlsLibPromise=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';sc.onload=res;sc.onerror=rej;document.head.append(sc);});}return hlsLibPromise;}
 function setStatus(text,cls){nowStatus.textContent=text;nowStatus.className='s'+(cls?' '+cls:'');}
 function markActive(){grid.querySelectorAll('.card').forEach(c=>{const active=currentIdx!==null&&Number(c.dataset.idx)===currentIdx;c.classList.toggle('active',active);c.classList.toggle('playing',active&&!audio.paused);});}
 function renderList(){const q=search.value.trim().toLowerCase();grid.replaceChildren();let shown=0;STATIONS.forEach((s,i)=>{if(q&&!(s.n.toLowerCase().includes(q)||s.r.toLowerCase().includes(q)))return;shown++;const card=document.createElement('button');card.type='button';card.className='card'+(s.u?'':' off');card.disabled=!s.u;card.dataset.idx=i;const ico=document.createElement('span');ico.className='play-ico';ico.textContent=s.u?'▶':'✕';ico.setAttribute('aria-hidden','true');const info=document.createElement('span');info.className='info';const name=document.createElement('span');name.className='name';name.textContent=s.n;const meta=document.createElement('span');meta.className='meta';const tag=document.createElement('span');tag.className='tag';tag.textContent=s.r;meta.append(tag);if(!s.u){const off=document.createElement('span');off.textContent='поток не найден';meta.append(off);}info.append(name,meta);const eq=document.createElement('span');eq.className='eq';eq.innerHTML='<i></i><i></i><i></i>';eq.setAttribute('aria-hidden','true');card.append(ico,info,eq);if(s.u)card.addEventListener('click',()=>playStation(s,i));grid.append(card);});if(!shown){const e=document.createElement('div');e.className='empty';e.textContent='Ничего не найдено';grid.append(e);}countEl.textContent=`Доступно: ${STATIONS.filter(s=>s.u).length} из ${STATIONS.length}`;markActive();}
-function startStream(){const id=++requestId;setStatus('Подключение…');audio.src=current.u;audio.play().catch(()=>{if(id!==requestId)return;setStatus('Не удалось воспроизвести поток','err');toggle.textContent='▶';markActive();});}
+function startStream(){const id=++requestId;setStatus('Подключение…');destroyHls();const fail=()=>{if(id!==requestId)return;setStatus('Не удалось воспроизвести поток','err');toggle.textContent='▶';markActive();};
+if(isHls(current.u)&&!audio.canPlayType('application/vnd.apple.mpegurl')){loadHlsLib().then(()=>{if(id!==requestId)return;if(!window.Hls||!Hls.isSupported()){fail();return;}hls=new Hls({enableWorker:true});hls.on(Hls.Events.ERROR,(_,d)=>{if(d&&d.fatal)fail();});hls.loadSource(current.u);hls.attachMedia(audio);hls.on(Hls.Events.MANIFEST_PARSED,()=>{audio.play().catch(fail);});}).catch(fail);return;}
+audio.src=current.u;audio.play().catch(fail);}
 function playStation(s,idx){if(!s||!s.u)return;if(current===s&&!audio.paused){audio.pause();return;}current=s;currentIdx=idx===undefined?null:idx;nowTitle.textContent=s.n;toggle.disabled=false;startStream();markActive();}
 toggle.addEventListener('click',()=>{if(!current)return;if(audio.paused)startStream();else audio.pause();});
 audio.addEventListener('playing',()=>{setStatus('В эфире','ok');toggle.textContent='⏸';markActive();});
