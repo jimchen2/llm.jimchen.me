@@ -6,6 +6,7 @@ import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-boo
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
+import { getModeMemory } from "../lib/modes";
 
 const ChatInput = ({ onSend, placeholder }) => {
   const [input, setInput] = useState("");
@@ -388,11 +389,17 @@ export default function App({ routeMode = "default" }) {
       setConversations((prev) => [{ id: convId, title, mode: conversationMode }, ...prev]);
     }
 
+    // One-off modes (e.g. random, memory = 0) only send the current message
+    // to the LLM with no previous conversation context — every prompt starts
+    // fresh. Default/grammar use Infinity and keep the full chain.
+    const modeMemory = getModeMemory(conversationMode);
     const path = [];
     let curr = isBotRetry ? parentId : userMsgId;
-    while (curr && newMsgs[curr]) {
+    let remaining = modeMemory === Infinity ? Infinity : modeMemory + 1; // current + memory previous
+    while (curr && newMsgs[curr] && remaining > 0) {
       path.unshift({ role: newMsgs[curr].role, content: newMsgs[curr].content });
       curr = newMsgs[curr].parent_id;
+      remaining--;
     }
 
     try {
