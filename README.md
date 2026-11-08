@@ -19,8 +19,12 @@ Copy `.env.example` to `.env` and fill in:
 | `DEFAULT_MODEL` | Model used by **all** modes |
 | `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |
 
-Modes (`default`, `random`, `grammar`) differ by their system prompt.
-`random` also has no memory (`memory: 0` in `lib/modes.js`): only the current
-message is sent to the LLM, while `default`/`grammar` send the full history.
+Modes (`default`, `grammar`) differ by their system prompt. Both keep the full
+conversation history. Random mode (a no-memory mode: `memory: 0` in
+`lib/modes.js`, only the current message sent to the LLM) is currently
+**disabled** — its entry in `lib/modes.js`, its routes (`app/random/**`) and its
+UI wiring are commented out in place. Stored conversations with mode `random`
+fall back to `default`. Uncomment those pieces (plus `RANDOM_MODE_SYSTEM_PROMPT`
+in `.env.example`) to bring it back.
 There are no per-mode API keys or models; `GEMINI_API_KEY` and the legacy
 `DEFAULT_MODE_API_KEY` are still accepted as aliases of `API_KEY`.

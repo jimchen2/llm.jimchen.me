@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getModeMemory, getModeMessages } from '../lib/modes.js';
+import { getModeMemory, getModeMessages, normalizeMode } from '../lib/modes.js';
 
 const messages = {
   first: { role: 'user', content: 'My name is Sam.', parent_id: null },
@@ -9,28 +9,43 @@ const messages = {
   otherBranch: { role: 'user', content: 'Unrelated branch', parent_id: 'first' },
 };
 
-test('random mode has no memory: only the current message is sent', () => {
-  assert.equal(getModeMemory('random'), 0);
-  // Even in the middle of a conversation, earlier user/assistant turns
-  // ("My name is Sam." / "Hello, Sam!") must not be sent to the LLM.
+// Random mode is disabled for now (see lib/modes.js). The mode key is gone from
+// MODES, so any stored conversation / request with mode "random" falls back to
+// the default mode — including its full conversation memory.
+test('random mode falls back to the default mode', () => {
+  assert.equal(normalizeMode('random'), 'default');
+  assert.equal(getModeMemory('random'), Infinity);
   assert.deepEqual(getModeMessages('random', messages, 'followup'), [
-    { role: 'user', content: 'What is my name?' },
-  ]);
-  assert.deepEqual(getModeMessages('random', messages, 'answer'), [
-    { role: 'assistant', content: 'Hello, Sam!' },
-  ]);
-  assert.deepEqual(getModeMessages('random', messages, 'first'), [
     { role: 'user', content: 'My name is Sam.' },
+    { role: 'assistant', content: 'Hello, Sam!' },
+    { role: 'user', content: 'What is my name?' },
   ]);
 });
 
-test('random mode retry and branch context is only the selected message', () => {
-  // Retry re-sends just the prompt being retried (its parent user message),
-  // with no ancestry before it.
-  assert.deepEqual(getModeMessages('random', messages, 'otherBranch'), [
-    { role: 'user', content: 'Unrelated branch' },
-  ]);
-});
+// Original no-memory behaviour of random mode, kept for when it is re-enabled.
+//
+// test('random mode has no memory: only the current message is sent', () => {
+//   assert.equal(getModeMemory('random'), 0);
+//   // Even in the middle of a conversation, earlier user/assistant turns
+//   // ("My name is Sam." / "Hello, Sam!") must not be sent to the LLM.
+//   assert.deepEqual(getModeMessages('random', messages, 'followup'), [
+//     { role: 'user', content: 'What is my name?' },
+//   ]);
+//   assert.deepEqual(getModeMessages('random', messages, 'answer'), [
+//     { role: 'assistant', content: 'Hello, Sam!' },
+//   ]);
+//   assert.deepEqual(getModeMessages('random', messages, 'first'), [
+//     { role: 'user', content: 'My name is Sam.' },
+//   ]);
+// });
+//
+// test('random mode retry and branch context is only the selected message', () => {
+//   // Retry re-sends just the prompt being retried (its parent user message),
+//   // with no ancestry before it.
+//   assert.deepEqual(getModeMessages('random', messages, 'otherBranch'), [
+//     { role: 'user', content: 'Unrelated branch' },
+//   ]);
+// });
 
 test('default and grammar retain full history', () => {
   for (const mode of ['default', 'grammar']) {

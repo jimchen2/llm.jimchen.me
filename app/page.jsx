@@ -135,9 +135,11 @@ export default function App({ routeMode = "default" }) {
     const params = new URLSearchParams(window.location.search);
     let urlId = params.get("chat");
 
-    if (pathname.startsWith("/random/chat/")) {
-      urlId = pathname.split("/random/chat/")[1];
-    } else if (pathname.startsWith("/grammar/chat/")) {
+    // Random mode is disabled for now (app/random/** is commented out).
+    // if (pathname.startsWith("/random/chat/")) {
+    //   urlId = pathname.split("/random/chat/")[1];
+    // } else
+    if (pathname.startsWith("/grammar/chat/")) {
       urlId = pathname.split("/grammar/chat/")[1];
     } else if (pathname.startsWith("/chat/")) {
       urlId = pathname.split("/chat/")[1];
@@ -278,7 +280,8 @@ export default function App({ routeMode = "default" }) {
           if (
             typeof window !== "undefined" &&
             (window.location.pathname.startsWith("/chat/") ||
-              window.location.pathname.startsWith("/random/chat/") ||
+              // Random mode is disabled for now (app/random/** is commented out).
+              // window.location.pathname.startsWith("/random/chat/") ||
               window.location.pathname.startsWith("/grammar/chat/") ||
               new URLSearchParams(window.location.search).get("chat"))
           ) {
@@ -389,10 +392,10 @@ export default function App({ routeMode = "default" }) {
       setConversations((prev) => [{ id: convId, title, mode: conversationMode }, ...prev]);
     }
 
-    // Send the mode's context to the LLM. One-off modes (random, memory = 0)
-    // only send the current message — no previous conversation context, every
-    // prompt starts fresh. Default/grammar use Infinity and keep the full
-    // active chain (or the retry's ancestry).
+    // Send the mode's context to the LLM. A mode with memory = 0 would only
+    // send the current message — no previous context, every prompt fresh.
+    // Default/grammar use Infinity and keep the full active chain (or the
+    // retry's ancestry).
     const path = getModeMessages(conversationMode, newMsgs, isBotRetry ? parentId : userMsgId);
 
     try {
@@ -673,11 +676,13 @@ export default function App({ routeMode = "default" }) {
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
               <h3 className="text-muted">
-                {routeMode === "random"
+                {/* Random mode is disabled for now (app/random/** is commented out). */}
+                {/* routeMode === "random"
                   ? "Random mode — ask anything"
-                  : routeMode === "grammar"
-                    ? "Grammar mode — исправьте грамматику"
-                    : "Please only talk about coding"}
+                  : */}
+                {routeMode === "grammar"
+                  ? "Grammar mode — исправьте грамматику"
+                  : "Please only talk about coding"}
               </h3>
             </div>
           ) : (
@@ -710,11 +715,13 @@ export default function App({ routeMode = "default" }) {
               key={activeConversation || "new-chat"}
               onSend={(text) => sendMessage(text)}
               placeholder={
-                routeMode === "random"
-                  ? "Ask anything"
-                  : routeMode === "grammar"
-                    ? "Введите текст для исправления"
-                    : "Please only talk about coding"
+                // Random mode is disabled for now (app/random/** is commented out).
+                // routeMode === "random"
+                //   ? "Ask anything"
+                //   :
+                routeMode === "grammar"
+                  ? "Введите текст для исправления"
+                  : "Please only talk about coding"
               }
             />
           </Container>
