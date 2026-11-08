@@ -1,4 +1,4 @@
-Google Cloud -> Billing -> Payment Methods -> Overview 
+Google Cloud -> Billing -> Payment methods -> Overview -> How you pay
 
 - A separate file to call the LLM. Minimal and fast interface
 - User can set a default model, no default system instructions. User provides the API, but all the endpoints are in the backend, enter sends the message in the frontend, autofocus on page load, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
