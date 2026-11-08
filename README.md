@@ -1,5 +1,3 @@
-Billing -> Payment Methods -> Overview  https://console.cloud.google.com/billing/01C4BE-260939-9B2310
-
 - A separate file to call the LLM, minimal and fast interface
 - User can set a default model, no default system instructions. User provides the API, but all the endpoints are in the backend, enter sends the message in the frontend, autofocus on page load, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
 - User can copy (purely on frontend), edit, branch, and delete any messages by user or bot, user can "retry" for every previous bot message, based on messages before that, user can copy the specific code snippets
