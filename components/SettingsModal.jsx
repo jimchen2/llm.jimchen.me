@@ -69,10 +69,11 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             <Form.Select 
               value={settings.mode || 'default'}
               onChange={(e) => {
-                if (e.target.value === 'random') {
-                  window.location.href = 'https://llm.jimchen.me/random';
-                  return;
-                }
+                // Random mode is disabled for now (app/random/** is commented out).
+                // if (e.target.value === 'random') {
+                //   window.location.href = 'https://llm.jimchen.me/random';
+                //   return;
+                // }
                 if (e.target.value === 'grammar') {
                   window.location.href = 'https://llm.jimchen.me/grammar';
                   return;
@@ -85,7 +86,8 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               }}
             >
               <option value="default">Default mode</option>
-              <option value="random">Random mode (No memory) ↗</option>
+              {/* Random mode is disabled for now (app/random/** is commented out). */}
+              {/* <option value="random">Random mode (No memory) ↗</option> */}
               <option value="grammar">Grammar mode ↗</option>
             </Form.Select>
             <Form.Text className="text-muted">
