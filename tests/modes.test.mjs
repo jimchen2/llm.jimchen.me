@@ -9,28 +9,41 @@ const messages = {
   otherBranch: { role: 'user', content: 'Unrelated branch', parent_id: 'first' },
 };
 
-test('random mode sends the full active conversation history', () => {
-  assert.equal(getModeMemory('random'), Infinity);
+test('random mode has no memory: only the current message is sent', () => {
+  assert.equal(getModeMemory('random'), 0);
+  // Even in the middle of a conversation, earlier user/assistant turns
+  // ("My name is Sam." / "Hello, Sam!") must not be sent to the LLM.
   assert.deepEqual(getModeMessages('random', messages, 'followup'), [
-    { role: 'user', content: 'My name is Sam.' },
-    { role: 'assistant', content: 'Hello, Sam!' },
     { role: 'user', content: 'What is my name?' },
   ]);
-});
-
-test('random mode retry and branch context includes only the selected ancestry', () => {
-  assert.deepEqual(getModeMessages('random', messages, 'otherBranch'), [
-    { role: 'user', content: 'My name is Sam.' },
-    { role: 'user', content: 'Unrelated branch' },
+  assert.deepEqual(getModeMessages('random', messages, 'answer'), [
+    { role: 'assistant', content: 'Hello, Sam!' },
   ]);
   assert.deepEqual(getModeMessages('random', messages, 'first'), [
     { role: 'user', content: 'My name is Sam.' },
   ]);
 });
 
+test('random mode retry and branch context is only the selected message', () => {
+  // Retry re-sends just the prompt being retried (its parent user message),
+  // with no ancestry before it.
+  assert.deepEqual(getModeMessages('random', messages, 'otherBranch'), [
+    { role: 'user', content: 'Unrelated branch' },
+  ]);
+});
+
 test('default and grammar retain full history', () => {
   for (const mode of ['default', 'grammar']) {
     assert.equal(getModeMemory(mode), Infinity);
-    assert.deepEqual(getModeMessages(mode, messages, 'followup'), getModeMessages('random', messages, 'followup'));
+    assert.deepEqual(getModeMessages(mode, messages, 'followup'), [
+      { role: 'user', content: 'My name is Sam.' },
+      { role: 'assistant', content: 'Hello, Sam!' },
+      { role: 'user', content: 'What is my name?' },
+    ]);
+    // Branch/retry ancestry is still limited to the selected path.
+    assert.deepEqual(getModeMessages(mode, messages, 'otherBranch'), [
+      { role: 'user', content: 'My name is Sam.' },
+      { role: 'user', content: 'Unrelated branch' },
+    ]);
   }
 });

@@ -85,7 +85,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               }}
             >
               <option value="default">Default mode</option>
-              <option value="random">Random mode ↗</option>
+              <option value="random">Random mode (No memory) ↗</option>
               <option value="grammar">Grammar mode ↗</option>
             </Form.Select>
             <Form.Text className="text-muted">

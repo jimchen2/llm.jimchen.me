@@ -389,7 +389,10 @@ export default function App({ routeMode = "default" }) {
       setConversations((prev) => [{ id: convId, title, mode: conversationMode }, ...prev]);
     }
 
-    // Send the active conversation history (or the retry's ancestry) to the LLM.
+    // Send the mode's context to the LLM. One-off modes (random, memory = 0)
+    // only send the current message — no previous conversation context, every
+    // prompt starts fresh. Default/grammar use Infinity and keep the full
+    // active chain (or the retry's ancestry).
     const path = getModeMessages(conversationMode, newMsgs, isBotRetry ? parentId : userMsgId);
 
     try {

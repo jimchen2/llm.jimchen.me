@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
 import { callLLM } from "@/lib/llm";
-import { getModeConfig } from "@/lib/modes";
+import { getModeConfig, getModeMemory } from "@/lib/modes";
 
 export async function POST(req) {
   const { messages, userMsgId, botMsgId, parentId, conversationId, model, mode } = await req.json();
@@ -39,11 +39,19 @@ export async function POST(req) {
   process.nextTick(async () => {
     let finalContent = "";
 
+    // Enforce the mode's memory server-side too, so no-memory modes stay
+    // one-off even if a client sends the full history: random (memory = 0)
+    // forwards only the current (last) message to the LLM. The messages are
+    // still saved above exactly as before — this only limits LLM context.
+    const memory = getModeMemory(mode);
+    const contextMessages =
+      memory === Infinity ? messages : messages.slice(-(memory + 1));
+
     // Prepend the mode's system prompt (from env) when configured.
     const llmMessages =
       systemPrompt && systemPrompt.length > 0
-        ? [{ role: "system", content: systemPrompt }, ...messages]
-        : messages;
+        ? [{ role: "system", content: systemPrompt }, ...contextMessages]
+        : contextMessages;
 
     await callLLM({
       model,

@@ -19,6 +19,8 @@ Copy `.env.example` to `.env` and fill in:
 | `DEFAULT_MODEL` | Model used by **all** modes |
 | `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |
 
-Modes (`default`, `random`, `grammar`) differ only by their system prompt.
+Modes (`default`, `random`, `grammar`) differ by their system prompt.
+`random` also has no memory (`memory: 0` in `lib/modes.js`): only the current
+message is sent to the LLM, while `default`/`grammar` send the full history.
 There are no per-mode API keys or models; `GEMINI_API_KEY` and the legacy
 `DEFAULT_MODE_API_KEY` are still accepted as aliases of `API_KEY`.
