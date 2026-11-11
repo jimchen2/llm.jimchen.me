@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Annoying Websites
 // @namespace    http://tampermonkey.net/
-// @version      6.7
+// @version      6.8
 // @license      Unlicense
 // @description  Block Harmful Websites
 // @author       Jim Chen
