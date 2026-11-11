@@ -1,3 +1,4 @@
+https://console.cloud.google.com/billing/01C4BE-260939-9B2310/payment?project=gen-lang-client-0133736136
 Google Cloud -> Billing -> Payment methods -> Overview -> How you pay
 
 - A separate file to call the LLM. Minimal and fast interface
