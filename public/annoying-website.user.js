@@ -23,7 +23,7 @@
   blockSite();
 
   function blockSite() {
-    window.location.replace("https://docs.google.com/document/d/1GIW1oz-ttAG3B08usdbz758iCgShPd4DWcBis_IBbgM/edit?tab=t.0");
+    window.location.replace("https://github.com/jimchen2/randompapers");
     alert(
       "WEBSITE BLOCKED\n\nSite blocked by Userscript because it contains extremist contents.\n\nPlease go for a walk."
     );
