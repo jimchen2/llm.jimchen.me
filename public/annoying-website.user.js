@@ -6,12 +6,9 @@
 // @description  Block Harmful Websites
 // @author       Jim Chen
 // @downloadURL  https://raw.githubusercontent.com/jimchen2/llm.jimchen.me/master/public/annoying-website.user.js
-// @match        *://*.reddit.com/*
 // @match        *://www.reddit.com/*
 // @match        *://*.huaren.us/*
-// @match        *://*.tieba.baidu.com/*
 // @match        *://www.baidu.com/*
-// @match        *://*.aistudio.google.com/*
 // @match        *://aistudio.google.com/*
 // @match        *://*.1point3acres.com/*
 // @match        *://arena.ai/c/*
