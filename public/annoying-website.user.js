@@ -5,6 +5,8 @@
 // @description  Block annoying websites completely - before the page can load, play, or paint over the block.
 // @author       Jim Chen
 // @license      Unlicense
+// @updateURL    https://raw.githubusercontent.com/jimchen2/llm.jimchen.me/master/public/annoying-website.user.js
+// @downloadURL  https://raw.githubusercontent.com/jimchen2/llm.jimchen.me/master/public/annoying-website.user.js
 // @run-at       document-start
 // @grant        none
 // @match        *://*.1point3acres.com/*
