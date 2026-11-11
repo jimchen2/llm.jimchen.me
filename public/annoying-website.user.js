@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Annoying Websites
 // @namespace    http://tampermonkey.net/
-// @version      3.0.0
+// @version      3.0.1
 // @description  Block annoying websites completely - before the page can load, play, or paint over the block.
 // @author       Jim Chen
 // @license      Unlicense
@@ -18,17 +18,6 @@
 // @match        *://*.zombsroyale.io/*
 // ==/UserScript==
 
-/*
- * Why a plain document-end overlay fails on zombsroyale.io:
- * 1. Unity WebGL (webgl.{framework.js,wasm,data}.br) still downloads, compiles WASM, and
- *    runs its rAF loop + ad/CMP scripts underneath, stalling the main thread (>20s freezes).
- * 2. Fullscreen, pointer lock, and WebAudio/<audio> bypass DOM overlays; CMP modals also
- *    sit at max z-index (2147483647), and a single unguarded node can be removed.
- * 3. Fix & limit: run at document-start, stub browser APIs, repaint/mute on a timer, and
- *    call window.stop() so WASM/framework bodies never arrive. (Must wait for <body> + 2 rAFs
- *    or the parser aborts before first paint; true request-time blocking needs DNR/DNS/hosts.)
- */
-
 (() => {
   "use strict";
 
@@ -41,7 +30,8 @@
   for (const n of ["AudioContext", "webkitAudioContext"]) if (window[n])
     window[n] = class extends window[n] { constructor(...a) { super(...a); this.suspend(); } };
 
-  const UI = `<style>
+  const CSS = `
+    html{overflow:hidden!important}body>*:not(#aw){display:none!important}
     #aw{all:initial;position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;
       align-items:center;justify-content:center;gap:28px;padding:24px;box-sizing:border-box;
       background:#000;color:#fff;font:700 clamp(30px,7vw,88px)/1.15 Arial,sans-serif;text-align:center}
@@ -50,14 +40,7 @@
     #aw a,#aw button{padding:12px 20px;border:0;border-radius:8px;background:#4caf50;color:#fff;
       font:700 16px/1.4 Arial,sans-serif;text-align:center;text-decoration:none;cursor:pointer}
     #aw button{background:#455a64}
-  </style>
-  <div id="aw" role="alertdialog" aria-modal="true">
-    <h1>ЭТОТ САЙТ ЗАБЛОКИРОВАН</h1>
-    <nav>
-      <a href="${PAPERS}" rel="noopener noreferrer">Go to papers</a>
-      <button type="button">Close the computer and go for a walk.</button>
-    </nav>
-  </div>`;
+  `;
 
   const until = (test, fn, ms = 20000) => {             // poll until test() is true
     const t = setInterval(() => { if (test()) { clearInterval(t); fn(); } }, 20);
@@ -67,11 +50,38 @@
   const paint = () => {
     const root = document.documentElement;
     if (!root?.isConnected) return false;
-    if (!document.getElementById("aw-css")) root.insertAdjacentHTML("beforeend",
-      "<style id='aw-css'>html{overflow:hidden!important}body>*:not(#aw){display:none!important}</style>");
+
+    if (!document.getElementById("aw-css")) {
+      const style = document.createElement("style");
+      style.id = "aw-css";
+      style.textContent = CSS;
+      root.appendChild(style);
+    }
+
     if (!document.getElementById("aw")) {
-      root.insertAdjacentHTML("beforeend", UI);
-      document.querySelector("#aw button").onclick = () => { close(); location.replace("about:blank"); };
+      const aw = document.createElement("div");
+      aw.id = "aw";
+      aw.setAttribute("role", "alertdialog");
+      aw.setAttribute("aria-modal", "true");
+
+      const h1 = document.createElement("h1");
+      h1.textContent = "ЭТОТ САЙТ ЗАБЛОКИРОВАН";
+
+      const nav = document.createElement("nav");
+
+      const a = document.createElement("a");
+      a.href = PAPERS;
+      a.rel = "noopener noreferrer";
+      a.textContent = "Go to papers";
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "Close the computer and go for a walk.";
+      btn.onclick = () => { window.close(); location.replace("about:blank"); };
+
+      nav.append(a, btn);
+      aw.append(h1, nav);
+      root.appendChild(aw);
     }
     return true;
   };
