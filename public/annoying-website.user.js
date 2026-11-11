@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Annoying Websites
 // @namespace    http://tampermonkey.net/
-// @version      6.6
+// @version      6.7
 // @license      Unlicense
 // @description  Block Harmful Websites
 // @author       Jim Chen
@@ -25,7 +25,7 @@
   function blockSite() {
     window.location.replace("https://docs.google.com/document/d/1GIW1oz-ttAG3B08usdbz758iCgShPd4DWcBis_IBbgM/edit?tab=t.0");
     alert(
-      "WEBSITE BLOCKED\n\nSite blocked by Userscript because it contains extremist contents.\n\nPlease choose healthy alternatives."
+      "WEBSITE BLOCKED\n\nSite blocked by Userscript because it contains extremist contents.\n\nPlease go for a walk."
     );
   }
 })();
