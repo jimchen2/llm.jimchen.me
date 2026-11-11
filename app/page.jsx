@@ -58,6 +58,7 @@ export default function App({ routeMode = "default" }) {
   const [currentId, setCurrentId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Authentication Modal State
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -613,7 +614,14 @@ export default function App({ routeMode = "default" }) {
       </Modal>
 
       {/* Desktop Sidebar */}
-      <div className="d-none d-md-block" style={{ width: "280px" }}>
+      <div className="d-none d-md-block flex-shrink-0" style={{ width: sidebarCollapsed ? "56px" : "280px" }}>
+        {sidebarCollapsed ? (
+          <div className="h-100 bg-dark border-end border-secondary p-2 d-flex justify-content-center align-items-start">
+            <Button variant="outline-light" size="sm" onClick={() => setSidebarCollapsed(false)} aria-label="Expand sidebar" title="Expand sidebar">
+              <span aria-hidden="true">›</span>
+            </Button>
+          </div>
+        ) : (
         <Sidebar
           conversations={conversations}
           activeConversation={activeConversation}
@@ -625,7 +633,9 @@ export default function App({ routeMode = "default" }) {
           loadMore={() => loadConversations(settings.dbToken, conversations.length)}
           hasMore={hasMoreConv}
           isLoading={isLoadingConv}
+          onCollapse={() => setSidebarCollapsed(true)}
         />
+        )}
       </div>
 
       {/* Mobile Sidebar */}
