@@ -7,7 +7,7 @@ Google Cloud -> Billing -> Payment methods -> Overview -> How you pay
 
 ## Some Example Prompts
 
-- **Weekly Report**: Based on this, write a weekly research report for PI. Note that PI usually doesn't want the tech details or jargon.  Focus on high level progress and you also need to have good communication details. Summarize it into a brief extract for me to send the email. (maybe you can paste the repo url and let the agent look for git commits within one week)
+- **Weekly Report**: Based on this, write a weekly research report for PI. Note that PI usually doesn't want the tech details or jargon.  Focus on high level progress and you also need to have good communication details. Summarize it into a very short extract for me to send the email. (maybe you can paste the repo url and let the agent look for git commits within one week)
 - **Minimal Changes** Just do () and do not change anything else, make very minimal changes and keep everything else the same
 - **Writeup After Conversation** (First paste a whole conversation) Look at the logs of this conversation, give a writeup on how to make it work. Put all the scripts/commands that the person successfully executed and that ended up working. And what you need to change to make it work, what are problems encountered. Give a writeup. Give a writeup so that in future trainings I can just look at the writeup and know what to do quickly.
 - **Tech Assistant** You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries
