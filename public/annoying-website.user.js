@@ -1,115 +1,34 @@
 // ==UserScript==
 // @name         Annoying Websites
 // @namespace    http://tampermonkey.net/
-// @version      3.0.1
-// @description  Block annoying websites completely - before the page can load, play, or paint over the block.
-// @author       Jim Chen
+// @version      6.5
 // @license      Unlicense
-// @updateURL    https://raw.githubusercontent.com/jimchen2/llm.jimchen.me/master/public/annoying-website.user.js
+// @description  Block Harmful Websites
+// @author       Jim Chen
 // @downloadURL  https://raw.githubusercontent.com/jimchen2/llm.jimchen.me/master/public/annoying-website.user.js
+// @match        *://*.reddit.com/*
+// @match        *://www.reddit.com/*
+// @match        *://*.huaren.us/*
+// @match        *://*.tieba.baidu.com/*
+// @match        *://www.baidu.com/*
+// @match        *://*.aistudio.google.com/*
+// @match        *://aistudio.google.com/*
+// @match        *://*.1point3acres.com/*
+// @match        *://arena.ai/c/*
+// @match        *://*.zombsroyale.io/*
 // @run-at       document-start
 // @grant        none
-// @match        *://*.1point3acres.com/*
-// @match        *://*.huaren.us/*
-// @match        *://www.reddit.com/*
-// @match        *://arena.ai/c/*
-// @match        *://www.baidu.com/*
-// @match        *://aistudio.google.com/*
-// @match        *://*.zombsroyale.io/*
 // ==/UserScript==
 
-(() => {
+(function () {
   "use strict";
 
-  const MINUTES = 0; // 0 = block immediately; >0 = allow this many focused minutes first
-  const PAPERS = "https://github.com/jimchen2/randompapers/tree/main";
+  blockSite();
 
-  // Escape hatches: no fullscreen, no pointer lock, no sound.
-  for (const p of ["requestFullscreen", "webkitRequestFullscreen", "requestPointerLock"])
-    if (Element.prototype[p]) Element.prototype[p] = () => Promise.reject(Error("blocked"));
-  for (const n of ["AudioContext", "webkitAudioContext"]) if (window[n])
-    window[n] = class extends window[n] { constructor(...a) { super(...a); this.suspend(); } };
-
-  const CSS = `
-    html{overflow:hidden!important}body>*:not(#aw){display:none!important}
-    #aw{all:initial;position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:28px;padding:24px;box-sizing:border-box;
-      background:#000;color:#fff;font:700 clamp(30px,7vw,88px)/1.15 Arial,sans-serif;text-align:center}
-    #aw h1{margin:0;font:inherit;max-width:1200px}
-    #aw nav{display:flex;flex-direction:column;gap:14px;width:min(300px,80vw)}
-    #aw a,#aw button{padding:12px 20px;border:0;border-radius:8px;background:#4caf50;color:#fff;
-      font:700 16px/1.4 Arial,sans-serif;text-align:center;text-decoration:none;cursor:pointer}
-    #aw button{background:#455a64}
-  `;
-
-  const until = (test, fn, ms = 20000) => {             // poll until test() is true
-    const t = setInterval(() => { if (test()) { clearInterval(t); fn(); } }, 20);
-    setTimeout(() => clearInterval(t), ms);
-  };
-
-  const paint = () => {
-    const root = document.documentElement;
-    if (!root?.isConnected) return false;
-
-    if (!document.getElementById("aw-css")) {
-      const style = document.createElement("style");
-      style.id = "aw-css";
-      style.textContent = CSS;
-      root.appendChild(style);
-    }
-
-    if (!document.getElementById("aw")) {
-      const aw = document.createElement("div");
-      aw.id = "aw";
-      aw.setAttribute("role", "alertdialog");
-      aw.setAttribute("aria-modal", "true");
-
-      const h1 = document.createElement("h1");
-      h1.textContent = "ЭТОТ САЙТ ЗАБЛОКИРОВАН";
-
-      const nav = document.createElement("nav");
-
-      const a = document.createElement("a");
-      a.href = PAPERS;
-      a.rel = "noopener noreferrer";
-      a.textContent = "Go to papers";
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = "Close the computer and go for a walk.";
-      btn.onclick = () => { window.close(); location.replace("about:blank"); };
-
-      nav.append(a, btn);
-      aw.append(h1, nav);
-      root.appendChild(aw);
-    }
-    return true;
-  };
-
-  let blocked = false, stopped = false;
-  const halt = () => {                                  // kill the rest of the site's loading
-    if (stopped) return;
-    stopped = true;
-    try { window.stop(); } catch {}
-  };
-
-  const silence = () => document.querySelectorAll("audio,video").forEach(m => {
-    try { if (!m.paused) m.pause(); m.muted = true; } catch {}
-  });
-
-  const block = () => {
-    if (blocked) return;
-    blocked = true;
-    silence();
-    paint();
-    // Wait for <body> + 2 frames: stopping earlier aborts the parser before first composite.
-    until(() => document.body, () => requestAnimationFrame(() => requestAnimationFrame(halt)));
-    setInterval(() => { paint(); silence(); }, 500);    // the site may wipe our DOM or start audio; undo it
-  };
-
-  if (MINUTES <= 0) block();
-  else {
-    let left = MINUTES * 60;
-    setInterval(() => { if (document.visibilityState === "visible" && document.hasFocus() && --left <= 0) block(); }, 1000);
+  function blockSite() {
+    window.location.replace("https://docs.google.com/document/d/1GIW1oz-ttAG3B08usdbz758iCgShPd4DWcBis_IBbgM/edit?tab=t.0");
+    alert(
+      "WEBSITE BLOCKED\n\nSite blocked by Userscript because it contains extremist contents.\n\nPlease choose healthy alternatives."
+    );
   }
 })();
