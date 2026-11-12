@@ -64,8 +64,17 @@ Copy `.env.example` to `.env` and fill in:
 | `DEFAULT_MODEL` | Model used by **all** modes |
 | `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |
 
-Modes (`default`, `grammar`) differ by their system prompt. Both keep the full
-conversation history. Random mode (a no-memory mode: `memory: 0` in
+Modes (`default`, `grammar`, `practical`) differ by their system prompt. All of
+them keep the full conversation history.
+
+- `/grammar` — Grammar mode: corrects Russian grammar before answering
+  (`GRAMMAR_MODE_SYSTEM_PROMPT`).
+- `/practical` — Practical mode: answers very short and concisely
+  (`PRACTICAL_MODE_SYSTEM_PROMPT`).
+
+Both modes use the same `API_KEY` and `DEFAULT_MODEL` as the default mode.
+
+Random mode (a no-memory mode: `memory: 0` in
 `lib/modes.js`, only the current message sent to the LLM) is currently
 **disabled** — its entry in `lib/modes.js`, its routes (`app/random/**`) and its
 UI wiring are commented out in place. Stored conversations with mode `random`

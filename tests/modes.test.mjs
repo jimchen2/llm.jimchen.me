@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getModeMemory, getModeMessages, normalizeMode } from '../lib/modes.js';
+import {
+  getModeConfig,
+  getModeMemory,
+  getModeMessages,
+  normalizeMode,
+} from '../lib/modes.js';
 
 const messages = {
   first: { role: 'user', content: 'My name is Sam.', parent_id: null },
@@ -47,8 +52,14 @@ test('random mode falls back to the default mode', () => {
 //   ]);
 // });
 
-test('default and grammar retain full history', () => {
-  for (const mode of ['default', 'grammar']) {
+test('practical mode is a real mode with its own prompt', () => {
+  assert.equal(normalizeMode('practical'), 'practical');
+  assert.equal(getModeMemory('practical'), Infinity);
+  assert.match(getModeConfig('practical').systemPrompt, /short and concisely/i);
+});
+
+test('default, grammar, and practical retain full history', () => {
+  for (const mode of ['default', 'grammar', 'practical']) {
     assert.equal(getModeMemory(mode), Infinity);
     assert.deepEqual(getModeMessages(mode, messages, 'followup'), [
       { role: 'user', content: 'My name is Sam.' },

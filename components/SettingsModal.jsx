@@ -74,8 +74,15 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
                 //   window.location.href = 'https://llm.jimchen.me/random';
                 //   return;
                 // }
+                // Grammar and practical modes are separate routes; switching to
+                // one of them navigates there. Switching back to default only
+                // needs to save the mode (or navigate home from another route).
                 if (e.target.value === 'grammar') {
                   window.location.href = 'https://llm.jimchen.me/grammar';
+                  return;
+                }
+                if (e.target.value === 'practical') {
+                  window.location.href = 'https://llm.jimchen.me/practical';
                   return;
                 }
                 if (routeMode !== 'default') {
@@ -89,9 +96,10 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               {/* Random mode is disabled for now (app/random/** is commented out). */}
               {/* <option value="random">Random mode (No memory) ↗</option> */}
               <option value="grammar">Grammar mode ↗</option>
+              <option value="practical">Practical mode ↗</option>
             </Form.Select>
             <Form.Text className="text-muted">
-              Each mode uses its own API key and system prompt, configured via environment variables.
+              All modes share the same API key and model; each mode only differs by its system prompt.
             </Form.Text>
           </Form.Group>
         </Form>
