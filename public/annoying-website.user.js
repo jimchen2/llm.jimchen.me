@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Annoying Websites
 // @namespace    http://tampermonkey.net/
-// @version      6.8
+// @version      6.9
 // @license      Unlicense
 // @description  Block Harmful Websites
 // @author       Jim Chen
 // @downloadURL  https://raw.githubusercontent.com/jimchen2/llm.jimchen.me/master/public/annoying-website.user.js
-// @match        *://www.reddit.com/*
+// @match        *://*.reddit.com/*
 // @match        *://*.huaren.us/*
 // @match        *://www.baidu.com/*
 // @match        *://aistudio.google.com/*
