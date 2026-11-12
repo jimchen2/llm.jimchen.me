@@ -142,6 +142,8 @@ export default function App({ routeMode = "default" }) {
     // } else
     if (pathname.startsWith("/grammar/chat/")) {
       urlId = pathname.split("/grammar/chat/")[1];
+    } else if (pathname.startsWith("/practical/chat/")) {
+      urlId = pathname.split("/practical/chat/")[1];
     } else if (pathname.startsWith("/chat/")) {
       urlId = pathname.split("/chat/")[1];
     }
@@ -284,6 +286,7 @@ export default function App({ routeMode = "default" }) {
               // Random mode is disabled for now (app/random/** is commented out).
               // window.location.pathname.startsWith("/random/chat/") ||
               window.location.pathname.startsWith("/grammar/chat/") ||
+              window.location.pathname.startsWith("/practical/chat/") ||
               new URLSearchParams(window.location.search).get("chat"))
           ) {
             window.history.replaceState({}, "", homePath);
@@ -692,7 +695,9 @@ export default function App({ routeMode = "default" }) {
                   : */}
                 {routeMode === "grammar"
                   ? "Grammar mode — исправьте грамматику"
-                  : "Please only talk about coding"}
+                  : routeMode === "practical"
+                    ? "Practical mode — short and concise answers"
+                    : "Please only talk about coding"}
               </h3>
             </div>
           ) : (
@@ -731,7 +736,9 @@ export default function App({ routeMode = "default" }) {
                 //   :
                 routeMode === "grammar"
                   ? "Введите текст для исправления"
-                  : "Please only talk about coding"
+                  : routeMode === "practical"
+                    ? "Ask anything — short answers"
+                    : "Please only talk about coding"
               }
             />
           </Container>
