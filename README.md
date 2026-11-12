@@ -39,6 +39,10 @@ Google Cloud -> Billing -> Payment methods -> Overview -> How you pay
 
 ---
 
+https://github.com/jimchen2/llm.jimchen.me/raw/refs/heads/master/public/annoying-website.user.js
+
+---
+
 ## Website/Configuration
 
 - A separate file to call the LLM. Minimal and fast interface
