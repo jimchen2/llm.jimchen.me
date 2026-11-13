@@ -82,3 +82,30 @@ fall back to `default`. Uncomment those pieces (plus `RANDOM_MODE_SYSTEM_PROMPT`
 in `.env.example`) to bring it back.
 There are no per-mode API keys or models; `GEMINI_API_KEY` and the legacy
 `DEFAULT_MODE_API_KEY` are still accepted as aliases of `API_KEY`.
+
+---
+
+## Radio page (`/radio`)
+
+`public/radio.html` is served at `/radio` (see the rewrite in `next.config.js`).
+Station metadata lives in `lib/radioStations.js`.
+
+Because a station can go off air at any moment — and the browser cannot tell
+"offline" from "cross-origin/CORS refused" — availability is checked on the
+server:
+
+- `GET /api/radio/status` — station list plus a cached availability snapshot.
+  Stations that were never checked, or whose cached result went stale (5 min for
+  "up", 1 min for "down"), come back as `pending` and are re-probed in the
+  background; the route waits at most 9 s, so a slow station cannot stall it.
+- `GET /api/radio/stream?i=<id>` — proxy for `http://`-only stations, so the
+  `https://` page is not blocked as mixed content. (A `https://` station that
+  ever needs proxying must be added to `lib/radioStations.js` as a relative
+  path, because the proxy hardcodes the station index.)
+
+The page polls every 15 s (2.5 s while the server is still probing; also on tab
+focus and when the browser comes back online). A station that is not available
+is **dampened**: the card is dimmed and its play button turns into a retry icon.
+Clicking it forces a fresh check and retries playback. If the stream you are
+listening to dies, the player says so and quietly reconnects once the station is
+back on air. The "Проверить" button forces a full re-check on demand.

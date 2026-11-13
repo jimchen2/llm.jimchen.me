@@ -5,87 +5,341 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Российские радиостанции — онлайн</title>
 <style>
-:root{--bg:#0f1115;--panel:#181b22;--panel-2:#20242d;--border:#2a2f3a;--text:#e8eaf0;--muted:#8a92a3;--accent:#ff6b35;--accent-2:#ffb24d;--ok:#3ecf8e;--bad:#ef5b5b}
+:root{--bg:#0f1115;--panel:#181b22;--panel-2:#20242d;--border:#2a2f3a;--text:#e8eaf0;--muted:#8a92a3;--accent:#ff6b35;--accent-2:#ffb24d;--ok:#3ecf8e;--bad:#ef5b5b;--warn:#e8b648}
 *{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}body{min-height:100vh;padding-bottom:160px}
-header{position:sticky;top:0;z-index:10;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:18px 24px 14px}.title-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}h1 span{color:var(--accent)}.count{color:var(--muted);font-size:14px}.controls{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}.search{flex:1 1 260px;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;outline:none}.search:focus{border-color:var(--accent)}.custom{display:flex;gap:8px;flex:2 1 420px}.custom input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:14px;outline:none}.custom input:focus{border-color:var(--accent)}.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}.btn:hover{filter:brightness(1.08)}
-main{padding:20px 24px}.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))}.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;transition:border-color .15s,background .15s;cursor:pointer;user-select:none;color:inherit;font:inherit;text-align:left}.card:hover{border-color:#3a4150;background:var(--panel-2)}.card.active{border-color:var(--accent);background:var(--panel-2)}.card.off{opacity:.45;cursor:not-allowed}.card.off:hover{border-color:var(--border);background:var(--panel)}.play-ico{flex:0 0 44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;font-size:16px}.card.off .play-ico{background:var(--border)}.info{min-width:0;flex:1}.name{font-size:15px;font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.meta{margin-top:4px;font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}.tag{background:#262b36;border-radius:6px;padding:2px 7px;color:#b5bccb}.eq{display:none;gap:2px;align-items:flex-end;height:14px;margin-left:auto}.card.active.playing .eq{display:inline-flex}.eq i{display:block;width:3px;background:var(--accent);border-radius:2px;animation:eq 1s infinite ease-in-out}.eq i:nth-child(1){height:60%;animation-delay:-.2s}.eq i:nth-child(2){height:100%;animation-delay:-.5s}.eq i:nth-child(3){height:40%;animation-delay:-.8s}@keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}.empty{color:var(--muted);padding:40px 0;text-align:center;grid-column:1/-1}
-.player{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(24,27,34,.97);border-top:1px solid var(--border);backdrop-filter:blur(8px);display:flex;align-items:center;gap:16px;padding:14px 24px;flex-wrap:wrap}.player .now{flex:1 1 260px;min-width:0}.player .now .t{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player .now .s{font-size:12px;color:var(--muted);margin-top:3px}.player .s.ok{color:var(--ok)}.player .s.err{color:var(--bad)}.toggle{width:52px;height:52px;border-radius:50%;border:0;cursor:pointer;background:var(--accent);color:#fff;font-size:20px;display:grid;place-items:center;flex:0 0 auto}.toggle:disabled{background:var(--border);cursor:default}@media(max-width:560px){header,main{padding-left:14px;padding-right:14px}.player{padding:12px 14px}}
+header{position:sticky;top:0;z-index:10;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:18px 24px 14px}.title-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}h1 span{color:var(--accent)}.title-actions{display:flex;gap:12px;align-items:center}.title-actions .btn{padding:7px 12px;font-size:13px}.count{color:var(--muted);font-size:14px;display:flex;gap:10px;align-items:center}.count .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}.count .dot.busy{background:var(--warn);animation:pulse 1.2s infinite}.count .dot.live{background:var(--ok)}@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}.controls{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}.search{flex:1 1 260px;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;outline:none}.search:focus{border-color:var(--accent)}.custom{display:flex;gap:8px;flex:2 1 420px}.custom input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:14px;outline:none}.custom input:focus{border-color:var(--accent)}.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}.btn:hover{filter:brightness(1.08)}.btn.ghost{background:var(--panel-2);border:1px solid var(--border);color:var(--text);font-weight:500}.btn.ghost:hover{border-color:var(--accent);filter:none}.btn:disabled{opacity:.6;cursor:default}
+main{padding:20px 24px}.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))}.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;transition:border-color .15s,background .15s,opacity .25s;cursor:pointer;user-select:none;color:inherit;font:inherit;text-align:left;position:relative}.card:hover{border-color:#3a4150;background:var(--panel-2)}.card.active{border-color:var(--accent);background:var(--panel-2)}
+/* Station temporarily unreachable: dim the whole card so it reads as "off air"
+   but keep it clickable — clicking forces an immediate re-check and retries. */
+.card.checking{opacity:.6;cursor:progress}.card.checking .play-ico{background:var(--border);color:var(--warn)}
+.card.off{opacity:.42;cursor:progress}.card.off .play-ico{background:var(--border)}.card.off:hover{border-color:var(--warn);background:var(--panel);opacity:.62}
+.play-ico{flex:0 0 44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;font-size:16px;transition:background .2s}.info{min-width:0;flex:1}.name{font-size:15px;font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.meta{margin-top:4px;font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.tag{background:#262b36;border-radius:6px;padding:2px 7px;color:#b5bccb}.state{display:inline-flex;align-items:center;gap:5px}.state i{width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block}.card.off .state{color:var(--warn)}.card.off .state i{background:var(--warn)}.card.up .state i{background:var(--ok)}
+.eq{display:none;gap:2px;align-items:flex-end;height:14px;margin-left:auto}.card.active.playing .eq{display:inline-flex}.eq i{display:block;width:3px;background:var(--accent);border-radius:2px;animation:eq 1s infinite ease-in-out}.eq i:nth-child(1){height:60%;animation-delay:-.2s}.eq i:nth-child(2){height:100%;animation-delay:-.5s}.eq i:nth-child(3){height:40%;animation-delay:-.8s}@keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}.empty{color:var(--muted);padding:40px 0;text-align:center;grid-column:1/-1}
+.player{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(24,27,34,.97);border-top:1px solid var(--border);backdrop-filter:blur(8px);display:flex;align-items:center;gap:16px;padding:14px 24px;flex-wrap:wrap}.player .now{flex:1 1 260px;min-width:0}.player .now .t{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player .now .s{font-size:12px;color:var(--muted);margin-top:3px}.player .s.ok{color:var(--ok)}.player .s.err{color:var(--bad)}.player .s.warn{color:var(--warn)}.toggle{width:52px;height:52px;border-radius:50%;border:0;cursor:pointer;background:var(--accent);color:#fff;font-size:20px;display:grid;place-items:center;flex:0 0 auto}.toggle:disabled{background:var(--border);cursor:default}@media(max-width:560px){header,main{padding-left:14px;padding-right:14px}.player{padding:12px 14px}}
 </style>
 </head>
 <body>
-<header><div class="title-row"><h1><span>●</span> Российские радиостанции</h1><div class="count" id="count"></div></div><div class="controls"><input class="search" id="search" type="search" aria-label="Поиск по названию или городу" placeholder="Поиск по названию или городу…"><div class="custom"><input id="customUrl" type="url" aria-label="Свой поток" placeholder="Свой поток: вставьте ссылку на аудиопоток (mp3/aac)"><button class="btn" id="customBtn">Слушать</button></div></div></header>
+<header><div class="title-row"><h1><span>●</span> Российские радиостанции</h1><div class="title-actions"><button class="btn ghost" id="recheck" title="Проверить все станции сейчас">Проверить</button><div class="count" id="count"></div></div></div><div class="controls"><input class="search" id="search" type="search" aria-label="Поиск по названию или городу" placeholder="Поиск по названию или городу…"><div class="custom"><input id="customUrl" type="url" aria-label="Свой поток" placeholder="Свой поток: вставьте ссылку на аудиопоток (mp3/aac)"><button class="btn" id="customBtn">Слушать</button></div></div></header>
 <main><div class="grid" id="grid"></div></main>
 <div class="player"><div class="now"><div class="t" id="nowTitle">Выберите станцию</div><div class="s" id="nowStatus" role="status">Нажмите на карточку, чтобы начать прослушивание</div></div><button class="toggle" id="toggle" disabled aria-label="Пуск/пауза">▶</button></div>
 <audio id="audio" preload="none"></audio>
 <script>
-const STATIONS = [
-['Говорит Москва','Москва','https://media.govoritmoskva.ru/ru64.mp3'],
-['Комсомольская Правда','Москва','https://kpradio.hostingradio.ru:8000/russia.radiokp128.mp3'],
-['Радио Звезда','Москва','https://zvezda-radio128.mediacdn.ru/radio/zvezda/zvezda_128'],
-['Радио Культура','Москва','https://icecast-vgtrk.cdnvideo.ru/kulturafm'],
-['Радио 1','Москва','https://stream.radio1.ru/memfs/49dee7fe-77ba-4e6b-8cdc-fa840535b242.m3u8'],
-['Радио России','Москва','https://icecast-vgtrk.cdnvideo.ru/rrzonam_mp3_128kbps'],
-['Радио Маяк','Москва','https://icecast-vgtrk.cdnvideo.ru/mayakfm_mp3_192kbps'],
-['Вести FM','Москва','https://icecast-vgtrk.cdnvideo.ru/vestifm'],
-['Коммерсантъ FM','Москва','https://kommersant77.hostingradio.ru:8085/kommersant128.mp3'],
-['Бизнес FM','Москва','https://bfm.hostingradio.ru:9075/fm'],
-['Москва FM','Москва','https://icecast-vgtrk.cdnvideo.ru/moscowfm128'],
-['Радонеж','Москва','https://icecast-radonezh.cdnvideo.ru/rad128'],
-['Радиокнига','Москва','https://bookradio.hostingradio.ru:8069/fm'],
-['Радио Спутник. Россия Сегодня','Москва','https://icecast-rian.cdnvideo.ru/voicerus'],
-['Радио Москвы','Москва','https://icecast-vgtrk.cdnvideo.ru/moscowtalk128'],
-['Радио Фантастики','Москва','https://listen9.myradio24.com/55699'],
-['Радио Вера','Москва','http://77.39.8.49:8000/vera_air_96'],
-['Davidzon Radio','США (Нью-Джерси)','http://radioserver.abinet.com:8800/dr.aac'],
-['Радио России (Нижний Новгород)','Нижний Новгород','https://icecast-vgtrk.cdnvideo.ru/russiafm_nn'],
-['Старое радио','Москва','http://195.91.237.50:8000/ices128'],
-['Радио Маяк (Нижний Новгород)','Нижний Новгород','https://icecast-vgtrk.cdnvideo.ru/mayak_nn'],
-['Радио России (Санкт-Петербург)','Санкт-Петербург','https://radio.rtr.spb.ru/live1'],
-['Благовещение','Москва','https://radio-blagoveshchenie.ru:10005/stream'],
-['Модель для сборки','Москва','http://mds-station.com:8000/mds'],
-['Радио Зенит','Санкт-Петербург','https://radiozenit.hostingradio.ru/radiozenit256.mp3'],
-['Радио России (Пермь)','Пермь','https://podcast-gtrk.smotrim.ru/vgtrk/perm/radio_russia/index.m3u8'],
-['Маяк (Самара)','Самара','https://podcast-gtrk.smotrim.ru/vgtrk/samara/mayak/index.m3u8'],
-['Радио России (Самара)','Самара','https://podcast-gtrk.smotrim.ru/vgtrk/samara/radio_russia/index.m3u8'],
-['Бизнес FM (Санкт-Петербург)','Санкт-Петербург','https://bfmreg.hostingradio.ru/spb.bfm128.mp3'],
-['Маяк (Барнаул)','Барнаул','http://gtrk22.ru:8000/mayak22'],
-['Радио Всероссийского общества слепых (ВОС)','Москва','http://radiovos.ru:9000/radiovos-128'],
-['Радио Справедливая Россия','Москва','https://spravedlivo.hostingradio.ru:8022/spravedlivo128.mp3'],
-['Комсомольская Правда (Санкт-Петербург)','Санкт-Петербург','https://kpradio.hostingradio.ru:8000/spb.radiokp128.mp3'],
-['Комсомольская Правда (Новосибирск)','Новосибирск','https://kpradio.hostingradio.ru:8000/novosibirsk.radiokp128.mp3'],
-['Радио Музком','Москва','https://geshou.s02.radio-tochka.com:5005/stream'],
-['Радио России (Иваново)','Иваново','https://podcast-gtrk.smotrim.ru/vgtrk/ivanovo/radio_russia/index.m3u8'],
-['Радио Воскресенье','Екатеринбург','http://217.24.181.164:8000/stream.mp3'],
-['Бизнес FM (Нижний Новгород)','Нижний Новгород','https://online-2.gkvr.ru:8000/bfm_nno_64.aac'],
-['Коммерсантъ FM (Нижний Новгород)','Нижний Новгород','https://kommersant77.hostingradio.ru:8085/kommersant128.mp3'],
-['Комсомольская правда (Екатеринбург)','Екатеринбург','https://kpradio.hostingradio.ru:8000/ekaterinburg.radiokp128.mp3'],
-['Радио России (Пенза)','Пенза','https://icecast-vgtrk.cdnvideo.ru/rr_penza_aac']
-].map(([n,r,u])=>({n,r,u}));
-const $=id=>document.getElementById(id);
-const audio=$('audio'),grid=$('grid'),search=$('search'),countEl=$('count'),toggle=$('toggle'),nowTitle=$('nowTitle'),nowStatus=$('nowStatus'),customUrl=$('customUrl'),customBtn=$('customBtn');
-let currentIdx=null,current=null,requestId=0;
-let hls=null,hlsLibPromise=null;
-function isHls(url){return /\.m3u8($|\?)/i.test(url||'');}
-function destroyHls(){if(hls){try{hls.destroy();}catch(e){}hls=null;}}
-function loadHlsLib(){if(window.Hls)return Promise.resolve();if(!hlsLibPromise){hlsLibPromise=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';sc.onload=res;sc.onerror=rej;document.head.append(sc);});}return hlsLibPromise;}
-function setStatus(text,cls){nowStatus.textContent=text;nowStatus.className='s'+(cls?' '+cls:'');}
-function markActive(){grid.querySelectorAll('.card').forEach(c=>{const active=currentIdx!==null&&Number(c.dataset.idx)===currentIdx;c.classList.toggle('active',active);c.classList.toggle('playing',active&&!audio.paused);});}
-function renderList(){const q=search.value.trim().toLowerCase();grid.replaceChildren();let shown=0;STATIONS.forEach((s,i)=>{if(q&&!(s.n.toLowerCase().includes(q)||s.r.toLowerCase().includes(q)))return;shown++;const card=document.createElement('button');card.type='button';card.className='card'+(s.u?'':' off');card.disabled=!s.u;card.dataset.idx=i;const ico=document.createElement('span');ico.className='play-ico';ico.textContent=s.u?'▶':'✕';ico.setAttribute('aria-hidden','true');const info=document.createElement('span');info.className='info';const name=document.createElement('span');name.className='name';name.textContent=s.n;const meta=document.createElement('span');meta.className='meta';const tag=document.createElement('span');tag.className='tag';tag.textContent=s.r;meta.append(tag);if(!s.u){const off=document.createElement('span');off.textContent='поток не найден';meta.append(off);}info.append(name,meta);const eq=document.createElement('span');eq.className='eq';eq.innerHTML='<i></i><i></i><i></i>';eq.setAttribute('aria-hidden','true');card.append(ico,info,eq);if(s.u)card.addEventListener('click',()=>playStation(s,i));grid.append(card);});if(!shown){const e=document.createElement('div');e.className='empty';e.textContent='Ничего не найдено';grid.append(e);}countEl.textContent=`Доступно: ${STATIONS.filter(s=>s.u).length} из ${STATIONS.length}`;markActive();}
-function startStream(){const id=++requestId;setStatus('Подключение…');destroyHls();const fail=()=>{if(id!==requestId)return;setStatus('Не удалось воспроизвести поток','err');toggle.textContent='▶';markActive();};
-if(isHls(current.u)&&!audio.canPlayType('application/vnd.apple.mpegurl')){loadHlsLib().then(()=>{if(id!==requestId)return;if(!window.Hls||!Hls.isSupported()){fail();return;}hls=new Hls({enableWorker:true});hls.on(Hls.Events.ERROR,(_,d)=>{if(d&&d.fatal)fail();});hls.loadSource(current.u);hls.attachMedia(audio);hls.on(Hls.Events.MANIFEST_PARSED,()=>{audio.play().catch(fail);});}).catch(fail);return;}
-audio.src=current.u;audio.play().catch(fail);}
-function playStation(s,idx){if(!s||!s.u)return;if(current===s&&!audio.paused){audio.pause();return;}current=s;currentIdx=idx===undefined?null:idx;nowTitle.textContent=s.n;toggle.disabled=false;startStream();markActive();}
-toggle.addEventListener('click',()=>{if(!current)return;if(audio.paused)startStream();else audio.pause();});
-audio.addEventListener('playing',()=>{setStatus('В эфире','ok');toggle.textContent='⏸';markActive();});
-audio.addEventListener('waiting',()=>setStatus('Буферизация…'));
-audio.addEventListener('pause',()=>{if(current)setStatus('Пауза');toggle.textContent='▶';markActive();});
-audio.addEventListener('error',()=>{if(!current)return;setStatus('Ошибка потока: станция недоступна или ссылка устарела','err');toggle.textContent='▶';markActive();});
-audio.addEventListener('ended',()=>{setStatus('Поток завершён','err');toggle.textContent='▶';markActive();});
-search.addEventListener('input',renderList);
-customBtn.addEventListener('click',()=>{let url;try{url=new URL(customUrl.value.trim());if(!['http:','https:'].includes(url.protocol))throw new Error();}catch{setStatus('Введите корректную ссылку, начинающуюся с http:// или https://','err');return;}playStation({n:'Свой поток',r:'вручную',u:url.href});});
-customUrl.addEventListener('keydown',e=>{if(e.key==='Enter')customBtn.click();});
-document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.target.closest('input,textarea,select,button,[contenteditable]')&&!toggle.disabled){e.preventDefault();toggle.click();}});
+// Station metadata + availability come from /api/radio/status (server-side probe,
+// see lib/radio.js). The page polls it, so a station that comes back on air is
+// re-enabled automatically and one that dies is dimmed automatically.
+const STATUS_URL = '/api/radio/status';
+const POLL_MS = 15000;        // regular background availability poll
+const PENDING_POLL_MS = 2500; // faster follow-up while the server is still probing
+const FAIL_RETRY_MS = 8000;   // quicker re-check when the stream we're playing dies
+const $ = id => document.getElementById(id);
+
+const audio = $('audio'), grid = $('grid'), search = $('search'), countEl = $('count'),
+      toggle = $('toggle'), nowTitle = $('nowTitle'), nowStatus = $('nowStatus'),
+      customUrl = $('customUrl'), customBtn = $('customBtn'), recheck = $('recheck');
+
+let stations = [];            // [{id,name,city,playUrl,available,reason}]
+let currentKey = null;        // station id, or 'custom'
+let current = null;           // {name, url}
+let requestId = 0;
+let hls = null, hlsLibPromise = null;
+let pollTimer = null, retryTimer = null, pollInFlight = false, lastUpdatedAt = 0;
+let pendingCount = 0;         // stations the server has not finished probing yet
+let userPaused = false;       // did the user press pause (vs. a transient failure)?
+
+function isHls(url) { return /\.m3u8($|\?)/i.test(url || ''); }
+function destroyHls() { if (hls) { try { hls.destroy(); } catch (e) {} hls = null; } }
+function loadHlsLib() {
+  if (window.Hls) return Promise.resolve();
+  if (!hlsLibPromise) {
+    hlsLibPromise = new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
+      sc.onload = res; sc.onerror = rej; document.head.append(sc);
+    });
+  }
+  return hlsLibPromise;
+}
+function setStatus(text, cls) { nowStatus.textContent = text; nowStatus.className = 's' + (cls ? ' ' + cls : ''); }
+
+function stationById(id) { return stations.find(s => s.id === id) || null; }
+
+// ---------------------------------------------------------------- availability
+
+function applyStatus(payload) {
+  const incoming = Array.isArray(payload && payload.stations) ? payload.stations : [];
+  const prev = new Map(stations.map(s => [s.id, s]));
+  stations = incoming.map(s => {
+    const old = prev.get(s.id);
+    // Keep the list stable while a station flips, but take the fresh view.
+    return Object.assign({}, old, s);
+  });
+  pendingCount = stations.filter(s => s.pending).length;
+  lastUpdatedAt = payload.updatedAt || Date.now();
+  renderList();
+  // If the station we are playing just went off air, show it in the player.
+  if (currentKey !== null && currentKey !== 'custom' && current) {
+    const station = stationById(currentKey);
+    if (station && !station.available && audio.paused) {
+      setStatus('Станция сейчас недоступна — ждём повторного подключения…', 'warn');
+    }
+  }
+}
+
+function setPollState(state) {
+  const dot = countEl.querySelector('.dot');
+  if (dot) dot.className = 'dot' + (state ? ' ' + state : '');
+}
+
+async function fetchStatus(opts) {
+  const force = opts && opts.force;
+  const manual = opts && opts.manual;
+  const index = opts && opts.index;
+  if (pollInFlight && !force) return;
+  pollInFlight = true;
+  if (recheck) recheck.disabled = true;
+  setPollState('busy');
+  try {
+    const query = force ? '?force=1' + (index !== undefined ? '&i=' + index : '') : '';
+    const res = await fetch(STATUS_URL + query, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    applyStatus(await res.json());
+    setPollState(pendingCount ? 'busy' : 'live');
+    if (manual) {
+      setStatus('Проверено: ' + stations.filter(s => s.available).length + ' из ' + stations.length + ' станций в эфире', 'ok');
+    }
+  } catch (e) {
+    setPollState('');
+    if (!stations.length) {
+      setStatus('Не удалось получить список станций — повторяем…', 'warn');
+    } else if (manual) {
+      setStatus('Не удалось проверить станции — повторим автоматически', 'warn');
+    }
+  } finally {
+    pollInFlight = false;
+    if (recheck) recheck.disabled = false;
+  }
+}
+
+function schedulePoll(ms) {
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(async () => {
+    await fetchStatus();
+    // While the server is still probing (or we just came back online) poll sooner.
+    schedulePoll(pendingCount ? PENDING_POLL_MS : POLL_MS);
+  }, ms);
+}
+
+// Quietly retry the station that just failed, sooner than the regular poll.
+// Stops on its own once the stream is playing again or the user pauses/stops.
+function retryStationSoon() {
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(async () => {
+    if (currentKey === null || currentKey === 'custom') return;
+    if (!audio.paused || userPaused) return;
+    const station = stationById(currentKey);
+    if (station && station.available) {
+      nowTitle.textContent = station.name;
+      setStatus('Станция снова в эфире — переподключаемся…', 'ok');
+      startStream({ url: station.playUrl, name: station.name });
+      return;
+    }
+    await fetchStatus();
+    const fresh = stationById(currentKey);
+    if (fresh && fresh.available) {
+      setStatus('Станция снова в эфире — переподключаемся…', 'ok');
+      startStream({ url: fresh.playUrl, name: fresh.name });
+      return;
+    }
+    retryStationSoon();
+  }, FAIL_RETRY_MS);
+}
+
+// ---------------------------------------------------------------- rendering
+
+function renderList() {
+  const q = search.value.trim().toLowerCase();
+  grid.replaceChildren();
+  let shown = 0;
+  stations.forEach(s => {
+    if (q && !(s.name.toLowerCase().includes(q) || s.city.toLowerCase().includes(q))) return;
+    shown++;
+    const checking = !!s.pending;
+    const off = !s.available && !checking;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'card' + (checking ? ' checking' : off ? ' off' : ' up') + (currentKey === s.id ? ' active' : '');
+    card.dataset.id = s.id;
+    card.dataset.playing = currentKey === s.id && !audio.paused ? '1' : '';
+    if (currentKey === s.id && !audio.paused) card.classList.add('playing');
+    card.title = checking ? 'Проверяем станцию…' : off ? 'Станция недоступна — нажмите, чтобы проверить снова' : 'Слушать';
+    card.setAttribute('aria-label', s.name + (checking ? ' (проверяется)' : off ? ' (недоступна)' : ''));
+
+    const ico = document.createElement('span');
+    ico.className = 'play-ico';
+    ico.textContent = checking ? '…' : off ? '↻' : '▶';
+    ico.setAttribute('aria-hidden', 'true');
+
+    const info = document.createElement('span');
+    info.className = 'info';
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = s.name;
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = s.city;
+    meta.append(tag);
+    const state = document.createElement('span');
+    state.className = 'state';
+    state.innerHTML = '<i></i>';
+    state.append(document.createTextNode(checking ? 'проверяем…' : off ? 'не в эфире' : 'в эфире'));
+    meta.append(state);
+    info.append(name, meta);
+
+    const eq = document.createElement('span');
+    eq.className = 'eq';
+    eq.innerHTML = '<i></i><i></i><i></i>';
+    eq.setAttribute('aria-hidden', 'true');
+
+    card.append(ico, info, eq);
+    card.addEventListener('click', () => onCardClick(s));
+    grid.append(card);
+  });
+  if (!shown) {
+    const e = document.createElement('div');
+    e.className = 'empty';
+    e.textContent = stations.length ? 'Ничего не найдено' : 'Загружаем список станций…';
+    grid.append(e);
+  }
+  const up = stations.filter(s => s.available).length;
+  const time = lastUpdatedAt ? new Date(lastUpdatedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+  countEl.replaceChildren();
+  const dot = document.createElement('span');
+  dot.className = 'dot';
+  const suffix = pendingCount
+    ? ' · проверяем ' + pendingCount + '…'
+    : ' · проверено ' + time;
+  countEl.append(dot, document.createTextNode('В эфире: ' + up + ' из ' + stations.length + suffix));
+}
+
+// ---------------------------------------------------------------- playback
+
+function onCardClick(s) {
+  if (currentKey === s.id && !audio.paused) { audio.pause(); return; }
+  currentKey = s.id;
+  current = { name: s.name, url: s.playUrl };
+  nowTitle.textContent = s.name;
+  toggle.disabled = false;
+  renderList();
+  if (!s.available && !s.pending) {
+    // Marked off air: still try (the cached status may be stale), and re-check
+    // just this station in the background.
+    setStatus('Проверяем станцию…', 'warn');
+    fetchStatus({ force: true, index: s.id });
+    retryStationSoon();
+  }
+  startStream(current);
+}
+
+function startStream(st) {
+  const id = ++requestId;
+  userPaused = false;
+  setStatus('Подключение…');
+  destroyHls();
+  const fail = (msg) => {
+    if (id !== requestId) return;
+    setStatus(msg || 'Не удалось воспроизвести поток', 'err');
+    toggle.textContent = '▶';
+    renderList();
+    // Probe just this station again so its card is dimmed right away if it is
+    // really gone, then keep retrying quietly in the background.
+    if (currentKey !== null && currentKey !== 'custom') {
+      fetchStatus({ force: true, index: currentKey });
+    }
+    retryStationSoon();
+  };
+  const onPlaying = () => {
+    if (id !== requestId) return;
+    clearTimeout(retryTimer);
+    setStatus('В эфире', 'ok');
+  };
+
+  audio.onplaying = onPlaying;
+  audio.onerror = () => {
+    if (id !== requestId) return;
+    fail('Ошибка потока: станция недоступна или ссылка устарела');
+  };
+
+  if (isHls(st.url) && !audio.canPlayType('application/vnd.apple.mpegurl')) {
+    loadHlsLib().then(() => {
+      if (id !== requestId) return;
+      if (!window.Hls || !Hls.isSupported()) { fail(); return; }
+      hls = new Hls({ enableWorker: true });
+      hls.on(Hls.Events.ERROR, (_, d) => { if (d && d.fatal) fail(); });
+      hls.loadSource(st.url);
+      hls.attachMedia(audio);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { audio.play().catch(() => fail()); });
+    }).catch(() => fail());
+    return;
+  }
+  audio.src = st.url;
+  audio.play().catch(() => fail());
+}
+
+toggle.addEventListener('click', () => {
+  if (!current) return;
+  if (audio.paused) { startStream(current); return; }
+  userPaused = true;
+  audio.pause();
+});
+audio.addEventListener('playing', () => { setStatus('В эфире', 'ok'); toggle.textContent = '⏸'; renderList(); });
+audio.addEventListener('waiting', () => setStatus('Буферизация…'));
+audio.addEventListener('pause', () => { if (current) setStatus(userPaused ? 'Пауза' : 'Поток остановлен'); toggle.textContent = '▶'; renderList(); });
+audio.addEventListener('ended', () => { setStatus('Поток завершён', 'warn'); toggle.textContent = '▶'; renderList(); retryStationSoon(); });
+
+search.addEventListener('input', renderList);
+
+customBtn.addEventListener('click', () => {
+  let url;
+  try {
+    url = new URL(customUrl.value.trim());
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
+  } catch {
+    setStatus('Введите корректную ссылку, начинающуюся с http:// или https://', 'err');
+    return;
+  }
+  currentKey = 'custom';
+  current = { name: 'Свой поток', url: url.href };
+  nowTitle.textContent = 'Свой поток';
+  toggle.disabled = false;
+  renderList();
+  startStream(current);
+});
+customUrl.addEventListener('keydown', e => { if (e.key === 'Enter') customBtn.click(); });
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !e.repeat && !e.target.closest('input,textarea,select,button,[contenteditable]') && !toggle.disabled) {
+    e.preventDefault(); toggle.click();
+  }
+});
+if (recheck) {
+  recheck.addEventListener('click', () => {
+    if (currentKey !== null && currentKey !== 'custom' && current && !audio.paused) {
+      // Do not interrupt what is playing; the forced sweep is still useful for
+      // its ?force=1 cache bypass, but the player keeps its current stream.
+    }
+    fetchStatus({ force: true, manual: true });
+  });
+}
+// Polling only while the tab is visible; catch up immediately when it returns.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) { fetchStatus(); schedulePoll(POLL_MS); }
+});
+window.addEventListener('online', () => { fetchStatus({ force: true }); schedulePoll(PENDING_POLL_MS); });
+window.addEventListener('beforeunload', () => destroyHls());
+
 renderList();
+fetchStatus().then(() => schedulePoll(POLL_MS));
 </script>
 </body>
 </html>
