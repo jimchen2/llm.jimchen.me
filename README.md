@@ -43,6 +43,25 @@ https://github.com/jimchen2/llm.jimchen.me/raw/refs/heads/master/public/annoying
 
 ---
 
+## Radio (`/radio`)
+
+`public/radio.html` is a static page (served at `/radio` by a rewrite in
+`next.config.js`) with a list of Russian radio streams.
+
+Streams go stale all the time, so the page checks availability **once on load**
+(no polling): it posts the stream URLs to `/api/radio/check`, which probes them
+in parallel on the server (`lib/radio.js`), hangs up right after the response
+head, and streams back one NDJSON verdict per stream. Streams that do not answer
+are dampened (dimmed, tagged "недоступно") and sorted to the bottom; the rest
+keep their original order. A plain refresh re-runs the check, and
+"Проверить снова" forces a fresh one. Verdicts are cached in memory for 10
+minutes (2 minutes for dead streams), so refreshes are cheap.
+
+Note: on an `https` page the browser refuses `http://` streams (mixed content),
+so those are marked unavailable up front and never probed.
+
+---
+
 ## Website/Configuration
 
 - A separate file to call the LLM. Minimal and fast interface
