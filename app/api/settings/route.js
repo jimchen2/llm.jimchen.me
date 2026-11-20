@@ -21,10 +21,10 @@ export async function GET(request) {
     return NextResponse.json({
       settings: {
         model: config.model ?? process.env.DEFAULT_MODEL ?? 'gemini-3.8-flash',
-        mode: normalizeMode(config.mode),
+        mode: config.mode == null ? null : normalizeMode(config.mode),
         modes: MODES,
       },
-    });
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

@@ -4,7 +4,10 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button } from 'react-bootstrap';
 
-export default function SettingsModal({ show, onHide, settings, setSettings, onSave, routeMode = 'default' }) {
+export default function SettingsModal({ show, onHide, settings, onSave }) {
+  const [model, setModel] = useState(settings.model);
+  const [mode, setMode] = useState(settings.mode);
+  const [saving, setSaving] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
   // Dynamically check if Dark Reader is enabled when modal opens
@@ -59,53 +62,38 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             <Form.Control 
               type="text" 
               placeholder="Model" 
-              value={settings.model || ''} 
-              onChange={e => setSettings({...settings, model: e.target.value})} 
+              value={model || ''}
+              onChange={e => setModel(e.target.value)}
             />
           </Form.Group>
           
           <Form.Group className="mb-3">
             <Form.Label className="fw-bold">Mode</Form.Label>
             <Form.Select 
-              value={settings.mode || 'default'}
-              onChange={(e) => {
-                // Random mode is disabled for now (app/random/** is commented out).
-                // if (e.target.value === 'random') {
-                //   window.location.href = 'https://llm.jimchen.me/random';
-                //   return;
-                // }
-                // Grammar and practical modes are separate routes; switching to
-                // one of them navigates there. Switching back to default only
-                // needs to save the mode (or navigate home from another route).
-                if (e.target.value === 'grammar') {
-                  window.location.href = 'https://llm.jimchen.me/grammar';
-                  return;
-                }
-                if (e.target.value === 'practical') {
-                  window.location.href = 'https://llm.jimchen.me/practical';
-                  return;
-                }
-                if (routeMode !== 'default') {
-                  window.location.href = 'https://llm.jimchen.me/';
-                  return;
-                }
-                setSettings({ ...settings, mode: 'default' });
-              }}
+              value={mode}
+              onChange={e => setMode(e.target.value)}
             >
               <option value="default">Default mode</option>
               {/* Random mode is disabled for now (app/random/** is commented out). */}
               {/* <option value="random">Random mode (No memory) ↗</option> */}
-              <option value="grammar">Grammar mode ↗</option>
-              <option value="practical">Practical mode ↗</option>
+              <option value="grammar">Grammar mode</option>
+              <option value="practical">Practical mode</option>
             </Form.Select>
             <Form.Text className="text-muted">
-              All modes share the same API key and model; each mode only differs by its system prompt.
+              The saved mode applies to new chats on all devices. Existing chats keep their original mode.
             </Form.Text>
           </Form.Group>
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="primary" onClick={onSave}>Save Settings</Button>
+        <Button variant="primary" disabled={saving} onClick={async () => {
+          setSaving(true);
+          try {
+            await onSave({ model, mode });
+          } finally {
+            setSaving(false);
+          }
+        }}>Save Settings</Button>
       </Modal.Footer>
     </Modal>
   );
