@@ -77,11 +77,12 @@ export default function App({ routeMode = "default" }) {
     mode: routeMode,
   });
 
-  const homePath = routeMode === "default" ? "/" : `/${routeMode}`;
+  const modePrefix = (mode) => mode === "default" ? "" : mode === "grammar" ? "/russian" : `/${mode}`;
+  const homePath = modePrefix(routeMode) || "/";
   const getConversationMode = (id) =>
     conversations.find((conversation) => conversation.id === id)?.mode || routeMode;
   const chatPath = (id, mode = routeMode) =>
-    mode === "default" ? `/chat/${id}` : `/${mode}/chat/${id}`;
+    `${modePrefix(mode)}/chat/${id}`;
 
   const endOfMessagesRef = useRef(null);
 
@@ -101,7 +102,7 @@ export default function App({ routeMode = "default" }) {
           savedMode &&
           savedMode !== "default"
         ) {
-          window.location.replace(`/${savedMode}`);
+          window.location.replace(modePrefix(savedMode));
           return true;
         }
         setSettings({
@@ -150,8 +151,8 @@ export default function App({ routeMode = "default" }) {
     // if (pathname.startsWith("/random/chat/")) {
     //   urlId = pathname.split("/random/chat/")[1];
     // } else
-    if (pathname.startsWith("/grammar/chat/")) {
-      urlId = pathname.split("/grammar/chat/")[1];
+    if (pathname.startsWith("/russian/chat/")) {
+      urlId = pathname.split("/russian/chat/")[1];
     } else if (pathname.startsWith("/practical/chat/")) {
       urlId = pathname.split("/practical/chat/")[1];
     } else if (pathname.startsWith("/chat/")) {
@@ -295,7 +296,7 @@ export default function App({ routeMode = "default" }) {
             (window.location.pathname.startsWith("/chat/") ||
               // Random mode is disabled for now (app/random/** is commented out).
               // window.location.pathname.startsWith("/random/chat/") ||
-              window.location.pathname.startsWith("/grammar/chat/") ||
+              window.location.pathname.startsWith("/russian/chat/") ||
               window.location.pathname.startsWith("/practical/chat/") ||
               new URLSearchParams(window.location.search).get("chat"))
           ) {
@@ -704,7 +705,7 @@ export default function App({ routeMode = "default" }) {
                   ? "Random mode — ask anything"
                   : */}
                 {routeMode === "grammar"
-                  ? "Grammar mode — исправьте грамматику"
+                  ? "Russian mode — исправьте грамматику"
                   : routeMode === "practical"
                     ? "Practical mode — short and concise answers"
                     : "Please only talk about coding"}
