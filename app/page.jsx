@@ -72,12 +72,6 @@ export default function App({ routeMode = "default" }) {
 
   const isInitializedRef = useRef(false);
 
-  // The mode this view is showing. Until the app has loaded (auth + saved
-  // settings + conversation/messages), we don't know which mode the user
-  // really belongs in, so don't render any mode-specific copy yet — otherwise
-  // on /russian you'd briefly see "Please only talk about coding" (the default
-  // mode's wording) before the Russian copy appears.
-  const [ready, setReady] = useState(false);
   // Set while a server-side "your last mode was not this route" redirect is in
   // flight; keeps the placeholder up so no default-mode copy flashes. The ref
   // is the same flag readable synchronously inside initializeApp.
@@ -101,9 +95,14 @@ export default function App({ routeMode = "default" }) {
   // default-mode chat opened on /russian, or vice versa), follow the
   // conversation's mode for the copy and placeholder.
   const mode = (activeConversation && getConversationMode(activeConversation)) || routeMode;
-  // Gate every mode-dependent string on the app being ready, so a reload never
-  // flashes the wrong mode's wording.
-  const uiMode = !ready || redirecting ? null : mode;
+  // The mode for this view is known synchronously from the URL (routeMode),
+  // possibly overridden by an open conversation's stored mode after load — so
+  // render the mode-specific copy immediately instead of waiting for the
+  // settings → conversations → messages waterfall. That waterfall still gates
+  // the actual chat content, but the mode wording no longer adds extra round
+  // trips to initial load. While a cross-mode redirect is in flight, keep the
+  // placeholder up so no default-mode copy flashes on the way to /russian.
+  const uiMode = redirecting ? null : mode;
 
   const endOfMessagesRef = useRef(null);
 
@@ -192,7 +191,6 @@ export default function App({ routeMode = "default" }) {
       loadMessages(token, urlId);
     }
     isInitializedRef.current = true;
-    setReady(true);
   };
 
   useEffect(() => {
