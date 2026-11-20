@@ -68,28 +68,43 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             <Form.Label className="fw-bold">Mode</Form.Label>
             <Form.Select 
               value={settings.mode || 'default'}
-              onChange={(e) => {
-                // Random mode is disabled for now (app/random/** is commented out).
-                // if (e.target.value === 'random') {
-                //   window.location.href = 'https://llm.jimchen.me/random';
-                //   return;
-                // }
+              onChange={async (e) => {
+                const newMode = e.target.value;
+                setSettings({ ...settings, mode: newMode });
+
+                if (settings.dbToken) {
+                  try {
+                    await fetch('/api/settings', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'x-db-token': settings.dbToken,
+                      },
+                      body: JSON.stringify({
+                        model: settings.model,
+                        mode: newMode,
+                      }),
+                    });
+                  } catch {
+                    // ignore — still navigate to the selected mode
+                  }
+                }
+
                 // Grammar and practical modes are separate routes; switching to
-                // one of them navigates there. Switching back to default only
-                // needs to save the mode (or navigate home from another route).
-                if (e.target.value === 'grammar') {
-                  window.location.href = 'https://llm.jimchen.me/grammar';
+                // one of them navigates there. Switching back to default
+                // navigates home from another route.
+                if (newMode === 'grammar') {
+                  window.location.href = '/grammar';
                   return;
                 }
-                if (e.target.value === 'practical') {
-                  window.location.href = 'https://llm.jimchen.me/practical';
+                if (newMode === 'practical') {
+                  window.location.href = '/practical';
                   return;
                 }
                 if (routeMode !== 'default') {
-                  window.location.href = 'https://llm.jimchen.me/';
+                  window.location.href = '/';
                   return;
                 }
-                setSettings({ ...settings, mode: 'default' });
               }}
             >
               <option value="default">Default mode</option>

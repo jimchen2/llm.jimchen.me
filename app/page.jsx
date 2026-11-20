@@ -94,6 +94,16 @@ export default function App({ routeMode = "default" }) {
 
       const data = await res.json();
       if (data.settings) {
+        const savedMode = data.settings.mode;
+        if (
+          typeof window !== "undefined" &&
+          window.location.pathname === "/" &&
+          savedMode &&
+          savedMode !== "default"
+        ) {
+          window.location.replace(`/${savedMode}`);
+          return true;
+        }
         setSettings({
           dbToken: token,
           model: data.settings.model ?? "gemini-3.8-flash",
