@@ -6,6 +6,7 @@ import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-boo
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
+import { updateReplyContent } from "../lib/replyContent";
 import { getModeMessages } from "../lib/modes";
 
 const ChatInput = ({ onSend, placeholder }) => {
@@ -442,38 +443,25 @@ export default function App({ routeMode = "default" }) {
 
       const source = new EventSource(`/api/chatstream?id=${botMsgId}&dbToken=${encodeURIComponent(settings.dbToken)}`);
 
+      // Keep the text with its stream so switching away and back between
+      // chunks doesn't lose the prefix of an in-progress reply.
+      let streamedText = "";
       source.onmessage = (e) => {
-        const chunk = JSON.parse(e.data);
-        setMessages((prev) => ({
-          ...prev,
-          [botMsgId]: { ...prev[botMsgId], content: prev[botMsgId].content + chunk },
-        }));
+        streamedText += JSON.parse(e.data);
+        const content = streamedText;
+        setMessages((prev) => updateReplyContent(prev, botMsgId, () => content));
       };
 
       source.onerror = () => {
         source.close();
-        setMessages((prev) => {
-          const currentContent = prev[botMsgId]?.content || "";
-          if (!currentContent) {
-            return {
-              ...prev,
-              [botMsgId]: {
-                ...prev[botMsgId],
-                content: `⚠️ **Network Error:** Connection lost to the stream.`,
-              },
-            };
-          }
-          return prev;
-        });
+        setMessages((prev) => updateReplyContent(prev, botMsgId, (content) =>
+          content || streamedText || "⚠️ **Network Error:** Connection lost to the stream."
+        ));
       };
     } catch (error) {
-      setMessages((prev) => ({
-        ...prev,
-        [botMsgId]: {
-          ...prev[botMsgId],
-          content: `⚠️ **Network Error:** Failed to send message.\n\n\`${error.message}\``,
-        },
-      }));
+      setMessages((prev) => updateReplyContent(prev, botMsgId, () =>
+        `⚠️ **Network Error:** Failed to send message.\n\n\`${error.message}\``
+      ));
     }
   };
 
