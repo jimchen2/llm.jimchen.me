@@ -72,6 +72,18 @@ export default function App({ routeMode = "default" }) {
 
   const isInitializedRef = useRef(false);
 
+  // The mode this view is showing. Until the app has loaded (auth + saved
+  // settings + conversation/messages), we don't know which mode the user
+  // really belongs in, so don't render any mode-specific copy yet — otherwise
+  // on /russian you'd briefly see "Please only talk about coding" (the default
+  // mode's wording) before the Russian copy appears.
+  const [ready, setReady] = useState(false);
+  // Set while a server-side "your last mode was not this route" redirect is in
+  // flight; keeps the placeholder up so no default-mode copy flashes. The ref
+  // is the same flag readable synchronously inside initializeApp.
+  const [redirecting, setRedirecting] = useState(false);
+  const redirectingRef = useRef(false);
+
   const [settings, setSettings] = useState({
     model: "gemini-3.7-flash",
     dbToken: "",
@@ -84,6 +96,14 @@ export default function App({ routeMode = "default" }) {
     conversations.find((conversation) => conversation.id === id)?.mode || routeMode;
   const chatPath = (id, mode = routeMode) =>
     `${modePrefix(mode)}/chat/${id}`;
+
+  // While this conversation's own mode differs from the route's mode (e.g. a
+  // default-mode chat opened on /russian, or vice versa), follow the
+  // conversation's mode for the copy and placeholder.
+  const mode = (activeConversation && getConversationMode(activeConversation)) || routeMode;
+  // Gate every mode-dependent string on the app being ready, so a reload never
+  // flashes the wrong mode's wording.
+  const uiMode = !ready || redirecting ? null : mode;
 
   const endOfMessagesRef = useRef(null);
 
@@ -103,6 +123,10 @@ export default function App({ routeMode = "default" }) {
           savedMode &&
           savedMode !== "default"
         ) {
+          // Hold the placeholder until the browser actually leaves "/", so the
+          // default-mode copy never flashes on the way to /russian.
+          redirectingRef.current = true;
+          setRedirecting(true);
           window.location.replace(modePrefix(savedMode));
           return true;
         }
@@ -142,6 +166,10 @@ export default function App({ routeMode = "default" }) {
   };
 
   const initializeApp = async (token) => {
+    // A redirect to another mode's route is underway: stay on the placeholder
+    // and let the navigation win.
+    if (redirectingRef.current) return;
+
     loadConversations(token, 0);
 
     const pathname = window.location.pathname;
@@ -164,6 +192,7 @@ export default function App({ routeMode = "default" }) {
       loadMessages(token, urlId);
     }
     isInitializedRef.current = true;
+    setReady(true);
   };
 
   useEffect(() => {
@@ -689,14 +718,16 @@ export default function App({ routeMode = "default" }) {
             <div className="h-100 d-flex justify-content-center align-items-center">
               <h3 className="text-muted">
                 {/* Random mode is disabled for now (app/random/** is commented out). */}
-                {/* routeMode === "random"
+                {/* uiMode === "random"
                   ? "Random mode — ask anything"
                   : */}
-                {routeMode === "grammar"
-                  ? "Russian mode — исправьте грамматику"
-                  : routeMode === "practical"
-                    ? "Practical mode — short and concise answers"
-                    : "Please only talk about coding"}
+                {uiMode === null
+                  ? ""
+                  : uiMode === "grammar"
+                    ? "Russian mode — исправьте грамматику"
+                    : uiMode === "practical"
+                      ? "Practical mode — short and concise answers"
+                      : "Please only talk about coding"}
               </h3>
             </div>
           ) : (
@@ -726,18 +757,22 @@ export default function App({ routeMode = "default" }) {
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
             <ChatInput
-              key={activeConversation || "new-chat"}
+              // Re-mount when the UI mode becomes known so the placeholder is
+              // right from the first paint instead of updating in place.
+              key={`${activeConversation || "new-chat"}:${uiMode ?? "pending"}`}
               onSend={(text) => sendMessage(text)}
               placeholder={
                 // Random mode is disabled for now (app/random/** is commented out).
-                // routeMode === "random"
+                // uiMode === "random"
                 //   ? "Ask anything"
                 //   :
-                routeMode === "grammar"
-                  ? "Введите текст для исправления"
-                  : routeMode === "practical"
-                    ? "Ask anything — short answers"
-                    : "Please only talk about coding"
+                uiMode === null
+                  ? ""
+                  : uiMode === "grammar"
+                    ? "Введите текст для исправления"
+                    : uiMode === "practical"
+                      ? "Ask anything — short answers"
+                      : "Please only talk about coding"
               }
             />
           </Container>
