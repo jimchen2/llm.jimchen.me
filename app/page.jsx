@@ -77,7 +77,7 @@ export default function App({ routeMode = "default" }) {
     mode: routeMode,
   });
 
-  const homePath = routeMode === "default" ? "/" : `/${routeMode}`;
+  const homePath = settings.mode === "default" ? "/" : `/${settings.mode}`;
   const getConversationMode = (id) =>
     conversations.find((conversation) => conversation.id === id)?.mode || routeMode;
   const chatPath = (id, mode = routeMode) =>
@@ -97,7 +97,7 @@ export default function App({ routeMode = "default" }) {
         setSettings({
           dbToken: token,
           model: data.settings.model ?? "gemini-3.8-flash",
-          mode: routeMode,
+          mode: data.settings.mode ?? routeMode,
         });
       } else {
         setSettings((prev) => ({ ...prev, dbToken: token, mode: routeMode }));
@@ -110,8 +110,7 @@ export default function App({ routeMode = "default" }) {
 
   const handleOpenSettings = async () => {
     if (settings.dbToken) {
-      // Refresh model from server, but don't reset mode — mode is per-conversation
-      // and only resets on page refresh or new chat.
+      // Refresh the shared preferences before opening the settings editor.
       try {
         const res = await fetch("/api/settings", {
           headers: { "x-db-token": settings.dbToken },
@@ -119,7 +118,11 @@ export default function App({ routeMode = "default" }) {
         if (res.ok) {
           const data = await res.json();
           if (data.settings?.model) {
-            setSettings((prev) => ({ ...prev, model: data.settings.model }));
+            setSettings((prev) => ({
+              ...prev,
+              model: data.settings.model,
+              mode: data.settings.mode ?? prev.mode,
+            }));
           }
         }
       } catch {
@@ -213,7 +216,7 @@ export default function App({ routeMode = "default" }) {
     } else {
       window.history.pushState({}, "", homePath);
     }
-  }, [activeConversation, conversations]);
+  }, [activeConversation, conversations, homePath]);
 
   const loadConversations = (dbToken, offset = 0) => {
     setIsLoadingConv(true);
@@ -300,7 +303,6 @@ export default function App({ routeMode = "default" }) {
     setMessages({});
     setCurrentId(null);
     setShowMobileMenu(false);
-    setSettings((prev) => ({ ...prev, mode: routeMode }));
   };
 
   const handleDeleteConversation = async (e, id) => {
@@ -315,7 +317,7 @@ export default function App({ routeMode = "default" }) {
     if (activeConversation === id) handleNewChat();
   };
 
-  const saveSettings = async () => {
+  const saveSettings = async ({ model, mode }) => {
     try {
       const res = await fetch("/api/settings", {
         method: "POST",
@@ -324,8 +326,8 @@ export default function App({ routeMode = "default" }) {
           "x-db-token": settings.dbToken,
         },
         body: JSON.stringify({
-          model: settings.model,
-          mode: settings.mode,
+          model,
+          mode,
         }),
       });
 
@@ -333,6 +335,7 @@ export default function App({ routeMode = "default" }) {
         alert("Failed to sync settings to Redis.");
         return;
       }
+      setSettings((prev) => ({ ...prev, model, mode }));
       setShowSettings(false);
     } catch (err) {
       alert(`Error updating settings: ${err.message}`);
@@ -386,10 +389,10 @@ export default function App({ routeMode = "default" }) {
 
     const title = content ? content.substring(0, 30) + (content.length > 30 ? "..." : "") : "New Chat";
     // Determine the mode for this conversation:
-    // - New conversations get the current settings.mode (which defaults to "default" on refresh/new chat).
+    // - New conversations get the saved shared mode.
     // - Existing conversations keep the mode they were created with.
     const conversationMode = isNewConv
-      ? (routeMode !== "default" ? routeMode : settings.mode)
+      ? settings.mode
       : (conversations.find((c) => c.id === convId)?.mode || routeMode);
     if (isNewConv) {
       setActiveConversation(convId);
@@ -667,14 +670,12 @@ export default function App({ routeMode = "default" }) {
         </Offcanvas.Body>
       </Offcanvas>
 
-      <SettingsModal
+      {showSettings && <SettingsModal
         show={showSettings}
         onHide={() => setShowSettings(false)}
         settings={settings}
-        setSettings={setSettings}
         onSave={saveSettings}
-        routeMode={routeMode}
-      />
+      />}
 
       {/* Main Area */}
       <div className="d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
@@ -693,9 +694,9 @@ export default function App({ routeMode = "default" }) {
                 {/* routeMode === "random"
                   ? "Random mode — ask anything"
                   : */}
-                {routeMode === "grammar"
+                {settings.mode === "grammar"
                   ? "Grammar mode — исправьте грамматику"
-                  : routeMode === "practical"
+                  : settings.mode === "practical"
                     ? "Practical mode — short and concise answers"
                     : "Please only talk about coding"}
               </h3>
@@ -734,9 +735,9 @@ export default function App({ routeMode = "default" }) {
                 // routeMode === "random"
                 //   ? "Ask anything"
                 //   :
-                routeMode === "grammar"
+                settings.mode === "grammar"
                   ? "Введите текст для исправления"
-                  : routeMode === "practical"
+                  : settings.mode === "practical"
                     ? "Ask anything — short answers"
                     : "Please only talk about coding"
               }
