@@ -72,17 +72,10 @@ export default function App({ routeMode = "default" }) {
 
   const isInitializedRef = useRef(false);
 
-  // The mode this view is showing. Until the app has loaded (auth + saved
-  // settings + conversation/messages), we don't know which mode the user
-  // really belongs in, so don't render any mode-specific copy yet — otherwise
-  // on /russian you'd briefly see "Please only talk about coding" (the default
-  // mode's wording) before the Russian copy appears.
-  const [ready, setReady] = useState(false);
-  // Set while a server-side "your last mode was not this route" redirect is in
-  // flight; keeps the placeholder up so no default-mode copy flashes. The ref
-  // is the same flag readable synchronously inside initializeApp.
-  const [redirecting, setRedirecting] = useState(false);
-  const redirectingRef = useRef(false);
+  // A mode-specific route already tells us which copy to show; on the default
+  // route, wait for the saved mode from settings so the default wording does
+  // not flash before (for example) Russian mode is known.
+  const [modeResolved, setModeResolved] = useState(routeMode !== "default");
 
   const [settings, setSettings] = useState({
     model: "gemini-3.7-flash",
@@ -92,18 +85,16 @@ export default function App({ routeMode = "default" }) {
 
   const modePrefix = (mode) => mode === "default" ? "" : mode === "grammar" ? "/russian" : `/${mode}`;
   const homePath = modePrefix(routeMode) || "/";
+  const pageMode = routeMode === "default" ? settings.mode : routeMode;
   const getConversationMode = (id) =>
-    conversations.find((conversation) => conversation.id === id)?.mode || routeMode;
-  const chatPath = (id, mode = routeMode) =>
+    conversations.find((conversation) => conversation.id === id)?.mode || pageMode;
+  const chatPath = (id, mode = pageMode) =>
     `${modePrefix(mode)}/chat/${id}`;
 
-  // While this conversation's own mode differs from the route's mode (e.g. a
-  // default-mode chat opened on /russian, or vice versa), follow the
-  // conversation's mode for the copy and placeholder.
-  const mode = (activeConversation && getConversationMode(activeConversation)) || routeMode;
-  // Gate every mode-dependent string on the app being ready, so a reload never
-  // flashes the wrong mode's wording.
-  const uiMode = !ready || redirecting ? null : mode;
+  // A conversation can have a different mode than the route it was opened on;
+  // prefer the conversation's saved mode, otherwise use the page's mode.
+  const mode = (activeConversation && getConversationMode(activeConversation)) || pageMode;
+  const uiMode = modeResolved ? mode : null;
 
   const endOfMessagesRef = useRef(null);
 
@@ -116,28 +107,23 @@ export default function App({ routeMode = "default" }) {
 
       const data = await res.json();
       if (data.settings) {
+        // The root route can use the saved mode directly. Don't force a full
+        // page navigation to /russian or /practical just to learn the mode —
+        // the route and the settings request are enough to initialize the UI.
         const savedMode = data.settings.mode;
-        if (
-          typeof window !== "undefined" &&
-          window.location.pathname === "/" &&
-          savedMode &&
-          savedMode !== "default"
-        ) {
-          // Hold the placeholder until the browser actually leaves "/", so the
-          // default-mode copy never flashes on the way to /russian.
-          redirectingRef.current = true;
-          setRedirecting(true);
-          window.location.replace(modePrefix(savedMode));
-          return true;
-        }
+        const initialMode =
+          typeof window !== "undefined" && window.location.pathname === "/"
+            ? savedMode || routeMode
+            : routeMode;
         setSettings({
           dbToken: token,
           model: data.settings.model ?? "gemini-3.8-flash",
-          mode: routeMode,
+          mode: initialMode,
         });
       } else {
         setSettings((prev) => ({ ...prev, dbToken: token, mode: routeMode }));
       }
+      setModeResolved(true);
       return true;
     } catch {
       return false;
@@ -166,10 +152,6 @@ export default function App({ routeMode = "default" }) {
   };
 
   const initializeApp = async (token) => {
-    // A redirect to another mode's route is underway: stay on the placeholder
-    // and let the navigation win.
-    if (redirectingRef.current) return;
-
     loadConversations(token, 0);
 
     const pathname = window.location.pathname;
@@ -192,7 +174,6 @@ export default function App({ routeMode = "default" }) {
       loadMessages(token, urlId);
     }
     isInitializedRef.current = true;
-    setReady(true);
   };
 
   useEffect(() => {
@@ -206,10 +187,12 @@ export default function App({ routeMode = "default" }) {
     if (!savedToken) {
       setShowAuthModal(true);
     } else {
+      // The token is already stored locally; make it available to the UI and
+      // start list/history requests while settings validation is in flight.
+      setSettings((prev) => ({ ...prev, dbToken: savedToken }));
+      initializeApp(savedToken);
       fetchRemoteSettings(savedToken).then((success) => {
-        if (success) {
-          initializeApp(savedToken);
-        } else {
+        if (!success) {
           localStorage.removeItem("db_access_token");
           setShowAuthModal(true);
         }
@@ -254,7 +237,7 @@ export default function App({ routeMode = "default" }) {
     } else {
       window.history.pushState({}, "", homePath);
     }
-  }, [activeConversation, conversations]);
+  }, [activeConversation, conversations, pageMode]);
 
   const loadConversations = (dbToken, offset = 0) => {
     setIsLoadingConv(true);
@@ -341,7 +324,10 @@ export default function App({ routeMode = "default" }) {
     setMessages({});
     setCurrentId(null);
     setShowMobileMenu(false);
-    setSettings((prev) => ({ ...prev, mode: routeMode }));
+    setSettings((prev) => ({
+      ...prev,
+      mode: routeMode === "default" ? prev.mode : routeMode,
+    }));
   };
 
   const handleDeleteConversation = async (e, id) => {
@@ -427,11 +413,11 @@ export default function App({ routeMode = "default" }) {
 
     const title = content ? content.substring(0, 30) + (content.length > 30 ? "..." : "") : "New Chat";
     // Determine the mode for this conversation:
-    // - New conversations get the current settings.mode (which defaults to "default" on refresh/new chat).
+    // - New conversations use the active route mode or the saved mode on "/".
     // - Existing conversations keep the mode they were created with.
     const conversationMode = isNewConv
       ? (routeMode !== "default" ? routeMode : settings.mode)
-      : (conversations.find((c) => c.id === convId)?.mode || routeMode);
+      : getConversationMode(convId);
     if (isNewConv) {
       setActiveConversation(convId);
       setConversations((prev) => [{ id: convId, title, mode: conversationMode }, ...prev]);
