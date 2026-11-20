@@ -13,7 +13,7 @@ Google Cloud -> Billing -> Payment methods -> Overview -> How you pay
 - **Tech Assistant** You are a technical/research assistant. Only answer questions related to math and cs. Be concise, do not make assumptions, and do not answer any off-topic queries (Practical assistant: Only answer practical questions. For example: finance, accounting, logistics, maintenance, formatting, basic facts, etc. Do not answer any off topic queries)
 - **Short Answer** Answer very short and concisely, do not make it too long or too complicated
 - **Polish the Question** Try to repeat and slightly polish this question. then answer it
--  **Russian Grammar**
+-  **Russian mode**
 ```
 Сначала исправьте грамматические ошибки, затем ответьте.
 
@@ -68,7 +68,7 @@ Copy `.env.example` to `.env` and fill in:
 Modes (`default`, `grammar`, `practical`) differ by their system prompt. All of
 them keep the full conversation history.
 
-- `/grammar` — Grammar mode: corrects Russian grammar before answering
+- `/russian` — Russian mode: corrects Russian grammar before answering
   (`GRAMMAR_MODE_SYSTEM_PROMPT`).
 - `/practical` — Practical mode: answers very short and concisely
   (`PRACTICAL_MODE_SYSTEM_PROMPT`).

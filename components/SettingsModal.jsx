@@ -94,7 +94,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
                 // one of them navigates there. Switching back to default
                 // navigates home from another route.
                 if (newMode === 'grammar') {
-                  window.location.href = '/grammar';
+                  window.location.href = '/russian';
                   return;
                 }
                 if (newMode === 'practical') {
@@ -110,7 +110,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               <option value="default">Default mode</option>
               {/* Random mode is disabled for now (app/random/** is commented out). */}
               {/* <option value="random">Random mode (No memory) ↗</option> */}
-              <option value="grammar">Grammar mode ↗</option>
+              <option value="grammar">Russian mode ↗</option>
               <option value="practical">Practical mode ↗</option>
             </Form.Select>
             <Form.Text className="text-muted">
