@@ -64,7 +64,7 @@ export default function MessageNode({
       {/* Sticky at the top of the chat pane. Opaque bg so body text
           does not show through while the header is pinned. */}
       <Card.Header
-        className={`message-header d-flex justify-content-between align-items-center gap-2 border-0 pt-3 pb-2 ${
+        className={`message-header d-flex justify-content-between align-items-center gap-2 border-0 ${
           msg.role === 'user' ? 'bg-white' : 'bg-light'
         }`}
       >
