@@ -57,13 +57,26 @@ https://github.com/jimchen2/llm.jimchen.me/raw/refs/heads/master/public/annoying
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
 
-Copy `.env.example` to `.env` and fill in:
+### Preview without any services
+
+```bash
+cp .env.example .env
+printf 'TEST_MODE=true\n' >> .env
+npm install && npm run dev   # http://localhost:3000
+```
+
+With `TEST_MODE=true` there is no password prompt, no Redis and no API key:
+the sidebar shows a few fixed sample conversations (code, KaTeX math, Russian
+grammar, short-conversation mode) and sending a message streams a canned reply
+so the streaming UI can be exercised. Everything resets on restart.
+
+For the full setup, copy `.env.example` to `.env` and fill in:
 
 | Variable | Purpose |
 | --- | --- |
 | `REDIS_URL` | Redis connection string used for message/stream storage |
 | `APP_PASSWORD` | The single app password, sent as `x-db-token` |
-| `TEST_MODE` | Set to `true` to skip the password and load a few sample conversations (see `lib/testSeed.js`). Off by default; do not enable it on a public deployment |
+| `TEST_MODE` | Set to `true` to skip the password and load a few sample conversations (see `lib/testConversations.js`). No Redis and no API key are needed: data lives in memory (`lib/memoryStore.js`) and replies are canned. Off by default; do not enable it on a public deployment |
 | `API_KEY` | Gemini API key — one key for **all** modes |
 | `DEFAULT_MODEL` | Model used by **all** modes |
 | `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |
