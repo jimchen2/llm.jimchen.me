@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
 import { DEFAULT_MODE, normalizeMode } from '@/lib/modes';
+import { isTestMode } from '@/lib/testMode';
+import { ensureTestSeed } from '@/lib/testSeed';
 
 export async function GET(req) {
   const url = new URL(req.url);
   const offset = parseInt(url.searchParams.get('offset') || '0', 10);
   const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+
+  // In test mode, make sure the sample conversations exist before listing them.
+  if (isTestMode()) await ensureTestSeed();
 
   // "conversations:index" is a sorted set of conversation IDs (newest first).
   // Each conversation's data lives in `conv:{id}` with its own TTL, while the

@@ -63,6 +63,7 @@ Copy `.env.example` to `.env` and fill in:
 | --- | --- |
 | `REDIS_URL` | Redis connection string used for message/stream storage |
 | `APP_PASSWORD` | The single app password, sent as `x-db-token` |
+| `TEST_MODE` | Set to `true` to skip the password and load a few sample conversations (see `lib/testSeed.js`). Off by default; do not enable it on a public deployment |
 | `API_KEY` | Gemini API key — one key for **all** modes |
 | `DEFAULT_MODEL` | Model used by **all** modes |
 | `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |

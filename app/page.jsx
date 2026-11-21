@@ -9,6 +9,9 @@ import MessageNode from "../components/MessageNode";
 import { updateReplyContent } from "../lib/replyContent";
 import { getModeMessages, getModeMaxMessages } from "../lib/modes";
 
+// Placeholder sent in x-db-token while the server runs in test mode (TEST_MODE=true).
+const TEST_MODE_TOKEN = "test-mode";
+
 const ChatInput = ({ onSend, placeholder, disabled = false }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
@@ -184,21 +187,35 @@ export default function App({ routeMode = "default" }) {
       });
     }
 
-    const savedToken = localStorage.getItem("db_access_token");
-    if (!savedToken) {
-      setShowAuthModal(true);
-    } else {
-      // The token is already stored locally; make it available to the UI and
-      // start list/history requests while settings validation is in flight.
-      setSettings((prev) => ({ ...prev, dbToken: savedToken }));
-      initializeApp(savedToken);
-      fetchRemoteSettings(savedToken).then((success) => {
-        if (!success) {
-          localStorage.removeItem("db_access_token");
+    // In test mode (TEST_MODE=true on the server) no password is needed. Skip
+    // the prompt and use a placeholder token, which is never stored locally.
+    fetch("/api/test-mode")
+      .then((r) => (r.ok ? r.json() : { testMode: false }))
+      .catch(() => ({ testMode: false }))
+      .then(({ testMode }) => {
+        if (testMode) {
+          setSettings((prev) => ({ ...prev, dbToken: TEST_MODE_TOKEN }));
+          initializeApp(TEST_MODE_TOKEN);
+          fetchRemoteSettings(TEST_MODE_TOKEN);
+          return;
+        }
+
+        const savedToken = localStorage.getItem("db_access_token");
+        if (!savedToken) {
           setShowAuthModal(true);
+        } else {
+          // The token is already stored locally; make it available to the UI and
+          // start list/history requests while settings validation is in flight.
+          setSettings((prev) => ({ ...prev, dbToken: savedToken }));
+          initializeApp(savedToken);
+          fetchRemoteSettings(savedToken).then((success) => {
+            if (!success) {
+              localStorage.removeItem("db_access_token");
+              setShowAuthModal(true);
+            }
+          });
         }
       });
-    }
 
     const handleSaveEdit = async (e) => {
       const { id, content } = e.detail;
