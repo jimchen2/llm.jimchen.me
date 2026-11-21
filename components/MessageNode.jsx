@@ -64,13 +64,23 @@ export default function MessageNode({
       <Card.Header className="d-flex justify-content-between align-items-center bg-transparent border-0 pt-3 pb-0">
         <strong className="text-secondary">{msg.role === 'user' ? 'You' : modelName}</strong>
         
-        {siblings.length > 1 && (
-          <ButtonGroup size="sm">
-            <Button variant="outline-secondary" disabled={index === 0} onClick={() => switchBranch(siblings[index - 1].id)}>&#8592;</Button>
-            <Button variant="outline-secondary" disabled className="text-dark border-secondary px-2">{index + 1}/{siblings.length}</Button>
-            <Button variant="outline-secondary" disabled={index === siblings.length - 1} onClick={() => switchBranch(siblings[index + 1].id)}>&#8594;</Button>
-          </ButtonGroup>
-        )}
+        <div className="d-flex align-items-center gap-2">
+          {siblings.length > 1 && (
+            <ButtonGroup size="sm">
+              <Button variant="outline-secondary" disabled={index === 0} onClick={() => switchBranch(siblings[index - 1].id)}>&#8592;</Button>
+              <Button variant="outline-secondary" disabled className="text-dark border-secondary px-2">{index + 1}/{siblings.length}</Button>
+              <Button variant="outline-secondary" disabled={index === siblings.length - 1} onClick={() => switchBranch(siblings[index + 1].id)}>&#8594;</Button>
+            </ButtonGroup>
+          )}
+          {!isEditing && (
+            <ButtonGroup size="sm">
+              <Button variant="outline-secondary" onClick={() => handleCopy(msg.content)}>Copy</Button>
+              <Button variant="outline-secondary" onClick={() => setIsEditing(true)}>Edit</Button>
+              <Button variant="outline-secondary" onClick={() => handleBranch(msg.id)}>Branch</Button>
+              <Button variant="outline-danger" onClick={() => deleteMessage(msg.id)}>Delete</Button>
+            </ButtonGroup>
+          )}
+        </div>
       </Card.Header>
       
       <Card.Body onClick={handleMarkdownClick}>
@@ -90,17 +100,6 @@ export default function MessageNode({
           />
         )}
       </Card.Body>
-
-      {!isEditing && (
-        <Card.Footer className="bg-transparent border-0 d-flex justify-content-end gap-2 pt-0 pb-3">
-          <ButtonGroup size="sm">
-            <Button variant="outline-secondary" onClick={() => handleCopy(msg.content)}>Copy</Button>
-            <Button variant="outline-secondary" onClick={() => setIsEditing(true)}>Edit</Button>
-            <Button variant="outline-secondary" onClick={() => handleBranch(msg.id)}>Branch</Button>
-            <Button variant="outline-danger" onClick={() => deleteMessage(msg.id)}>Delete</Button>
-          </ButtonGroup>
-        </Card.Footer>
-      )}
     </Card>
   );
 }
