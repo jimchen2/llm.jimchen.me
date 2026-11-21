@@ -1,12 +1,11 @@
 'use client';
-import { Button, ListGroup } from 'react-bootstrap';
 
-export default function Sidebar({ 
-  conversations, 
-  activeConversation, 
-  handleNewChat, 
-  loadMessages, 
-  handleDeleteConversation, 
+export default function Sidebar({
+  conversations,
+  activeConversation,
+  handleNewChat,
+  loadMessages,
+  handleDeleteConversation,
   setShowSettings,
   dbToken,
   loadMore,
@@ -25,57 +24,60 @@ export default function Sidebar({
   };
 
   return (
-    <div className="d-flex flex-column h-100 bg-dark text-light border-end border-secondary">
-      <div className="p-3 border-bottom border-secondary d-grid gap-2">
+    <div className="sidebar d-flex flex-column h-100">
+      <div className="sidebar-top">
         {onCollapse && (
-          <div className="d-flex justify-content-end">
-            <Button variant="outline-light" size="sm" onClick={onCollapse} aria-label="Collapse sidebar" title="Collapse sidebar">
+          <div className="sidebar-collapse-row">
+            <button className="sidebar-icon-btn" onClick={onCollapse} aria-label="Collapse sidebar" title="Collapse sidebar">
               <span aria-hidden="true">‹</span>
-            </Button>
+            </button>
           </div>
         )}
-        <Button variant="outline-light" className="w-100 fw-bold" onClick={handleNewChat}>
+        <button className="sidebar-new-chat" onClick={handleNewChat}>
           + New Chat
-        </Button>
+        </button>
       </div>
-      
-      <div className="flex-grow-1 overflow-auto p-2" onScroll={handleScroll}>
-        <ListGroup variant="flush">
-          {conversations.map(c => (
-            <ListGroup.Item 
-              as="div"
-              key={c.id} 
-              action 
-              onClick={() => loadMessages(dbToken, c.id)}
-              className={`d-flex justify-content-between align-items-center rounded mb-1 text-light border-0 ${
-                c.id === activeConversation ? 'bg-secondary' : 'bg-dark'
-              }`}
-              style={{ cursor: 'pointer' }}
+
+      <div className="sidebar-list" onScroll={handleScroll}>
+        {conversations.map(c => (
+          <div
+            key={c.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => loadMessages(dbToken, c.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                loadMessages(dbToken, c.id);
+              }
+            }}
+            className={`sidebar-item ${c.id === activeConversation ? 'sidebar-item-active' : ''}`}
+          >
+            <span className="sidebar-item-title">{c.title}</span>
+            <button
+              type="button"
+              className="sidebar-item-delete"
+              aria-label="Delete conversation"
+              title="Delete conversation"
+              onClick={(e) => handleDeleteConversation(e, c.id)}
             >
-              <span className="text-truncate flex-grow-1 me-2">{c.title}</span>
-              <Button 
-                variant="link" 
-                className="p-0 text-white-50 text-decoration-none fs-5" 
-                onClick={(e) => handleDeleteConversation(e, c.id)}
-              >
-                &times;
-              </Button>
-            </ListGroup.Item>
-          ))}
-        </ListGroup>
-        
-        {/* Loading Spinner / Text indicator */}
+              &times;
+            </button>
+          </div>
+        ))}
+
+        {/* Loading indicator */}
         {isLoading && (
-          <div className="text-center p-3 text-secondary">
+          <div className="sidebar-loading">
             <small>Loading...</small>
           </div>
         )}
       </div>
-      
-      <div className="p-3 border-top border-secondary">
-        <Button variant="dark" className="w-100 text-start" onClick={() => setShowSettings(true)}>
+
+      <div className="sidebar-bottom">
+        <button className="sidebar-settings" onClick={() => setShowSettings(true)}>
           ⚙ Settings
-        </Button>
+        </button>
       </div>
     </div>
   );

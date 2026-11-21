@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal, Button } from "react-bootstrap";
+import Modal from "./Modal";
 
 export default function PopupMessage() {
   const [show, setShow] = useState(false);
@@ -23,11 +23,11 @@ export default function PopupMessage() {
         <p className="text-danger fw-bold">
           As a reminder, this platform is strictly for discussing coding, programming, and software development-related topics. Please refrain from off-topic conversations.
         </p>
-        
+
         <hr />
 
         <h4 className="mt-3 mb-3">Q & A</h4>
-        
+
         <div className="mb-3">
           <strong>- About talking with AI</strong>
           <p className="mt-1">
@@ -48,12 +48,12 @@ export default function PopupMessage() {
             A happy social life is the most important thing. Dating is a good plus once my life is stable. Do not think of marriage.
           </p>
         </div>
-        
+
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="primary" onClick={handleClose} className="fw-bold px-4">
+        <button className="btn btn-primary fw-bold px-4" onClick={handleClose}>
           I Understand
-        </Button>
+        </button>
       </Modal.Footer>
     </Modal>
   );
