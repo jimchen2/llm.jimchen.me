@@ -86,10 +86,6 @@ them keep the full conversation history.
 
 - `/russian` — Russian mode: corrects Russian grammar before answering
   (`GRAMMAR_MODE_SYSTEM_PROMPT`).
-- `/practical` — Short conversation mode: conversational, concise replies, with
-  a limit of five user/assistant exchanges (10 messages) per conversation. Once
-  the limit is reached, the input is disabled and a new conversation is required
-  (`PRACTICAL_MODE_SYSTEM_PROMPT`).
 
 Both modes use the same `API_KEY` and `DEFAULT_MODEL` as the default mode.
 
