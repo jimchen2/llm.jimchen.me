@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-bootstrap";
+import Modal from "../components/Modal";
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
@@ -31,14 +31,18 @@ const ChatInput = ({ onSend, placeholder, disabled = false }) => {
   };
 
   return (
-    <InputGroup>
-      <Form.Control
+    <form
+      className="composer-row"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submitMessage();
+      }}
+    >
+      <textarea
         ref={textareaRef}
-        as="textarea"
+        className="composer-input"
         rows={1}
-        className="shadow-none border-secondary fs-5"
         autoFocus
-        style={{ resize: "none", maxHeight: "200px", overflowY: "auto" }}
         value={input}
         onChange={(e) => {
           setInput(e.target.value);
@@ -49,10 +53,10 @@ const ChatInput = ({ onSend, placeholder, disabled = false }) => {
         placeholder={placeholder}
         disabled={disabled}
       />
-      <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={submitMessage} disabled={disabled}>
+      <button type="submit" className="composer-send" disabled={disabled}>
         Send
-      </Button>
-    </InputGroup>
+      </button>
+    </form>
   );
 };
 
@@ -625,43 +629,65 @@ export default function App({ routeMode = "default" }) {
   const conversationLimitReached =
     Number.isFinite(maxMessages) && activePath.length >= maxMessages;
 
+  // Empty-state copy. Stays empty until the mode is known, and an empty
+  // string renders no box at all (before it was an empty, invisible <h3>).
+  // Random mode is disabled for now (app/random/** is commented out).
+  const emptyStateText =
+    uiMode === null
+      ? ""
+      : uiMode === "grammar"
+        ? "Russian mode — исправьте грамматику"
+        : uiMode === "practical"
+          ? "Short conversation mode — concise replies, up to 5 exchanges"
+          : "Please only talk about coding";
+
   return (
-    <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: "100dvh" }}>
+    <div className="app">
       {/* Access Password Prompt Modal */}
-      <Modal show={showAuthModal} backdrop="static" keyboard={false} centered>
-        <Modal.Header>
-          <Modal.Title>Access Required</Modal.Title>
-        </Modal.Header>
-        <Form onSubmit={handleAuthSubmit}>
-          <Modal.Body>
-            <Form.Group className="mb-3">
-              <Form.Label>Access Password</Form.Label>
-              <Form.Control
-                type="password"
-                placeholder="Enter access password"
-                value={inputPassword}
-                onChange={(e) => setInputPassword(e.target.value)}
-                autoFocus
-                required
-              />
-              {authError && <div className="text-danger mt-2 small">{authError}</div>}
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="primary" type="submit">
-              Authenticate
-            </Button>
-          </Modal.Footer>
-        </Form>
+      <Modal
+        show={showAuthModal}
+        title="Access Required"
+        closeOnBackdrop={false}
+        showCloseButton={false}
+        footer={
+          <button type="submit" form="auth-form" className="btn btn-primary">
+            Authenticate
+          </button>
+        }
+      >
+        <form id="auth-form" onSubmit={handleAuthSubmit}>
+          <div className="field">
+            <label className="field-label" htmlFor="access-password">
+              Access Password
+            </label>
+            <input
+              id="access-password"
+              type="password"
+              className="input"
+              placeholder="Enter access password"
+              value={inputPassword}
+              onChange={(e) => setInputPassword(e.target.value)}
+              autoFocus
+              required
+            />
+            {authError && <span className="field-error">{authError}</span>}
+          </div>
+        </form>
       </Modal>
 
       {/* Desktop Sidebar */}
-      <div className="d-none d-md-block flex-shrink-0" style={{ width: sidebarCollapsed ? "56px" : "280px" }}>
+      <div className="sidebar-dock" style={{ width: sidebarCollapsed ? "56px" : "280px" }}>
         {sidebarCollapsed ? (
-          <div className="h-100 bg-dark border-end border-secondary p-2 d-flex justify-content-center align-items-start">
-            <Button variant="outline-light" size="sm" onClick={() => setSidebarCollapsed(false)} aria-label="Expand sidebar" title="Expand sidebar">
+          <div className="sidebar-rail">
+            <button
+              type="button"
+              className="btn btn-sm btn-on-dark"
+              onClick={() => setSidebarCollapsed(false)}
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+            >
               <span aria-hidden="true">›</span>
-            </Button>
+            </button>
           </div>
         ) : (
         <Sidebar
@@ -681,30 +707,42 @@ export default function App({ routeMode = "default" }) {
       </div>
 
       {/* Mobile Sidebar */}
-      <Offcanvas
-        show={showMobileMenu}
-        onHide={() => setShowMobileMenu(false)}
-        placement="start"
-        className="bg-dark text-light w-75"
-      >
-        <Offcanvas.Header closeButton closeVariant="white">
-          <Offcanvas.Title>Chats</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="p-0">
-          <Sidebar
-            conversations={conversations}
-            activeConversation={activeConversation}
-            handleNewChat={handleNewChat}
-            loadMessages={loadMessages}
-            handleDeleteConversation={handleDeleteConversation}
-            setShowSettings={handleOpenSettings}
-            dbToken={settings.dbToken}
-            loadMore={() => loadConversations(settings.dbToken, conversations.length)}
-            hasMore={hasMoreConv}
-            isLoading={isLoadingConv}
+      {showMobileMenu && (
+        <div className="offcanvas-layer">
+          <div
+            className="offcanvas-backdrop"
+            aria-hidden="true"
+            onClick={() => setShowMobileMenu(false)}
           />
-        </Offcanvas.Body>
-      </Offcanvas>
+          <div className="offcanvas-panel" role="dialog" aria-modal="true" aria-label="Chats">
+            <div className="offcanvas-header">
+              <span className="offcanvas-title">Chats</span>
+              <button
+                type="button"
+                className="btn btn-sm btn-on-dark"
+                onClick={() => setShowMobileMenu(false)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="offcanvas-body">
+              <Sidebar
+                conversations={conversations}
+                activeConversation={activeConversation}
+                handleNewChat={handleNewChat}
+                loadMessages={loadMessages}
+                handleDeleteConversation={handleDeleteConversation}
+                setShowSettings={handleOpenSettings}
+                dbToken={settings.dbToken}
+                loadMore={() => loadConversations(settings.dbToken, conversations.length)}
+                hasMore={hasMoreConv}
+                isLoading={isLoadingConv}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <SettingsModal
         show={showSettings}
@@ -716,12 +754,16 @@ export default function App({ routeMode = "default" }) {
       />
 
       {/* Main Area */}
-      <div className="d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
-        <div className="d-md-none p-2 border-bottom d-flex align-items-center bg-light">
-          <Button variant="outline-dark" size="sm" onClick={() => setShowMobileMenu(true)}>
+      <div className="main">
+        <div className="mobile-bar">
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => setShowMobileMenu(true)}
+          >
             ☰ Menu
-          </Button>
-          <span className="ms-3 fw-bold">Chat</span>
+          </button>
+          <span className="mobile-title">Chat</span>
         </div>
 
         {/* No top padding here or on the messages container: it would
@@ -729,24 +771,12 @@ export default function App({ routeMode = "default" }) {
             first message sits flush at the absolute top of the page,
             so its sticky header can pin there with no gap above it. */}
         {/* Full-bleed message list: no horizontal padding here so a user
-            message's white band can run edge to edge. Each row supplies its
+            message's band can run edge to edge. Each row supplies its
             own readable column (see .message-row-inner). */}
-        <div className="flex-grow-1 overflow-auto pb-3 pb-md-4 bg-light">
+        <div className="chat-scroll">
           {activePath.length === 0 ? (
-            <div className="h-100 d-flex justify-content-center align-items-center px-3">
-              <h3 className="text-muted">
-                {/* Random mode is disabled for now (app/random/** is commented out). */}
-                {/* uiMode === "random"
-                  ? "Random mode — ask anything"
-                  : */}
-                {uiMode === null
-                  ? ""
-                  : uiMode === "grammar"
-                    ? "Russian mode — исправьте грамматику"
-                    : uiMode === "practical"
-                      ? "Short conversation mode — concise replies, up to 5 exchanges"
-                      : "Please only talk about coding"}
-              </h3>
+            <div className="empty-state">
+              {emptyStateText && <h3 className="empty-title">{emptyStateText}</h3>}
             </div>
           ) : (
             <div className="conversation-rows">
@@ -772,10 +802,10 @@ export default function App({ routeMode = "default" }) {
           )}
         </div>
 
-        <div className="p-3 bg-white border-top">
-          <Container className="px-0" style={{ maxWidth: "800px" }}>
+        <div className="composer">
+          <div className="composer-inner">
             {conversationLimitReached && (
-              <div className="alert alert-info py-2 mb-2" role="status">
+              <div className="notice" role="status">
                 This conversation has reached its limit of 5 exchanges (10 messages). Start a new conversation to continue.
               </div>
             )}
@@ -799,9 +829,9 @@ export default function App({ routeMode = "default" }) {
               }
               disabled={conversationLimitReached}
             />
-          </Container>
+          </div>
         </div>
       </div>
-    </Container>
+    </div>
   );
 }

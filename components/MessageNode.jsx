@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { Card, Button, ButtonGroup, Form } from 'react-bootstrap';
 import MarkdownIt from 'markdown-it';
 import mk from '@vscode/markdown-it-katex';
 
@@ -16,12 +15,13 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
   // Encode the raw code to attach it safely as a dataset attribute
   const encodedCode = encodeURIComponent(token.content);
   const rendered = defaultRender(tokens, idx, options, env, self);
-  
+
   // Wrap the output in a relative container with the copy button already inside
   return `
-    <div class="position-relative mt-2 mb-3">
-      <button 
-        class="copy-code-btn btn btn-dark btn-sm position-absolute top-0 end-0 m-1 opacity-75" 
+    <div class="code-block">
+      <button
+        class="copy-code-btn"
+        type="button"
         data-code="${encodedCode}"
       >Copy</button>
       ${rendered}
@@ -29,16 +29,16 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
   `;
 };
 
-export default function MessageNode({ 
-  msg, siblings, index, switchBranch, handleCopy, 
+export default function MessageNode({
+  msg, siblings, index, switchBranch, handleCopy,
   handleBranch, handleRetry, deleteMessage, modelName
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(msg.content);
 
   const saveEdit = async () => {
-    window.dispatchEvent(new CustomEvent('save-message-edit', { 
-      detail: { id: msg.id, content: editContent } 
+    window.dispatchEvent(new CustomEvent('save-message-edit', {
+      detail: { id: msg.id, content: editContent }
     }));
     setIsEditing(false);
   };
@@ -48,9 +48,9 @@ export default function MessageNode({
     if (e.target && e.target.classList.contains('copy-code-btn')) {
       const btn = e.target;
       const codeToCopy = decodeURIComponent(btn.getAttribute('data-code') || '');
-      
+
       navigator.clipboard.writeText(codeToCopy);
-      
+
       btn.innerText = 'Copied!';
       setTimeout(() => {
         // Double check if element still exists
@@ -61,64 +61,76 @@ export default function MessageNode({
 
   const isUser = msg.role === 'user';
 
-  // User turns ("You") render as a full-bleed white band that spans the entire
+  // User turns ("You") render as a full-bleed band that spans the entire
   // width of the conversation pane. The band is the outer element and the
   // readable column is nested inside it, so the text stays aligned with the
-  // bot replies while the white background runs edge to edge.
+  // bot replies while the band runs edge to edge.
   return (
     <div className={`message-row ${isUser ? 'message-row-user' : 'message-row-assistant'}`}>
       <div className="message-row-inner">
-        <Card
-          className={`message-card mb-0 border-0 ${
-            isUser ? 'message-card-user bg-white' : 'message-card-assistant bg-transparent shadow-none'
-          }`}
-        >
+        <div className="message-card">
           {/* Sticky at the top of the chat pane. Opaque bg so body text
               does not show through while the header is pinned. */}
-          <Card.Header
-            className={`message-header d-flex justify-content-between align-items-center gap-2 border-0 ${
-              isUser ? 'bg-white' : 'bg-light'
-            }`}
-          >
-            <strong className="text-secondary text-truncate">{isUser ? 'You' : modelName}</strong>
+          <div className="message-header">
+            <span className="message-role">{isUser ? 'You' : modelName}</span>
 
-            <div className="d-flex align-items-center gap-2 flex-shrink-0">
+            <div className="message-actions">
               {siblings.length > 1 && (
-                <ButtonGroup size="sm">
-                  <Button variant="outline-secondary" disabled={index === 0} onClick={() => switchBranch(siblings[index - 1].id)}>&#8592;</Button>
-                  <Button variant="outline-secondary" disabled className="text-dark border-secondary px-2">{index + 1}/{siblings.length}</Button>
-                  <Button variant="outline-secondary" disabled={index === siblings.length - 1} onClick={() => switchBranch(siblings[index + 1].id)}>&#8594;</Button>
-                </ButtonGroup>
+                <div className="btn-group">
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={index === 0}
+                    onClick={() => switchBranch(siblings[index - 1].id)}
+                    aria-label="Previous branch"
+                  >
+                    &#8592;
+                  </button>
+                  <span className="btn-counter">{index + 1}/{siblings.length}</span>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={index === siblings.length - 1}
+                    onClick={() => switchBranch(siblings[index + 1].id)}
+                    aria-label="Next branch"
+                  >
+                    &#8594;
+                  </button>
+                </div>
               )}
               {!isEditing && (
-                <ButtonGroup size="sm">
-                  <Button variant="outline-secondary" onClick={() => handleCopy(msg.content)}>Copy</Button>
-                  <Button variant="outline-secondary" onClick={() => setIsEditing(true)}>Edit</Button>
-                  <Button variant="outline-secondary" onClick={() => handleBranch(msg.id)}>Branch</Button>
-                  <Button variant="outline-danger" onClick={() => deleteMessage(msg.id)}>Delete</Button>
-                </ButtonGroup>
+                <div className="btn-group">
+                  <button type="button" className="btn btn-sm" onClick={() => handleCopy(msg.content)}>Copy</button>
+                  <button type="button" className="btn btn-sm" onClick={() => setIsEditing(true)}>Edit</button>
+                  <button type="button" className="btn btn-sm" onClick={() => handleBranch(msg.id)}>Branch</button>
+                  <button type="button" className="btn btn-sm btn-danger" onClick={() => deleteMessage(msg.id)}>Delete</button>
+                </div>
               )}
             </div>
-          </Card.Header>
+          </div>
 
-          <Card.Body onClick={handleMarkdownClick}>
+          <div className="message-body" onClick={handleMarkdownClick}>
             {isEditing ? (
-              <div className="d-flex flex-column gap-2">
-                <Form.Control as="textarea" rows={4} value={editContent} onChange={e => setEditContent(e.target.value)} />
-                <div>
-                  <Button size="sm" variant="success" className="me-2" onClick={saveEdit}>Save</Button>
-                  <Button size="sm" variant="secondary" onClick={() => setIsEditing(false)}>Cancel</Button>
+              <div className="message-edit">
+                <textarea
+                  className="textarea"
+                  rows={4}
+                  value={editContent}
+                  onChange={e => setEditContent(e.target.value)}
+                />
+                <div className="message-edit-actions">
+                  <button type="button" className="btn btn-sm btn-primary" onClick={saveEdit}>Save</button>
+                  <button type="button" className="btn btn-sm" onClick={() => setIsEditing(false)}>Cancel</button>
                 </div>
               </div>
             ) : (
-              <div 
-                className="markdown-body fs-5" 
-                style={{ fontSize: '1.1rem' }}
-                dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }} 
+              <div
+                className="markdown-body"
+                dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }}
               />
             )}
-          </Card.Body>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
