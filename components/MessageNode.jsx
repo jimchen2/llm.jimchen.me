@@ -60,11 +60,19 @@ export default function MessageNode({
   };
 
   return (
-    <Card className={`mb-4 border-0 shadow-sm ${msg.role === 'user' ? 'bg-white' : 'bg-transparent shadow-none'}`}>
-      <Card.Header className="d-flex justify-content-between align-items-center bg-transparent border-0 pt-3 pb-0">
-        <strong className="text-secondary">{msg.role === 'user' ? 'You' : modelName}</strong>
+    <Card className={`message-card mb-4 border-0 shadow-sm ${msg.role === 'user' ? 'bg-white' : 'bg-transparent shadow-none'}`}>
+      {/* Sticky so the model name and the message actions stay reachable
+          while a long message is being read. The background matches the
+          card (user) or the chat pane (assistant) so the body scrolls
+          underneath instead of showing through. */}
+      <Card.Header
+        className={`message-header d-flex justify-content-between align-items-center gap-2 border-0 pt-3 pb-2 ${
+          msg.role === 'user' ? 'bg-white' : 'bg-light'
+        }`}
+      >
+        <strong className="text-secondary text-truncate">{msg.role === 'user' ? 'You' : modelName}</strong>
         
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center gap-2 flex-shrink-0">
           {siblings.length > 1 && (
             <ButtonGroup size="sm">
               <Button variant="outline-secondary" disabled={index === 0} onClick={() => switchBranch(siblings[index - 1].id)}>&#8592;</Button>
