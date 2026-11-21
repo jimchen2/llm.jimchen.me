@@ -64,10 +64,12 @@ html, body {
   overflow: visible;
 }
 
-.message-header {
+.message-card .message-header {
   position: sticky;
   top: 0;
   z-index: 3;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
   background-color: #f8f9fa !important;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
 }
@@ -76,14 +78,34 @@ html, body {
   background-color: #fff !important;
 }
 
+.message-header strong {
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+.message-header .btn-group-sm > .btn,
+.message-header .btn {
+  --bs-btn-padding-y: 0.125rem;
+  --bs-btn-padding-x: 0.45rem;
+  --bs-btn-font-size: 0.78rem;
+  --bs-btn-line-height: 1.3;
+}
+
 @media (max-width: 768px) {
-  .message-header {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.4rem !important;
+  .message-card .message-header {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
   }
 
   .message-header strong {
-    font-size: 0.95rem;
+    font-size: 0.82rem;
+  }
+
+  .message-header .btn-group-sm > .btn,
+  .message-header .btn {
+    --bs-btn-padding-y: 0.1rem;
+    --bs-btn-padding-x: 0.375rem;
+    --bs-btn-font-size: 0.74rem;
   }
 }
 
