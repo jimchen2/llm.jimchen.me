@@ -728,9 +728,12 @@ export default function App({ routeMode = "default" }) {
             stuck message header. Top spacing lives on the inner messages
             container instead, so it scrolls away and the sticky header
             can sit flush at the absolute top of the page. */}
-        <div className="flex-grow-1 overflow-auto px-3 px-md-4 pb-3 pb-md-4 bg-light">
+        {/* Full-bleed message list: no horizontal padding here so a user
+            message's white band can run edge to edge. Each row supplies its
+            own readable column (see .message-row-inner). */}
+        <div className="flex-grow-1 overflow-auto pb-3 pb-md-4 bg-light">
           {activePath.length === 0 ? (
-            <div className="h-100 d-flex justify-content-center align-items-center">
+            <div className="h-100 d-flex justify-content-center align-items-center px-3">
               <h3 className="text-muted">
                 {/* Random mode is disabled for now (app/random/** is commented out). */}
                 {/* uiMode === "random"
@@ -746,7 +749,7 @@ export default function App({ routeMode = "default" }) {
               </h3>
             </div>
           ) : (
-            <Container className="px-0 pt-3 pt-md-4" style={{ maxWidth: "800px" }}>
+            <div className="conversation-rows pt-3 pt-md-4">
               {activePath.map((msg) => {
                 const { siblings, index } = getSiblings(msg.id, msg.parent_id);
                 return (
@@ -765,7 +768,7 @@ export default function App({ routeMode = "default" }) {
                 );
               })}
               <div ref={endOfMessagesRef} />
-            </Container>
+            </div>
           )}
         </div>
 
