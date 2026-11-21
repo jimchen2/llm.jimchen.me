@@ -55,6 +55,52 @@ html, body {
 }
 
 /* ==================================================== */
+/* FULL-WIDTH MESSAGE ROWS                              */
+/* ==================================================== */
+/* The message list is full-bleed, so a user ("You") turn
+   paints a white band that spans the entire conversation
+   width instead of sitting inside a narrow card. The text
+   still lives in a centered readable column so it lines up
+   with the bot replies above and below it. */
+.conversation-rows {
+  width: 100%;
+}
+
+.message-row {
+  width: 100%;
+}
+
+/* Same readable column the old <Container maxWidth="800px"> gave the
+   messages, plus a little breathing room on small screens. The card
+   itself keeps its own horizontal padding, so the text lines up with
+   the composer below it. */
+.message-row-inner {
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .message-row-inner {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+.message-row-user {
+  background-color: #fff;
+}
+
+/* Vertical rhythm lives on the row, not on the card, so consecutive
+   full-width user bands keep a consistent gap between them. */
+.message-row + .message-row {
+  margin-top: 1.5rem;
+}
+
+/* ==================================================== */
 /* STICKY MESSAGE HEADER                                */
 /* ==================================================== */
 /* Pin the model name + actions to the absolute top of the
