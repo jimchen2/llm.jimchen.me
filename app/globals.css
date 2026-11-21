@@ -57,9 +57,11 @@ html, body {
 /* ==================================================== */
 /* STICKY MESSAGE HEADER                                */
 /* ==================================================== */
-/* Pin the model name + actions to the top of the chat
-   pane. Opaque background so message text never shows
-   through or slides under the bar. */
+/* Pin the model name + actions to the absolute top of the
+   chat pane (top of the page on desktop). No divider line
+   between the header and the message body — the header
+   blends straight into the message. Opaque background so
+   message text never shows through or slides under the bar. */
 .message-card {
   overflow: visible;
 }
@@ -70,8 +72,10 @@ html, body {
   z-index: 3;
   padding-top: 0.35rem;
   padding-bottom: 0.35rem;
+  border: 0;
+  border-bottom: 0;
+  box-shadow: none;
   background-color: #f8f9fa !important;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
 }
 
 .message-card.bg-white .message-header {
