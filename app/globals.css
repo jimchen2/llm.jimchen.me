@@ -101,6 +101,27 @@ html, body {
 }
 
 /* ==================================================== */
+/* MESSAGE BODY PADDING                                 */
+/* ==================================================== */
+/* A little more breathing room inside the message content
+   only. The row, card, and header keep their current
+   spacing — this just insets the text, especially from
+   the left, so it doesn't hug the edge so tightly. */
+.message-card > .card-body {
+  padding-top: 1.1rem;
+  padding-bottom: 1.25rem;
+  padding-left: 1.6rem;
+  padding-right: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .message-card > .card-body {
+    padding-left: 1.15rem;
+    padding-right: 1rem;
+  }
+}
+
+/* ==================================================== */
 /* STICKY MESSAGE HEADER                                */
 /* ==================================================== */
 /* Pin the model name + actions to the absolute top of the
