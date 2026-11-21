@@ -5,36 +5,25 @@ import { useState, useEffect } from 'react';
 import Modal from './Modal';
 
 export default function SettingsModal({ show, onHide, settings, setSettings, onSave, routeMode = 'default' }) {
-  const [isDark, setIsDark] = useState(false);
+  const [theme, setTheme] = useState('light');
 
-  // Dynamically check if Dark Reader is enabled when modal opens
   useEffect(() => {
     if (show) {
-      import('darkreader').then((darkreader) => {
-        setIsDark(darkreader.isEnabled());
-      });
+      const current = document.documentElement.getAttribute('data-theme');
+      if (current === 'dark' || current === 'brutalist' || current === 'light') {
+        setTheme(current);
+      } else {
+        const match = document.cookie.match(/(?:^|; )theme=(light|dark|brutalist)/);
+        setTheme(match ? match[1] : 'light');
+      }
     }
   }, [show]);
 
-  const handleDarkModeToggle = async (e) => {
-    const enable = e.target.checked;
-    setIsDark(enable);
-
-    // Save theme preference in cookie for 1 year
-    document.cookie = `theme=${enable ? 'dark' : 'light'}; path=/; max-age=31536000`;
-
-    // Dynamically import darkreader only on the client
-    const darkreader = await import('darkreader');
-
-    if (enable) {
-      darkreader.enable({
-        brightness: 100,
-        contrast: 90,
-        sepia: 10,
-      });
-    } else {
-      darkreader.disable();
-    }
+  const handleThemeChange = (e) => {
+    const nextTheme = e.target.value;
+    setTheme(nextTheme);
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    document.cookie = `theme=${nextTheme}; path=/; max-age=31536000`;
   };
 
   return (
@@ -49,18 +38,19 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
       }
     >
       <div className="field-row">
-        <label className="field-label" htmlFor="dark-mode-switch">
-          Dark Mode
+        <label className="field-label" htmlFor="theme-select">
+          Theme
         </label>
-        <span className="switch">
-          <input
-            type="checkbox"
-            id="dark-mode-switch"
-            checked={isDark}
-            onChange={handleDarkModeToggle}
-          />
-          <span className="switch-track" aria-hidden="true" />
-        </span>
+        <select
+          id="theme-select"
+          className="input"
+          value={theme}
+          onChange={handleThemeChange}
+        >
+          <option value="light">Light (Minimal)</option>
+          <option value="dark">Dark (Minimal)</option>
+          <option value="brutalist">Brutalist</option>
+        </select>
       </div>
 
       <div className="field">

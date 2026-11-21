@@ -185,11 +185,9 @@ export default function App({ routeMode = "default" }) {
   };
 
   useEffect(() => {
-    if (document.cookie.split("; ").find((row) => row.startsWith("theme=dark"))) {
-      import("darkreader").then((darkreader) => {
-        darkreader.enable({ brightness: 100, contrast: 90, sepia: 10 });
-      });
-    }
+    const match = document.cookie.match(/(?:^|; )theme=(light|dark|brutalist)/);
+    const theme = match ? match[1] : "light";
+    document.documentElement.setAttribute("data-theme", theme);
 
     // In test mode (TEST_MODE=true on the server) no password is needed. Skip
     // the prompt and use a placeholder token, which is never stored locally.
