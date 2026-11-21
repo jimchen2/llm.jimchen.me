@@ -61,10 +61,8 @@ export default function MessageNode({
 
   return (
     <Card className={`message-card mb-4 border-0 shadow-sm ${msg.role === 'user' ? 'bg-white' : 'bg-transparent shadow-none'}`}>
-      {/* Sticky so the model name and the message actions stay reachable
-          while a long message is being read. The background matches the
-          card (user) or the chat pane (assistant) so the body scrolls
-          underneath instead of showing through. */}
+      {/* Sticky at the top of the chat pane. Opaque bg so body text
+          does not show through while the header is pinned. */}
       <Card.Header
         className={`message-header d-flex justify-content-between align-items-center gap-2 border-0 pt-3 pb-2 ${
           msg.role === 'user' ? 'bg-white' : 'bg-light'
