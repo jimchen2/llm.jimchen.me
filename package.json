@@ -21,6 +21,7 @@
   "homepage": "https://github.com/jimchen2/llm.jimchen.me#readme",
   "dependencies": {
     "@vscode/markdown-it-katex": "^1.1.2",
+    "bootstrap": "^5.3.8",
     "cookie": "^1.1.1",
     "darkreader": "^4.9.120",
     "ioredis": "^5.10.1",
@@ -28,6 +29,7 @@
     "next": "^16.2.3",
     "pg": "^8.20.0",
     "react": "^19.2.5",
+    "react-bootstrap": "^2.10.10",
     "react-dom": "^19.2.5"
   }
 }
