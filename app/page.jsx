@@ -707,7 +707,11 @@ export default function App({ routeMode = "default" }) {
           <span className="ms-3 fw-bold">Chat</span>
         </div>
 
-        <div className="flex-grow-1 overflow-auto p-3 p-md-4 bg-light">
+        {/* No top padding here: it would stay pinned as a strip above a
+            stuck message header. Top spacing lives on the inner messages
+            container instead, so it scrolls away and the sticky header
+            can sit flush at the absolute top of the page. */}
+        <div className="flex-grow-1 overflow-auto px-3 px-md-4 pb-3 pb-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center">
               <h3 className="text-muted">
@@ -725,7 +729,7 @@ export default function App({ routeMode = "default" }) {
               </h3>
             </div>
           ) : (
-            <Container className="px-0" style={{ maxWidth: "800px" }}>
+            <Container className="px-0 pt-3 pt-md-4" style={{ maxWidth: "800px" }}>
               {activePath.map((msg) => {
                 const { siblings, index } = getSiblings(msg.id, msg.parent_id);
                 return (
