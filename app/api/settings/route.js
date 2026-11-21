@@ -2,8 +2,11 @@
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
 import { MODES, DEFAULT_MODE, normalizeMode } from '@/lib/modes';
+import { isTestMode } from '@/lib/testMode';
 
 function isAuthorized(request) {
+  // Test mode (TEST_MODE=true) needs no password.
+  if (isTestMode()) return true;
   const token = request.headers.get('x-db-token');
   const validToken = process.env.APP_PASSWORD || 'your-default-password';
   return token === validToken;
