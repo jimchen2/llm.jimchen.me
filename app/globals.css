@@ -55,6 +55,37 @@ html, body {
 }
 
 /* ==================================================== */
+/* STICKY MESSAGE HEADER                                */
+/* ==================================================== */
+/* The model name and the Copy/Edit/Branch/Delete actions
+   stay pinned to the top of the chat pane while a long
+   message scrolls underneath. */
+.message-card {
+  /* The card is the sticky containing block, so it must not clip. */
+  overflow: visible;
+}
+
+.message-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  /* Hairline under the row: separates it from the message body that
+     scrolls beneath once the header is pinned. */
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .message-header {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.4rem !important;
+  }
+
+  .message-header strong {
+    font-size: 0.95rem;
+  }
+}
+
+/* ==================================================== */
 /* KATEX / MATH OVERFLOW & SCROLLBAR FIX                */
 /* ==================================================== */
 
