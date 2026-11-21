@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   getModeConfig,
   getModeMemory,
+  getModeMaxMessages,
   getModeMessages,
   normalizeMode,
 } from '../lib/modes.js';
@@ -52,15 +53,19 @@ test('random mode falls back to the default mode', () => {
 //   ]);
 // });
 
-test('practical mode is a real mode with its own prompt', () => {
+test('practical route is short conversation mode with a five-exchange limit', () => {
   assert.equal(normalizeMode('practical'), 'practical');
-  assert.equal(getModeMemory('practical'), Infinity);
-  assert.match(getModeConfig('practical').systemPrompt, /short and concisely/i);
+  assert.equal(getModeMemory('practical'), 9);
+  assert.equal(getModeMaxMessages('practical'), 10);
+  assert.match(getModeConfig('practical').label, /short conversation/i);
+  assert.match(getModeConfig('practical').systemPrompt, /conversational/i);
+  assert.match(getModeConfig('practical').systemPrompt, /shortly and concisely/i);
 });
 
-test('default, grammar, and practical retain full history', () => {
-  for (const mode of ['default', 'grammar', 'practical']) {
+test('default and grammar modes retain full history', () => {
+  for (const mode of ['default', 'grammar']) {
     assert.equal(getModeMemory(mode), Infinity);
+    assert.equal(getModeMaxMessages(mode), Infinity);
     assert.deepEqual(getModeMessages(mode, messages, 'followup'), [
       { role: 'user', content: 'My name is Sam.' },
       { role: 'assistant', content: 'Hello, Sam!' },
@@ -72,4 +77,26 @@ test('default, grammar, and practical retain full history', () => {
       { role: 'user', content: 'Unrelated branch' },
     ]);
   }
+});
+
+test('short conversation context is capped at the latest ten messages', () => {
+  const longPath = {};
+  let parentId = null;
+  for (let i = 0; i < 12; i++) {
+    const id = `message-${i}`;
+    longPath[id] = {
+      role: i % 2 === 0 ? 'user' : 'assistant',
+      content: `Message ${i}`,
+      parent_id: parentId,
+    };
+    parentId = id;
+  }
+
+  assert.deepEqual(
+    getModeMessages('practical', longPath, parentId),
+    Array.from({ length: 10 }, (_, i) => ({
+      role: (i + 2) % 2 === 0 ? 'user' : 'assistant',
+      content: `Message ${i + 2}`,
+    }))
+  );
 });
