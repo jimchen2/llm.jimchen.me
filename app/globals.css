@@ -1,67 +1,759 @@
 /* ==================================================== */
-/* GLOBAL VIEWPORT & FLEX WRAPPER FIX                   */
+/* BRUTALIST DESIGN TOKENS                              */
 /* ==================================================== */
-html, body {
-  max-width: 100vw;
-  overflow-x: hidden;
+/* Raw, flat, high contrast. No rounded corners, no soft
+   gradients: hard black rules, offset hard shadows, one
+   acid accent, and a monospace voice everywhere.        */
+:root {
+  --ink: #000;
+  --paper: #fff;
+  --acid: #ffe600;
+  --mute: #666;
+  --gray: #f0f0f0;
+  --danger: #d40000;
+  --line: 3px solid var(--ink);
+  --hairline: 2px solid var(--ink);
+  --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+/* ==================================================== */
+/* RESET / VIEWPORT                                     */
+/* ==================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 /* Ensure any parent flexbox containers shrink properly */
 * {
   min-width: 0;
-  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--mono);
+  font-size: 16px;
+  line-height: 1.5;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--acid);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--acid);
+  color: var(--ink);
 }
 
 /* ==================================================== */
-/* MARKDOWN CONTAINER                                   */
+/* BUTTONS                                              */
 /* ==================================================== */
-.markdown-body {
-  min-width: 0;
-  max-width: 100%;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--hairline);
+  border-radius: 0;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  transition: background-color 0.06s linear, color 0.06s linear,
+    transform 0.06s linear, box-shadow 0.06s linear;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.btn-sm {
+  padding: 0.24rem 0.45rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.btn-sm:active:not(:disabled) {
+  transform: translate(2px, 2px);
+}
+
+.btn-sm:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--acid);
+  color: var(--ink);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  color: var(--paper);
+}
+
+/* Buttons that sit on the black sidebar / offcanvas */
+.btn-on-dark {
+  background: transparent;
+  color: var(--paper);
+  border-color: var(--paper);
+  box-shadow: 3px 3px 0 var(--paper);
   width: 100%;
-  overflow-wrap: anywhere; 
-  word-wrap: break-word;
-  word-break: break-word;
 }
 
-.markdown-body p, 
-.markdown-body ul, 
-.markdown-body ol, 
-.markdown-body li {
-  max-width: 100%;
+.btn-on-dark:hover:not(:disabled) {
+  background: var(--acid);
+  color: var(--ink);
+  border-color: var(--acid);
 }
 
-/* Code Blocks */
-.markdown-body pre {
-  max-width: 100%;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
+.btn-on-dark.btn-sm {
+  box-shadow: 2px 2px 0 var(--paper);
+  width: auto;
 }
 
-.markdown-body code {
-  max-width: 100%;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
-  word-break: break-all;
+.btn-on-dark.btn-sm:hover:not(:disabled) {
+  border-color: var(--paper);
 }
 
-.markdown-body img {
-  max-width: 100%;
-  height: auto;
+.btn-block {
+  width: 100%;
+}
+
+/* Flush button groups (branch arrows, message actions): one hard
+   segmented bar, no offset shadows fighting each other. */
+.btn-group {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.btn-group > * {
+  box-shadow: none;
+}
+
+.btn-group > * + * {
+  margin-left: -2px;
+}
+
+.btn-group > .btn:active:not(:disabled) {
+  transform: none;
+}
+
+.btn-group > .btn:hover:not(:disabled) {
+  position: relative;
+  z-index: 1;
+}
+
+.btn-group > .btn-counter {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.24rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--gray);
+  border: var(--hairline);
+  border-radius: 0;
+}
+
+/* ==================================================== */
+/* FORM CONTROLS                                        */
+/* ==================================================== */
+.field {
   display: block;
+  margin-bottom: 1.15rem;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--mute);
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--danger);
+}
+
+.input,
+.textarea,
+.select {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--hairline);
+  border-radius: 0;
+  appearance: none;
+}
+
+.select {
+  padding-right: 2rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+    linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 55%, calc(100% - 10px) 55%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: 3px solid var(--acid);
+  outline-offset: 0;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+/* Chunky hard-edged switch */
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.field-row .field-label {
+  margin-bottom: 0;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 58px;
+  height: 30px;
+}
+
+.switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.switch .switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  border: var(--hairline);
+}
+
+.switch .switch-track::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: var(--ink);
+  transition: left 0.08s linear, background-color 0.08s linear;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--ink);
+}
+
+.switch input:checked + .switch-track::before {
+  left: 30px;
+  background: var(--acid);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 3px solid var(--acid);
+  outline-offset: 2px;
 }
 
 /* ==================================================== */
-/* FULL-WIDTH MESSAGE ROWS                              */
+/* APP SHELL                                            */
 /* ==================================================== */
-/* The message list is full-bleed, so a user ("You") turn
-   paints a white band that spans the entire conversation
-   width instead of sitting inside a narrow card. The text
-   still lives in a centered readable column so it lines up
-   with the bot replies above and below it. */
+.app {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Desktop sidebar slot. Hidden under md, like before. */
+.sidebar-dock {
+  display: none;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .sidebar-dock {
+    display: block;
+  }
+}
+
+.main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  height: 100%;
+  background: var(--paper);
+}
+
+/* ==================================================== */
+/* SIDEBAR                                              */
+/* ==================================================== */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  border-right: var(--line);
+}
+
+.sidebar-top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-bottom: 2px solid var(--paper);
+}
+
+.sidebar-top-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sidebar-scroll {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.sidebar-loading {
+  padding: 0.85rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: #9a9a9a;
+}
+
+.sidebar-foot {
+  padding: 0.75rem;
+  border-top: 2px solid var(--paper);
+}
+
+.conv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conv-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.55rem;
+  font-size: 0.8rem;
+  color: var(--paper);
+  background: var(--ink);
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.conv-item:hover {
+  border-color: var(--paper);
+}
+
+.conv-item.is-active {
+  background: var(--acid);
+  color: var(--ink);
+  border-color: var(--acid);
+  font-weight: 700;
+}
+
+.conv-title {
+  flex-grow: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.conv-delete {
+  flex-shrink: 0;
+  padding: 0 0.15rem;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  opacity: 0.65;
+}
+
+.conv-delete:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
+.conv-item.is-active .conv-delete:hover {
+  color: var(--danger);
+}
+
+/* Collapsed rail */
+.sidebar-rail {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100%;
+  padding: 0.5rem;
+  background: var(--ink);
+  border-right: var(--line);
+}
+
+/* ==================================================== */
+/* OFFCANVAS (mobile sidebar)                           */
+/* ==================================================== */
+.offcanvas-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1040;
+  display: flex;
+}
+
+.offcanvas-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.offcanvas-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 80%;
+  max-width: 330px;
+  height: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  border-right: var(--line);
+  animation: offcanvas-in 0.12s linear;
+}
+
+@keyframes offcanvas-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.offcanvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-bottom: 2px solid var(--paper);
+}
+
+.offcanvas-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.offcanvas-body {
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+/* ==================================================== */
+/* MODAL                                                */
+/* ==================================================== */
+.modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90dvh;
+  background: var(--paper);
+  border: var(--line);
+  border-radius: 0;
+  box-shadow: 10px 10px 0 var(--ink);
+}
+
+.modal-panel-wide {
+  max-width: 760px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--acid);
+  border-bottom: var(--line);
+}
+
+.modal-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+  background: var(--paper);
+  border: var(--hairline);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.modal-body {
+  flex-grow: 1;
+  padding: 1rem 1.1rem;
+  overflow-y: auto;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.75rem 1.1rem;
+  background: var(--gray);
+  border-top: var(--line);
+}
+
+.modal-body p {
+  margin: 0 0 0.75rem;
+}
+
+.modal-body h4 {
+  margin: 1rem 0 0.6rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.modal-body hr {
+  border: 0;
+  border-top: var(--hairline);
+  margin: 1rem 0;
+}
+
+.notice-strong {
+  font-weight: 700;
+  color: var(--danger);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.qa-item {
+  margin-bottom: 0.9rem;
+}
+
+.qa-item strong {
+  display: inline-block;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.1rem 0.4rem;
+}
+
+.qa-item p {
+  margin: 0.4rem 0 0;
+}
+
+/* ==================================================== */
+/* MOBILE TOP BAR                                       */
+/* ==================================================== */
+.mobile-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: var(--paper);
+  border-bottom: var(--line);
+}
+
+.mobile-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+@media (min-width: 768px) {
+  .mobile-bar {
+    display: none;
+  }
+}
+
+/* ==================================================== */
+/* CHAT SCROLL AREA                                     */
+/* ==================================================== */
+/* No top padding, full bleed: a user turn's band runs
+   edge to edge, and the sticky message header can pin
+   flush to the very top of the pane. */
+.chat-scroll {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-bottom: 0.85rem;
+  background: var(--paper);
+}
+
+@media (min-width: 768px) {
+  .chat-scroll {
+    padding-bottom: 1rem;
+  }
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 1.5rem;
+}
+
+.empty-title {
+  max-width: 640px;
+  margin: 0;
+  padding: 1.1rem 1.3rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+  background: var(--acid);
+  border: var(--line);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+/* ==================================================== */
+/* MESSAGE ROWS                                         */
+/* ==================================================== */
 .conversation-rows {
   width: 100%;
 }
@@ -70,10 +762,7 @@ html, body {
   width: 100%;
 }
 
-/* Same readable column the old <Container maxWidth="800px"> gave the
-   messages, plus a little breathing room on small screens. The card
-   itself keeps its own horizontal padding, so the text lines up with
-   the composer below it. */
+/* Same readable column the composer uses. */
 .message-row-inner {
   width: 100%;
   max-width: 800px;
@@ -91,92 +780,308 @@ html, body {
 }
 
 .message-row-user {
-  background-color: #fff;
+  background: var(--acid);
+  border-top: var(--hairline);
+  border-bottom: var(--hairline);
 }
 
-/* Vertical rhythm lives on the row, not on the card, so consecutive
-   full-width user bands keep a consistent gap between them. */
+.message-row-assistant {
+  background: var(--paper);
+}
+
+/* Vertical rhythm lives on the row, not on the card. */
 .message-row + .message-row {
   margin-top: 1.5rem;
 }
 
-/* ==================================================== */
-/* MESSAGE BODY PADDING                                 */
-/* ==================================================== */
-/* A little more breathing room inside the message content
-   only. The row, card, and header keep their current
-   spacing — this just insets the text, especially from
-   the left, so it doesn't hug the edge so tightly. */
-.message-card > .card-body {
-  padding-top: 1.1rem;
-  padding-bottom: 1.25rem;
-  padding-left: 1.6rem;
-  padding-right: 1.25rem;
-}
-
-@media (max-width: 768px) {
-  .message-card > .card-body {
-    padding-left: 1.15rem;
-    padding-right: 1rem;
-  }
+.message-card {
+  overflow: visible;
 }
 
 /* ==================================================== */
 /* STICKY MESSAGE HEADER                                */
 /* ==================================================== */
-/* Pin the model name + actions to the absolute top of the
-   chat pane (top of the page on desktop). No divider line
-   between the header and the message body — the header
-   blends straight into the message. Opaque background so
-   message text never shows through or slides under the bar. */
-.message-card {
-  overflow: visible;
-}
-
-.message-card .message-header {
+.message-header {
   position: sticky;
   top: 0;
   z-index: 3;
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
-  border: 0;
-  border-bottom: 0;
-  box-shadow: none;
-  background-color: #f8f9fa !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  padding: 0.35rem 0;
+  background: var(--paper);
+  border-bottom: var(--hairline);
 }
 
-.message-card.bg-white .message-header {
-  background-color: #fff !important;
+.message-row-user .message-header {
+  background: var(--acid);
 }
 
-.message-header strong {
-  font-size: 0.875rem;
+.message-role {
+  flex-shrink: 1;
+  overflow: hidden;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
   line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--paper);
+  background: var(--ink);
 }
 
-.message-header .btn-group-sm > .btn,
-.message-header .btn {
-  --bs-btn-padding-y: 0.25rem;
-  --bs-btn-padding-x: 0.45rem;
-  --bs-btn-font-size: 0.78rem;
-  --bs-btn-line-height: 1.3;
+.message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+/* ==================================================== */
+/* MESSAGE BODY                                         */
+/* ==================================================== */
+.message-body {
+  padding: 1.1rem 1.25rem 1.25rem 1.6rem;
 }
 
 @media (max-width: 768px) {
-  .message-card .message-header {
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
+  .message-body {
+    padding-left: 1.15rem;
+    padding-right: 1rem;
   }
+}
 
-  .message-header strong {
-    font-size: 0.82rem;
-  }
+.message-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
 
-  .message-header .btn-group-sm > .btn,
-  .message-header .btn {
-    --bs-btn-padding-y: 0.2rem;
-    --bs-btn-padding-x: 0.375rem;
-    --bs-btn-font-size: 0.74rem;
+.message-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ==================================================== */
+/* MARKDOWN                                             */
+/* ==================================================== */
+.markdown-body {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  font-size: 1rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body li {
+  max-width: 100%;
+}
+
+.markdown-body p {
+  margin: 0 0 0.85rem;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin: 1.4rem 0 0.6rem;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: var(--hairline);
+  padding-bottom: 0.25rem;
+}
+
+.markdown-body h1 {
+  font-size: 1.25rem;
+}
+
+.markdown-body h2 {
+  font-size: 1.12rem;
+}
+
+.markdown-body a {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.markdown-body a:hover {
+  background: var(--acid);
+}
+
+.markdown-body strong {
+  font-weight: 700;
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 0.85rem;
+  padding-left: 1.4rem;
+}
+
+.markdown-body li {
+  margin-bottom: 0.3rem;
+}
+
+.markdown-body li::marker {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.markdown-body blockquote {
+  margin: 0 0 0.9rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--gray);
+  border-left: 8px solid var(--ink);
+}
+
+.markdown-body blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body hr {
+  margin: 1.2rem 0;
+  border: 0;
+  border-top: var(--line);
+}
+
+/* Inline code */
+.markdown-body code {
+  max-width: 100%;
+  padding: 0.05em 0.3em;
+  font-size: 0.88em;
+  background: var(--gray);
+  border: 1px solid var(--ink);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+/* Code blocks */
+.code-block {
+  position: relative;
+  margin: 0.85rem 0 1.1rem;
+}
+
+.markdown-body pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 2.3rem 0.9rem 0.9rem;
+  overflow-x: auto;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #f2f2f2;
+  background: #0b0b0b;
+  border: var(--hairline);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  font-size: 1em;
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
+
+.copy-code-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  padding: 0.2rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  background: var(--acid);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.copy-code-btn:hover {
+  color: var(--acid);
+  background: var(--ink);
+  border-color: var(--acid);
+}
+
+.markdown-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: var(--hairline);
+}
+
+/* Tables */
+.markdown-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 0.85rem 0 1.1rem;
+  overflow-x: auto;
+  border-collapse: collapse;
+  border: var(--hairline);
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.4rem 0.65rem;
+  text-align: left;
+  border: 1px solid var(--ink);
+}
+
+.markdown-body th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--paper);
+  background: var(--ink);
+}
+
+@media (max-width: 768px) {
+  .markdown-body ul,
+  .markdown-body ol {
+    padding-left: 1.25rem;
   }
 }
 
@@ -187,7 +1092,7 @@ html, body {
 /* 1. Force the paragraph/wrapper that contains KaTeX to not exceed width */
 .markdown-body .katex-block,
 .markdown-body p.katex-block,
-p:has(.katex-display) {
+.markdown-body p:has(.katex-display) {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -231,18 +1136,139 @@ p:has(.katex-display) {
 }
 
 /* ==================================================== */
-/* MOBILE SPACING & TABLES                              */
+/* COMPOSER                                             */
 /* ==================================================== */
-@media (max-width: 768px) {
-  .markdown-body ul,
-  .markdown-body ol {
-    padding-left: 1.25rem;
-  }
+.composer {
+  padding: 0.75rem;
+  background: var(--paper);
+  border-top: var(--line);
 }
 
-.markdown-body table {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+.composer-inner {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.composer-row {
+  display: flex;
+  align-items: stretch;
+  margin: 0;
+  background: var(--paper);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.composer-input {
+  flex-grow: 1;
+  max-height: 200px;
+  padding: 0.7rem 0.8rem;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--line);
+  border-right: 0;
+  border-radius: 0;
+  resize: none;
+  overflow-y: auto;
+}
+
+.composer-input:focus {
+  outline: none;
+  background: #fffff2;
+}
+
+.composer-send {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 0 1.1rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--paper);
+  background: var(--ink);
+  border: var(--line);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.composer-send:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--acid);
+}
+
+.composer-send:disabled {
+  cursor: not-allowed;
+  color: #9a9a9a;
+  background: #1a1a1a;
+}
+
+.notice {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--acid);
+  border: var(--hairline);
+}
+
+/* ==================================================== */
+/* SCROLLBARS                                           */
+/* ==================================================== */
+.chat-scroll,
+.sidebar-scroll,
+.modal-body,
+.textarea,
+.markdown-body pre {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink) var(--paper);
+}
+
+.chat-scroll::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar,
+.sidebar-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.chat-scroll::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+  background: var(--paper);
+  border-left: 1px solid var(--ink);
+}
+
+.chat-scroll::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--ink);
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: var(--ink);
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: var(--paper);
+}
+
+/* ==================================================== */
+/* REDUCED MOTION                                       */
+/* ==================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .switch .switch-track::before {
+    transition: none;
+  }
+
+  .offcanvas-panel {
+    animation: none;
+  }
 }

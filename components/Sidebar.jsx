@@ -1,12 +1,11 @@
 'use client';
-import { Button, ListGroup } from 'react-bootstrap';
 
-export default function Sidebar({ 
-  conversations, 
-  activeConversation, 
-  handleNewChat, 
-  loadMessages, 
-  handleDeleteConversation, 
+export default function Sidebar({
+  conversations,
+  activeConversation,
+  handleNewChat,
+  loadMessages,
+  handleDeleteConversation,
   setShowSettings,
   dbToken,
   loadMore,
@@ -25,57 +24,57 @@ export default function Sidebar({
   };
 
   return (
-    <div className="d-flex flex-column h-100 bg-dark text-light border-end border-secondary">
-      <div className="p-3 border-bottom border-secondary d-grid gap-2">
+    <div className="sidebar">
+      <div className="sidebar-top">
         {onCollapse && (
-          <div className="d-flex justify-content-end">
-            <Button variant="outline-light" size="sm" onClick={onCollapse} aria-label="Collapse sidebar" title="Collapse sidebar">
+          <div className="sidebar-top-actions">
+            <button
+              type="button"
+              className="btn btn-sm btn-on-dark"
+              onClick={onCollapse}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
               <span aria-hidden="true">‹</span>
-            </Button>
+            </button>
           </div>
         )}
-        <Button variant="outline-light" className="w-100 fw-bold" onClick={handleNewChat}>
+        <button type="button" className="btn btn-on-dark" onClick={handleNewChat}>
           + New Chat
-        </Button>
+        </button>
       </div>
-      
-      <div className="flex-grow-1 overflow-auto p-2" onScroll={handleScroll}>
-        <ListGroup variant="flush">
+
+      <div className="sidebar-scroll" onScroll={handleScroll}>
+        <ul className="conv-list">
           {conversations.map(c => (
-            <ListGroup.Item 
-              as="div"
-              key={c.id} 
-              action 
+            <li
+              key={c.id}
+              className={`conv-item${c.id === activeConversation ? ' is-active' : ''}`}
               onClick={() => loadMessages(dbToken, c.id)}
-              className={`d-flex justify-content-between align-items-center rounded mb-1 text-light border-0 ${
-                c.id === activeConversation ? 'bg-secondary' : 'bg-dark'
-              }`}
-              style={{ cursor: 'pointer' }}
             >
-              <span className="text-truncate flex-grow-1 me-2">{c.title}</span>
-              <Button 
-                variant="link" 
-                className="p-0 text-white-50 text-decoration-none fs-5" 
+              <span className="conv-title">{c.title}</span>
+              <button
+                type="button"
+                className="conv-delete"
                 onClick={(e) => handleDeleteConversation(e, c.id)}
+                aria-label={`Delete conversation ${c.title}`}
               >
                 &times;
-              </Button>
-            </ListGroup.Item>
+              </button>
+            </li>
           ))}
-        </ListGroup>
-        
+        </ul>
+
         {/* Loading Spinner / Text indicator */}
         {isLoading && (
-          <div className="text-center p-3 text-secondary">
-            <small>Loading...</small>
-          </div>
+          <div className="sidebar-loading">Loading...</div>
         )}
       </div>
-      
-      <div className="p-3 border-top border-secondary">
-        <Button variant="dark" className="w-100 text-start" onClick={() => setShowSettings(true)}>
+
+      <div className="sidebar-foot">
+        <button type="button" className="btn btn-on-dark" onClick={() => setShowSettings(true)}>
           ⚙ Settings
-        </Button>
+        </button>
       </div>
     </div>
   );
