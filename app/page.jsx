@@ -724,10 +724,10 @@ export default function App({ routeMode = "default" }) {
           <span className="ms-3 fw-bold">Chat</span>
         </div>
 
-        {/* No top padding here: it would stay pinned as a strip above a
-            stuck message header. Top spacing lives on the inner messages
-            container instead, so it scrolls away and the sticky header
-            can sit flush at the absolute top of the page. */}
+        {/* No top padding here or on the messages container: it would
+            stay pinned as a strip above a stuck message header. The
+            first message sits flush at the absolute top of the page,
+            so its sticky header can pin there with no gap above it. */}
         {/* Full-bleed message list: no horizontal padding here so a user
             message's white band can run edge to edge. Each row supplies its
             own readable column (see .message-row-inner). */}
@@ -749,7 +749,7 @@ export default function App({ routeMode = "default" }) {
               </h3>
             </div>
           ) : (
-            <div className="conversation-rows pt-3 pt-md-4">
+            <div className="conversation-rows">
               {activePath.map((msg) => {
                 const { siblings, index } = getSiblings(msg.id, msg.parent_id);
                 return (
