@@ -1,12 +1,36 @@
 import { NextResponse } from "next/server";
 import { redis, CACHE_TTL_SECONDS } from "@/lib/redis";
 import { callLLM } from "@/lib/llm";
-import { getModeConfig, getModeMemory } from "@/lib/modes";
+import { getModeConfig, getModeMemory, getModeMaxMessages } from "@/lib/modes";
 
 export async function POST(req) {
   const { messages, userMsgId, botMsgId, parentId, conversationId, model, mode } = await req.json();
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
+
+  // Enforce the short-conversation cap on the server as well as in the UI.
+  // Count the ancestry before accepting another complete user/assistant turn.
+  const maxMessages = getModeMaxMessages(mode);
+  if (userMsgId && Number.isFinite(maxMessages)) {
+    const stored = await redis.hgetall(msgKey);
+    let cursor = parentId;
+    let pathLength = 0;
+    const visited = new Set();
+    while (cursor && stored[cursor] && !visited.has(cursor)) {
+      visited.add(cursor);
+      const message = typeof stored[cursor] === "string"
+        ? JSON.parse(stored[cursor])
+        : stored[cursor];
+      pathLength++;
+      cursor = message.parent_id;
+    }
+    if (pathLength + 2 > maxMessages) {
+      return NextResponse.json(
+        { error: "conversation_limit_reached" },
+        { status: 409 }
+      );
+    }
+  }
 
   const { systemPrompt } = getModeConfig(mode);
 

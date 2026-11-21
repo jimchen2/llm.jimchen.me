@@ -111,7 +111,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               {/* Random mode is disabled for now (app/random/** is commented out). */}
               {/* <option value="random">Random mode (No memory) ↗</option> */}
               <option value="grammar">Russian mode ↗</option>
-              <option value="practical">Practical mode ↗</option>
+              <option value="practical">Short conversation mode ↗</option>
             </Form.Select>
             <Form.Text className="text-muted">
               All modes share the same API key and model; each mode only differs by its system prompt.

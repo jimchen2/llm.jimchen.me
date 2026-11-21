@@ -7,14 +7,14 @@ import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 import { updateReplyContent } from "../lib/replyContent";
-import { getModeMessages } from "../lib/modes";
+import { getModeMessages, getModeMaxMessages } from "../lib/modes";
 
-const ChatInput = ({ onSend, placeholder }) => {
+const ChatInput = ({ onSend, placeholder, disabled = false }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef(null);
 
   const submitMessage = () => {
-    if (!input.trim()) return;
+    if (disabled || !input.trim()) return;
     onSend(input);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -44,8 +44,9 @@ const ChatInput = ({ onSend, placeholder }) => {
         }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        disabled={disabled}
       />
-      <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={submitMessage}>
+      <Button variant="primary" className="px-3 px-md-4 fw-bold" onClick={submitMessage} disabled={disabled}>
         Send
       </Button>
     </InputGroup>
@@ -418,6 +419,10 @@ export default function App({ routeMode = "default" }) {
     const conversationMode = isNewConv
       ? (routeMode !== "default" ? routeMode : settings.mode)
       : getConversationMode(convId);
+    const maxMessages = getModeMaxMessages(conversationMode);
+    if (!isBotRetry && Number.isFinite(maxMessages) && getActivePath().length >= maxMessages) {
+      return;
+    }
     if (isNewConv) {
       setActiveConversation(convId);
       setConversations((prev) => [{ id: convId, title, mode: conversationMode }, ...prev]);
@@ -599,6 +604,9 @@ export default function App({ routeMode = "default" }) {
   };
 
   const activePath = getActivePath();
+  const maxMessages = getModeMaxMessages(mode);
+  const conversationLimitReached =
+    Number.isFinite(maxMessages) && activePath.length >= maxMessages;
 
   return (
     <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: "100dvh" }}>
@@ -712,7 +720,7 @@ export default function App({ routeMode = "default" }) {
                   : uiMode === "grammar"
                     ? "Russian mode — исправьте грамматику"
                     : uiMode === "practical"
-                      ? "Practical mode — short and concise answers"
+                      ? "Short conversation mode — concise replies, up to 5 exchanges"
                       : "Please only talk about coding"}
               </h3>
             </div>
@@ -742,6 +750,11 @@ export default function App({ routeMode = "default" }) {
 
         <div className="p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
+            {conversationLimitReached && (
+              <div className="alert alert-info py-2 mb-2" role="status">
+                This conversation has reached its limit of 5 exchanges (10 messages). Start a new conversation to continue.
+              </div>
+            )}
             <ChatInput
               // Re-mount when the UI mode becomes known so the placeholder is
               // right from the first paint instead of updating in place.
@@ -757,9 +770,10 @@ export default function App({ routeMode = "default" }) {
                   : uiMode === "grammar"
                     ? "Введите текст для исправления"
                     : uiMode === "practical"
-                      ? "Ask anything — short answers"
+                      ? "Say something — short conversational replies"
                       : "Please only talk about coding"
               }
+              disabled={conversationLimitReached}
             />
           </Container>
         </div>
