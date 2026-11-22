@@ -3,7 +3,7 @@
 // uncommenting it together with the other random-mode pieces:
 //   - lib/modes.js                 (the `random` entry in MODES)
 //   - app/page.jsx                 (URL parsing, empty state, input placeholder)
-//   - components/SettingsModal.jsx (the mode dropdown option)
+//   - app/page.jsx             (the mode dropdown option)
 //   - tests/modes.test.mjs         (the no-memory tests)
 //   - .env.example                 (RANDOM_MODE_SYSTEM_PROMPT)
 //

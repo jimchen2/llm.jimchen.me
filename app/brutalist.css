@@ -780,3 +780,17 @@ html[data-theme="brutalist"] .chat-sidebar .flex-grow-1::-webkit-scrollbar-thumb
     transition: none;
   }
 }
+
+html[data-theme="brutalist"] .chat-mode-select {
+  color: var(--ink);
+  background-color: var(--paper);
+  border: var(--thin-rule);
+  border-radius: 0;
+  font-family: var(--brutalist-mono);
+}
+
+html[data-theme="brutalist"] .chat-mode-select:focus {
+  border-color: var(--ink);
+  outline: 3px solid var(--acid);
+  box-shadow: none;
+}

@@ -357,6 +357,27 @@ export default function App({ routeMode = "default" }) {
     if (activeConversation === id) handleNewChat();
   };
 
+  // A mode change starts a new chat; existing conversations retain their mode.
+  const handleModeChange = async (event) => {
+    const newMode = event.target.value;
+    if (newMode === mode || !settings.dbToken) return;
+
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-db-token": settings.dbToken,
+        },
+        body: JSON.stringify({ model: settings.model, mode: newMode }),
+      });
+      if (!res.ok) throw new Error("Could not save the selected mode.");
+      window.location.href = newMode === "grammar" ? "/russian" : newMode === "practical" ? "/practical" : "/";
+    } catch (error) {
+      alert(`Error changing mode: ${error.message}`);
+    }
+  };
+
   const saveSettings = async () => {
     try {
       const res = await fetch("/api/settings", {
@@ -709,7 +730,6 @@ export default function App({ routeMode = "default" }) {
         settings={settings}
         setSettings={setSettings}
         onSave={saveSettings}
-        routeMode={routeMode}
       />
 
       {/* Main Area */}
@@ -771,6 +791,25 @@ export default function App({ routeMode = "default" }) {
 
         <div className="chat-composer-shell p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <Form.Label htmlFor="chat-mode" className="mb-0 small fw-bold">Mode</Form.Label>
+              <Form.Select
+                id="chat-mode"
+                className="chat-mode-select w-auto"
+                size="sm"
+                value={uiMode || "default"}
+                onChange={handleModeChange}
+                disabled={!modeResolved || !settings.dbToken}
+                aria-label="Chat mode (changing modes starts a new chat)"
+              >
+                <option value="default">Default mode</option>
+                <option value="grammar">Russian mode</option>
+                <option value="practical">Short conversation mode</option>
+              </Form.Select>
+            </div>
+            {activeConversation && (
+              <div className="small text-muted mb-2">Changing mode starts a new chat; this conversation keeps its mode.</div>
+            )}
             {conversationLimitReached && (
               <div className="alert alert-info py-2 mb-2" role="status">
                 This conversation has reached its limit of 5 exchanges (10 messages). Start a new conversation to continue.

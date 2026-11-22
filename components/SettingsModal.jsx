@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Modal, Form, Button } from 'react-bootstrap';
 import { applyThemePreference, getSavedTheme } from '../lib/theme';
 
-export default function SettingsModal({ show, onHide, settings, setSettings, onSave, routeMode = 'default' }) {
+export default function SettingsModal({ show, onHide, settings, setSettings, onSave }) {
   const [isDark, setIsDark] = useState(false);
   const [isBrutalist, setIsBrutalist] = useState(false);
 
@@ -75,59 +75,6 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
             />
           </Form.Group>
           
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">Mode</Form.Label>
-            <Form.Select 
-              value={settings.mode || 'default'}
-              onChange={async (e) => {
-                const newMode = e.target.value;
-                setSettings({ ...settings, mode: newMode });
-
-                if (settings.dbToken) {
-                  try {
-                    await fetch('/api/settings', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'x-db-token': settings.dbToken,
-                      },
-                      body: JSON.stringify({
-                        model: settings.model,
-                        mode: newMode,
-                      }),
-                    });
-                  } catch {
-                    // ignore — still navigate to the selected mode
-                  }
-                }
-
-                // Grammar and practical modes are separate routes; switching to
-                // one of them navigates there. Switching back to default
-                // navigates home from another route.
-                if (newMode === 'grammar') {
-                  window.location.href = '/russian';
-                  return;
-                }
-                if (newMode === 'practical') {
-                  window.location.href = '/practical';
-                  return;
-                }
-                if (routeMode !== 'default') {
-                  window.location.href = '/';
-                  return;
-                }
-              }}
-            >
-              <option value="default">Default mode</option>
-              {/* Random mode is disabled for now (app/random/** is commented out). */}
-              {/* <option value="random">Random mode (No memory) ↗</option> */}
-              <option value="grammar">Russian mode ↗</option>
-              <option value="practical">Short conversation mode ↗</option>
-            </Form.Select>
-            <Form.Text className="text-muted">
-              All modes share the same API key and model; each mode only differs by its system prompt.
-            </Form.Text>
-          </Form.Group>
         </Form>
       </Modal.Body>
       <Modal.Footer>
