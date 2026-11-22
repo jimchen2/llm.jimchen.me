@@ -721,6 +721,21 @@ export default function App({ routeMode = "default" }) {
           <span className="ms-3 fw-bold">Chat</span>
         </div>
 
+        {/* Chat header: the Telegram theme styles this as the contact bar
+            (avatar, title, last-seen line); other themes hide it entirely and
+            keep their original layout without it. */}
+        <div className="chat-header align-items-center">
+          <div className="chat-header-avatar" aria-hidden="true">✳</div>
+          <div className="chat-header-text">
+            <div className="chat-header-title">{settings.model || 'Chat'}</div>
+            <div className="chat-header-status">
+              {activePath.length > 0
+                ? `${activePath.length} message${activePath.length === 1 ? '' : 's'}`
+                : 'last seen recently'}
+            </div>
+          </div>
+        </div>
+
         {/* No top padding here or on the messages container: it would
             stay pinned as a strip above a stuck message header. The
             first message sits flush at the absolute top of the page,

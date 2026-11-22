@@ -246,3 +246,14 @@ p:has(.katex-display) {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ==================================================== */
+/* TELEGRAM-THEME-ONLY MARKUP                           */
+/* ==================================================== */
+/* The chat header and per-message timestamps are only
+   rendered by the opt-in Telegram theme; keep them out
+   of the light, dark and brutalist layouts. */
+.chat-header,
+.message-time {
+  display: none;
+}

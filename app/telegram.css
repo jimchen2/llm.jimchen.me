@@ -1,0 +1,1139 @@
+/*
+ * Opt-in "Telegram" appearance — a light "Day theme" replica of a Telegram
+ * Desktop / Telegram Web chat. Every override is scoped behind the root theme
+ * attribute, so the existing light, Dark Reader and brutalist appearances stay
+ * untouched.
+ *
+ * Palette follows Telegram's own light theme (tdesktop colors.palette /
+ * basic.style): white incoming bubbles, pale mint outgoing bubbles (#effdde),
+ * blue accent (#3390ec), green metadata on outgoing messages (#62ac55), green
+ * sender names (Telegram group chats) and the classic light-blue wallpaper.
+ *
+ * Specificity notes: Bootstrap's color utilities (.bg-dark, .bg-light,
+ * .text-light, ...) are !important. The rules below that paint page regions
+ * are scoped with `.chat-app-root` and placed after the utility overrides so
+ * they win on equal specificity; the portaled offcanvas is styled directly.
+ */
+html[data-theme="telegram"] {
+  color-scheme: light;
+  --tg-blue: #3390ec;
+  --tg-blue-hover: #2b7fd4;
+  --tg-link: #168acd;
+  --tg-in-bg: #ffffff;
+  --tg-out-bg: #effdde;
+  --tg-text: #000000;
+  --tg-out-time: #62ac55;
+  --tg-sender: #3a8e26;
+  --tg-chatlist-bg: #ffffff;
+  --tg-chatlist-hover: #f2f6fa;
+  --tg-divider: #e7e7e7;
+  --tg-muted: #707579;
+  --tg-faint: #a2acb4;
+  --tg-danger: #e53935;
+  --tg-font: "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif;
+  --tg-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  /* Faint white doodles over soft sky gradients: the classic Telegram
+     day-theme wallpaper. */
+  --tg-wallpaper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.34' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M26 44l34 12-16 22-7-13z'/%3E%3Cpath d='M60 56L44 78'/%3E%3Cpath d='M118 30c-4-7-15-5-15 4 0 7 15 15 15 15s15-8 15-15c0-9-11-11-15-4z'/%3E%3Cpath d='M196 28h20M206 18v20'/%3E%3Cpath d='M38 118a9 9 0 0 1 9-9 12 12 0 0 1 22 4 8 8 0 0 1 1 16H47a9 9 0 0 1-9-11z'/%3E%3Ccircle cx='160' cy='104' r='13'/%3E%3Cpath d='M154 104h1M165 104h1M154 110c3 3 9 3 12 0'/%3E%3Cpath d='M228 92c-8 0-12 5-12 12v10l6-4h12c8 0 12-5 12-12s-6-6-18-6z'/%3E%3Cpath d='M22 196c4-6 12-6 16 0 4-6 12-6 16 0'/%3E%3Cpath d='M96 160c8-8 22-8 30 0M126 160c8-8 22-8 30 0'/%3E%3Cpath d='M190 180l-10 26 14-6 14 6-10-26z'/%3E%3Cpath d='M60 232h24M72 220v24'/%3E%3Cpath d='M148 214a10 10 0 1 0 20 0 10 10 0 1 0-20 0M168 214l8 8'/%3E%3Cpath d='M224 232c-5 0-8 3-8 8v10l4-3h8c5 0 8-3 8-8'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='0.3'%3E%3Ccircle cx='92' cy='92' r='3.5'/%3E%3Ccircle cx='132' cy='196' r='3'/%3E%3Ccircle cx='214' cy='146' r='3.5'/%3E%3Ccircle cx='40' cy='168' r='2.5'/%3E%3Ccircle cx='176' cy='40' r='2.5'/%3E%3C/g%3E%3C/svg%3E");
+  --tg-send: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M3.4 20.4l17.4-7.9c.8-.4.8-1.6 0-2L3.4 2.6c-.7-.3-1.4.3-1.3 1l1 5.6 9.6 1.6-9.6 1.6-1 5.6c-.1.7.6 1.3 1.3 1z'/%3E%3C/svg%3E");
+
+  --bs-body-color: var(--tg-text);
+  --bs-body-bg: var(--tg-chatlist-bg);
+  --bs-body-font-family: var(--tg-font);
+  --bs-border-color: var(--tg-divider);
+  --bs-primary: var(--tg-blue);
+  --bs-primary-rgb: 51, 144, 236;
+  --bs-link-color: var(--tg-link);
+  --bs-link-hover-color: var(--tg-blue-hover);
+}
+
+html[data-theme="telegram"] body {
+  color: var(--tg-text);
+  background: var(--tg-chatlist-bg);
+  font-family: var(--tg-font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme="telegram"] button,
+html[data-theme="telegram"] input,
+html[data-theme="telegram"] select,
+html[data-theme="telegram"] textarea {
+  font-family: inherit;
+}
+
+html[data-theme="telegram"] ::selection {
+  color: var(--tg-text);
+  background: rgba(51, 144, 236, 0.28);
+}
+
+html[data-theme="telegram"] :focus-visible {
+  outline: 2px solid var(--tg-blue);
+  outline-offset: 2px;
+}
+
+/* ==================================================== */
+/* COLOR UTILITIES → TELEGRAM SURFACES                  */
+/* ==================================================== */
+html[data-theme="telegram"] .chat-app-root {
+  color: var(--tg-text);
+  background: var(--tg-chatlist-bg);
+}
+
+html[data-theme="telegram"] .chat-app-root .bg-white {
+  --bs-bg-opacity: 1;
+  background-color: var(--tg-chatlist-bg) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .bg-light {
+  --bs-bg-opacity: 1;
+  background-color: var(--tg-chatlist-hover) !important;
+}
+
+/* The sidebar's dark surfaces become the white Telegram chat list. */
+html[data-theme="telegram"] .chat-app-root .bg-dark {
+  --bs-bg-opacity: 1;
+  background-color: var(--tg-chatlist-bg) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .text-light {
+  color: var(--tg-text) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .text-dark {
+  color: var(--tg-text) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .text-secondary,
+html[data-theme="telegram"] .chat-app-root .text-muted {
+  color: var(--tg-muted) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .text-danger {
+  color: var(--tg-danger) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .border-secondary,
+html[data-theme="telegram"] .chat-app-root .border-top,
+html[data-theme="telegram"] .chat-app-root .border-bottom,
+html[data-theme="telegram"] .chat-app-root .border-end {
+  border-color: var(--tg-divider) !important;
+}
+
+/* ==================================================== */
+/* BUTTONS                                              */
+/* ==================================================== */
+/* Telegram has no boxed chrome inside a chat: actions read as plain
+   text/icon buttons that light up on hover. */
+html[data-theme="telegram"] .chat-app-root .btn,
+html[data-theme="telegram"] .modal .btn,
+html[data-theme="telegram"] .offcanvas .btn {
+  --bs-btn-focus-box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.75rem;
+  color: var(--tg-blue);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+  font-family: var(--tg-font);
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+html[data-theme="telegram"] .chat-app-root .btn:hover:not(:disabled),
+html[data-theme="telegram"] .modal .btn:hover:not(:disabled),
+html[data-theme="telegram"] .offcanvas .btn:hover:not(:disabled) {
+  color: var(--tg-blue);
+  background: rgba(51, 144, 236, 0.1);
+}
+
+html[data-theme="telegram"] .chat-app-root .btn:active:not(:disabled),
+html[data-theme="telegram"] .modal .btn:active:not(:disabled),
+html[data-theme="telegram"] .offcanvas .btn:active:not(:disabled) {
+  background: rgba(51, 144, 236, 0.18);
+}
+
+html[data-theme="telegram"] .chat-app-root .btn:disabled,
+html[data-theme="telegram"] .modal .btn:disabled,
+html[data-theme="telegram"] .offcanvas .btn:disabled {
+  color: var(--tg-faint);
+  background: transparent;
+  opacity: 1;
+}
+
+html[data-theme="telegram"] .chat-app-root .btn.btn-sm,
+html[data-theme="telegram"] .modal .btn.btn-sm,
+html[data-theme="telegram"] .offcanvas .btn.btn-sm {
+  padding: 0.22rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+/* Filled primary actions (Save Settings, Authenticate) keep Telegram's solid
+   blue button, as in dialog footers. */
+html[data-theme="telegram"] .chat-app-root .btn-primary,
+html[data-theme="telegram"] .chat-app-root .btn-success,
+html[data-theme="telegram"] .modal .btn-primary,
+html[data-theme="telegram"] .modal .btn-success {
+  color: #ffffff;
+  background: var(--tg-blue);
+  border-radius: 8px;
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-primary:hover:not(:disabled),
+html[data-theme="telegram"] .chat-app-root .btn-success:hover:not(:disabled),
+html[data-theme="telegram"] .modal .btn-primary:hover:not(:disabled),
+html[data-theme="telegram"] .modal .btn-success:hover:not(:disabled) {
+  color: #ffffff;
+  background: var(--tg-blue-hover);
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-outline-secondary,
+html[data-theme="telegram"] .chat-app-root .btn-outline-dark,
+html[data-theme="telegram"] .chat-app-root .btn-outline-primary,
+html[data-theme="telegram"] .chat-app-root .btn-secondary,
+html[data-theme="telegram"] .modal .btn-outline-secondary,
+html[data-theme="telegram"] .modal .btn-secondary {
+  color: var(--tg-blue);
+  background: transparent;
+  border: 0;
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-outline-secondary:hover:not(:disabled),
+html[data-theme="telegram"] .chat-app-root .btn-outline-dark:hover:not(:disabled),
+html[data-theme="telegram"] .chat-app-root .btn-outline-primary:hover:not(:disabled),
+html[data-theme="telegram"] .modal .btn-outline-secondary:hover:not(:disabled) {
+  color: var(--tg-blue);
+  background: rgba(51, 144, 236, 0.1);
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-outline-danger,
+html[data-theme="telegram"] .chat-app-root .btn-danger {
+  color: var(--tg-danger);
+  background: transparent;
+  border: 0;
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-outline-danger:hover:not(:disabled),
+html[data-theme="telegram"] .chat-app-root .btn-danger:hover:not(:disabled) {
+  color: var(--tg-danger);
+  background: rgba(229, 57, 53, 0.1);
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-link {
+  padding: 0 !important;
+  color: #939ba1;
+  background: transparent;
+  border: 0;
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-link:hover:not(:disabled) {
+  color: var(--tg-muted);
+  background: transparent;
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-group {
+  gap: 0;
+}
+
+html[data-theme="telegram"] .chat-app-root .btn-group > .btn {
+  margin-left: 0;
+}
+
+/* ==================================================== */
+/* SIDEBAR (the Telegram chat list)                     */
+/* ==================================================== */
+html[data-theme="telegram"] .chat-app-root .chat-sidebar,
+html[data-theme="telegram"] .chat-mobile-sidebar .chat-sidebar {
+  color: var(--tg-text) !important;
+  background: var(--tg-chatlist-bg) !important;
+  border-right: 1px solid var(--tg-divider) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-sidebar > .border-bottom,
+html[data-theme="telegram"] .chat-app-root .chat-sidebar > .border-top,
+html[data-theme="telegram"] .chat-mobile-sidebar .chat-sidebar > .border-bottom,
+html[data-theme="telegram"] .chat-mobile-sidebar .chat-sidebar > .border-top {
+  border-color: var(--tg-divider) !important;
+  border-width: 1px !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-sidebar > .border-bottom {
+  padding: 0.75rem !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-sidebar > .border-bottom .d-grid {
+  gap: 0.4rem !important;
+}
+
+/* "+ New Chat" becomes a blue Telegram pill; the collapse chevron becomes a
+   quiet round icon button. */
+html[data-theme="telegram"] .chat-sidebar .btn-outline-light,
+html[data-theme="telegram"] .chat-mobile-sidebar .btn-outline-light {
+  color: var(--tg-blue) !important;
+  background: rgba(51, 144, 236, 0.08);
+  border: 0;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+html[data-theme="telegram"] .chat-sidebar .btn-outline-light:hover:not(:disabled),
+html[data-theme="telegram"] .chat-mobile-sidebar .btn-outline-light:hover:not(:disabled) {
+  color: var(--tg-blue) !important;
+  background: rgba(51, 144, 236, 0.16);
+}
+
+html[data-theme="telegram"] .chat-sidebar .btn-outline-light.w-100,
+html[data-theme="telegram"] .chat-mobile-sidebar .btn-outline-light.w-100 {
+  justify-content: center;
+  padding: 0.5rem 0.9rem;
+}
+
+html[data-theme="telegram"] .chat-sidebar .btn-outline-light:not(.w-100),
+html[data-theme="telegram"] .chat-mobile-sidebar .btn-outline-light:not(.w-100) {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group {
+  --bs-list-group-bg: transparent;
+  --bs-list-group-color: var(--tg-text);
+  --bs-list-group-border-color: transparent;
+  gap: 0;
+}
+
+/* Chat rows: quiet by default, a round blue pill for the active chat — the
+   selected dialog look from Telegram Desktop. */
+html[data-theme="telegram"] .chat-sidebar .list-group-item,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item {
+  margin-bottom: 0.15rem !important;
+  padding: 0.55rem 0.65rem;
+  color: var(--tg-text) !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  font-size: 0.9rem;
+  transition: background-color 0.1s ease;
+}
+
+/* Decorative round avatar per chat row, like the Telegram chat list. */
+html[data-theme="telegram"] .chat-sidebar .list-group-item::before,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  margin-right: 0.6rem;
+  background-color: #79b7dd;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M12 3C6.9 3 3 6.4 3 10.7c0 2.4 1.3 4.6 3.4 6l-.7 3.4c-.1.4.3.7.7.5l3.8-2c.6.1 1.2.2 1.8.2 5.1 0 9-3.4 9-7.7S17.1 3 12 3z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, center;
+  background-size: auto, 21px 21px;
+  border-radius: 50%;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item.bg-secondary::before,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item.bg-secondary::before {
+  background-color: #ffffff;
+  background-image: linear-gradient(135deg, rgba(51, 144, 236, 0.06), rgba(51, 144, 236, 0.06)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24'%3E%3Cpath fill='%233390ec' d='M12 3C6.9 3 3 6.4 3 10.7c0 2.4 1.3 4.6 3.4 6l-.7 3.4c-.1.4.3.7.7.5l3.8-2c.6.1 1.2.2 1.8.2 5.1 0 9-3.4 9-7.7S17.1 3 12 3z'/%3E%3C/svg%3E");
+}
+
+/* Keeps the title on the row's own line beside the avatar. */
+html[data-theme="telegram"] .chat-sidebar .list-group-item .text-truncate,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item .text-truncate {
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item:hover,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item:hover {
+  color: var(--tg-text) !important;
+  background: var(--tg-chatlist-hover) !important;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item.bg-secondary,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item.bg-secondary {
+  color: #ffffff !important;
+  background: var(--tg-blue) !important;
+  box-shadow: 0 2px 8px rgba(51, 144, 236, 0.32);
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item.bg-secondary .text-truncate,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item.bg-secondary .text-truncate {
+  font-weight: 600;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item .btn-link,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item .btn-link {
+  color: rgba(0, 0, 0, 0.3) !important;
+  font-size: 1.15rem;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item.bg-secondary .btn-link,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item.bg-secondary .btn-link {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item .btn-link:hover,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item .btn-link:hover {
+  color: var(--tg-muted) !important;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item.bg-secondary .btn-link:hover,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item.bg-secondary .btn-link:hover {
+  color: #ffffff !important;
+}
+
+/* Settings sits at the bottom of the chat list as a quiet menu row, like
+   Telegram's sidebar menu entries. */
+html[data-theme="telegram"] .chat-sidebar > .border-top .btn-dark,
+html[data-theme="telegram"] .chat-mobile-sidebar .chat-sidebar > .border-top .btn-dark {
+  justify-content: flex-start;
+  padding: 0.55rem 0.7rem;
+  color: var(--tg-text) !important;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+html[data-theme="telegram"] .chat-sidebar > .border-top .btn-dark:hover:not(:disabled),
+html[data-theme="telegram"] .chat-mobile-sidebar .chat-sidebar > .border-top .btn-dark:hover:not(:disabled) {
+  color: var(--tg-text) !important;
+  background: var(--tg-chatlist-hover);
+}
+
+html[data-theme="telegram"] .chat-sidebar .sidebar-loading,
+html[data-theme="telegram"] .chat-sidebar .text-secondary,
+html[data-theme="telegram"] .chat-mobile-sidebar .sidebar-loading,
+html[data-theme="telegram"] .chat-mobile-sidebar .text-secondary {
+  color: var(--tg-muted) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-sidebar-rail {
+  background: var(--tg-chatlist-bg) !important;
+  border-right: 1px solid var(--tg-divider) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-sidebar-rail .btn-outline-light {
+  color: var(--tg-blue);
+  background: transparent;
+  border: 0;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-sidebar-rail .btn-outline-light:hover:not(:disabled) {
+  color: var(--tg-blue);
+  background: rgba(51, 144, 236, 0.1);
+}
+
+/* The Bootstrap offcanvas remains the mobile navigation. It renders in a
+   portal outside .chat-app-root, so it is styled directly. */
+html[data-theme="telegram"] .offcanvas.chat-mobile-sidebar {
+  color: var(--tg-text) !important;
+  background: var(--tg-chatlist-bg) !important;
+  border-right: 1px solid var(--tg-divider);
+}
+
+html[data-theme="telegram"] .offcanvas.chat-mobile-sidebar .offcanvas-header {
+  border-bottom: 1px solid var(--tg-divider);
+}
+
+html[data-theme="telegram"] .offcanvas.chat-mobile-sidebar .offcanvas-title {
+  color: var(--tg-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* ==================================================== */
+/* MAIN PANE + WALLPAPER                                */
+/* ==================================================== */
+/* The whole conversation surface carries Telegram's patterned day wallpaper,
+   so the bubbles and the floating composer sit right on it. */
+html[data-theme="telegram"] .chat-app-root .chat-main {
+  color: var(--tg-text);
+  background-color: #cfe0ee !important;
+  background-image: var(--tg-wallpaper),
+    radial-gradient(circle at 16% 10%, #e9f4ff 0%, rgba(233, 244, 255, 0) 46%),
+    radial-gradient(circle at 84% 82%, #ecf9e6 0%, rgba(236, 249, 230, 0) 44%),
+    linear-gradient(155deg, #d3e5f1 0%, #c3d9e8 55%, #cde1ee 100%);
+  background-size: 260px 260px, auto, auto, auto;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-mobile-bar {
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem !important;
+  background: var(--tg-chatlist-bg) !important;
+  border-bottom: 1px solid var(--tg-divider) !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-mobile-bar .btn-outline-dark {
+  padding: 0.3rem 0.6rem;
+  color: var(--tg-blue);
+  border: 0;
+  font-weight: 600;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-mobile-bar .fw-bold {
+  color: var(--tg-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-messages {
+  padding-bottom: 0.6rem !important;
+  background: transparent !important;
+}
+
+/* Empty chat: Telegram shows a floating gray service pill, not a headline. */
+html[data-theme="telegram"] .chat-app-root .chat-messages > .h-100 > h3 {
+  max-width: 440px;
+  margin: 0;
+  padding: 0.5rem 1.1rem;
+  color: #ffffff !important;
+  background: rgba(62, 74, 84, 0.45);
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-messages > .h-100 > h3.text-muted {
+  color: #ffffff !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .conversation-rows {
+  padding-top: 0.9rem;
+}
+
+/* ==================================================== */
+/* MESSAGE BUBBLES                                      */
+/* ==================================================== */
+/* Telegram has no full-bleed turn bands: each message is a rounded bubble
+   that hugs its own text, and the wallpaper shows between bubbles. */
+html[data-theme="telegram"] .chat-app-root .message-row,
+html[data-theme="telegram"] .chat-app-root .message-row-user,
+html[data-theme="telegram"] .chat-app-root .message-row-assistant {
+  background: transparent;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row + .message-row {
+  margin-top: 0.3rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row-inner {
+  display: flex;
+  max-width: 800px;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 0.85rem;
+  padding-left: 0.85rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row-assistant .message-row-inner {
+  justify-content: flex-start;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row-user .message-row-inner {
+  justify-content: flex-end;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card {
+  position: relative;
+  flex: 0 1 auto;
+  max-width: min(80%, 620px);
+  overflow: visible;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card-assistant,
+html[data-theme="telegram"] .chat-app-root .message-row-assistant .message-card {
+  background: var(--tg-in-bg) !important;
+  border-radius: 15px 15px 15px 3px !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card-user,
+html[data-theme="telegram"] .chat-app-root .message-row-user .message-card {
+  background: var(--tg-out-bg) !important;
+  border-radius: 15px 15px 3px 15px !important;
+}
+
+/* Bubble tails: a small concave fin on the bottom outer corner, drawn with a
+   radial-gradient cut so it blends into the bubble with no seams. */
+html[data-theme="telegram"] .chat-app-root .message-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row-assistant .message-card::after {
+  left: -7px;
+  background: radial-gradient(circle at 100% 0, transparent 7.5px, var(--tg-in-bg) 8px);
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row-user .message-card::after {
+  right: -7px;
+  background: radial-gradient(circle at 0 0, transparent 7.5px, var(--tg-out-bg) 8px);
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card .card-body,
+html[data-theme="telegram"] .chat-app-root .message-card > .card-body {
+  padding: 0.4rem 0.72rem 0.5rem;
+  color: var(--tg-text);
+  background: transparent;
+  border-radius: inherit;
+  font-size: 1rem;
+  line-height: 1.42;
+}
+
+
+/* Sender name + actions (the sticky header), now a quiet first line inside
+   the bubble. */
+html[data-theme="telegram"] .chat-app-root .message-card .message-header {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 0.4rem;
+  padding: 0.18rem 0.6rem 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-header strong {
+  flex-shrink: 1;
+  overflow: hidden;
+  padding: 0;
+  color: var(--tg-sender) !important;
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+/* Message actions stay legible but quiet, then sharpen on hover/focus so
+   they never crowd the bubble and stay reachable without a hover. */
+html[data-theme="telegram"] .chat-app-root .message-header .btn-group {
+  gap: 0;
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card:hover .message-header .btn-group,
+html[data-theme="telegram"] .chat-app-root .message-header .btn-group:focus-within {
+  opacity: 1;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-header .btn {
+  padding: 0.08rem 0.3rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-header .btn-outline-secondary:disabled {
+  color: var(--tg-muted) !important;
+}
+
+/* Touch screens cannot hover: keep the message actions visible. */
+@media (hover: none), (pointer: coarse) {
+  html[data-theme="telegram"] .chat-app-root .message-card {
+    max-width: 88%;
+  }
+}
+
+/* ==================================================== */
+/* CHAT HEADER + BUBBLE TIME                            */
+/* ==================================================== */
+/* The contact bar from Telegram: avatar, name, and the last-seen line, on
+   the white strip above the wallpaper. Other themes hide this block. */
+html[data-theme="telegram"] .chat-app-root .chat-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 60px;
+  padding: 0.5rem 1.1rem;
+  background: var(--tg-chatlist-bg);
+  border-bottom: 1px solid var(--tg-divider);
+}
+
+/* The contact bar belongs to the desktop layout; phones keep the existing
+   mobile bar with the menu button. */
+@media (max-width: 767.98px) {
+  html[data-theme="telegram"] .chat-app-root .chat-header {
+    display: none;
+  }
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-header-avatar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--tg-blue) 0%, #43b0ea 100%);
+  border-radius: 50%;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-header-text {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-header-title {
+  overflow: hidden;
+  color: var(--tg-text);
+  font-size: 1rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-header-status {
+  overflow: hidden;
+  color: var(--tg-muted);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The per-bubble time sits in the bottom corner on its own line, like
+   Telegram's message meta: green on outgoing bubbles, gray on incoming ones,
+   with the green double check to the left of the time. */
+html[data-theme="telegram"] .chat-app-root .message-time {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.22rem;
+  margin-top: 0.1rem;
+  color: #a0a0a0;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  text-align: right;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row-user .message-time {
+  color: var(--tg-out-time);
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row-user .message-time::before {
+  content: "\2713\2713";
+  color: var(--tg-out-time);
+  font-weight: 700;
+  letter-spacing: -0.12em;
+}
+
+/* Flex so the double check and the time share one baseline. */
+html[data-theme="telegram"] .chat-app-root .message-time::before {
+  flex: 0 0 auto;
+}
+
+/* ==================================================== */
+/* MARKDOWN                                             */
+/* ==================================================== */
+html[data-theme="telegram"] .chat-app-root .markdown-body {
+  color: var(--tg-text);
+  font-size: 1rem;
+  line-height: 1.42;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body p {
+  margin-bottom: 0.42rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body h1,
+html[data-theme="telegram"] .chat-app-root .markdown-body h2,
+html[data-theme="telegram"] .chat-app-root .markdown-body h3,
+html[data-theme="telegram"] .chat-app-root .markdown-body h4,
+html[data-theme="telegram"] .chat-app-root .markdown-body h5,
+html[data-theme="telegram"] .chat-app-root .markdown-body h6 {
+  margin: 0.8rem 0 0.35rem;
+  color: var(--tg-text);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body h1 {
+  font-size: 1.3rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body h2 {
+  font-size: 1.16rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body h3 {
+  font-size: 1.06rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body a {
+  color: var(--tg-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body a:hover {
+  color: var(--tg-blue-hover);
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body blockquote {
+  margin: 0.3rem 0 0.5rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(0, 0, 0, 0.03);
+  border-left: 3px solid var(--tg-blue);
+  border-radius: 4px;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body hr {
+  margin: 0.8rem 0;
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body code {
+  padding: 0.05em 0.3em;
+  color: #c7254e;
+  background: rgba(0, 0, 0, 0.05);
+  border: 0;
+  border-radius: 4px;
+  font-family: var(--tg-mono);
+  font-size: 0.9em;
+}
+
+/* Code blocks use Telegram's monospace message block: a soft gray rounded
+   panel instead of a black terminal. */
+html[data-theme="telegram"] .chat-app-root .markdown-body pre {
+  margin: 0;
+  padding: 1.9rem 0.7rem 0.6rem;
+  color: var(--tg-text);
+  background: rgba(0, 0, 0, 0.05);
+  border: 0;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body pre code {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+/* The copy button rides on the code panel and only appears with the panel. */
+html[data-theme="telegram"] .chat-app-root .copy-code-btn {
+  top: 5px !important;
+  right: 5px !important;
+  z-index: 2;
+  padding: 0.15rem 0.45rem !important;
+  color: var(--tg-blue) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  box-shadow: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0 !important;
+  transition: opacity 0.12s ease;
+}
+
+html[data-theme="telegram"] .chat-app-root .position-relative:hover .copy-code-btn,
+html[data-theme="telegram"] .chat-app-root .copy-code-btn:focus-visible {
+  opacity: 1 !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .copy-code-btn:hover {
+  color: var(--tg-blue) !important;
+  background: #ffffff !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body img {
+  border-radius: 8px;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body table {
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  border-collapse: collapse;
+  border-radius: 8px;
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body th,
+html[data-theme="telegram"] .chat-app-root .markdown-body td {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="telegram"] .chat-app-root .markdown-body th {
+  color: var(--tg-muted);
+  background: rgba(0, 0, 0, 0.04);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ==================================================== */
+/* COMPOSER                                             */
+/* ==================================================== */
+/* Telegram's input is a floating white pill with a round blue send button,
+   sitting directly on the wallpaper. */
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell {
+  padding: 0.55rem 0.75rem 0.8rem !important;
+  background: transparent !important;
+  border-top: 0 !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell > .container {
+  width: 100%;
+  max-width: 800px !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell .input-group {
+  gap: 0.5rem;
+  padding: 0;
+  background: transparent;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell .input-group > .form-control {
+  min-height: 46px;
+  padding: 0.62rem 1rem;
+  color: var(--tg-text);
+  background: #ffffff;
+  border: 0;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 4px rgba(16, 35, 47, 0.12) !important;
+  font-size: 1rem !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell .input-group > .form-control::placeholder {
+  color: var(--tg-faint);
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell .input-group > .form-control:focus {
+  background: #ffffff;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(16, 35, 47, 0.12),
+    0 0 0 2px rgba(51, 144, 236, 0.55) !important;
+}
+
+/* Round blue send button with a white paper-plane glyph. The "Send" label
+   stays in the DOM for screen readers. */
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell .input-group > .btn {
+  flex: 0 0 auto;
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  padding: 0;
+  color: transparent !important;
+  background-color: var(--tg-blue);
+  background-image: var(--tg-send);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 21px 21px;
+  border: 0;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 4px rgba(16, 35, 47, 0.2);
+  font-size: 0 !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell .input-group > .btn:hover:not(:disabled) {
+  color: transparent !important;
+  background-color: var(--tg-blue-hover);
+  background-image: var(--tg-send);
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell .input-group > .btn:disabled {
+  color: transparent !important;
+  background-color: var(--tg-faint);
+  background-image: var(--tg-send);
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell .alert-info {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--tg-text);
+  background: #ffffff;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(16, 35, 47, 0.12);
+  font-size: 0.82rem;
+}
+
+/* ==================================================== */
+/* SETTINGS / AUTH MODALS                               */
+/* ==================================================== */
+html[data-theme="telegram"] .modal-content {
+  color: var(--tg-text);
+  background: #ffffff;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(16, 35, 47, 0.24);
+}
+
+html[data-theme="telegram"] .modal-header {
+  padding: 0.9rem 1.1rem 0.5rem;
+  background: transparent;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+}
+
+html[data-theme="telegram"] .modal-title {
+  font-size: 1.06rem;
+  font-weight: 600;
+}
+
+html[data-theme="telegram"] .modal-body {
+  padding: 0.4rem 1.1rem 1rem;
+  color: var(--tg-text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+html[data-theme="telegram"] .modal-footer {
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem 1rem;
+  background: transparent;
+  border-top: 0;
+}
+
+html[data-theme="telegram"] .modal .form-label {
+  margin-bottom: 0.35rem;
+  color: var(--tg-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+html[data-theme="telegram"] .modal .form-control,
+html[data-theme="telegram"] .modal .form-select {
+  padding: 0.55rem 0.7rem;
+  color: var(--tg-text);
+  background-color: #f2f2f2;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  box-shadow: none;
+  font-size: 0.92rem;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+html[data-theme="telegram"] .modal .form-control:focus,
+html[data-theme="telegram"] .modal .form-select:focus {
+  background-color: #ffffff;
+  border-color: var(--tg-blue);
+  box-shadow: none;
+}
+
+html[data-theme="telegram"] .modal .form-control::placeholder {
+  color: var(--tg-faint);
+}
+
+html[data-theme="telegram"] .modal .text-muted {
+  color: var(--tg-muted) !important;
+}
+
+html[data-theme="telegram"] .modal .text-danger {
+  color: var(--tg-danger) !important;
+}
+
+html[data-theme="telegram"] .modal .btn-close {
+  padding: 0.4rem;
+  border-radius: 50%;
+  opacity: 0.55;
+}
+
+html[data-theme="telegram"] .modal .btn-close:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  opacity: 0.75;
+}
+
+/* ==================================================== */
+/* SCROLLBARS                                           */
+/* ==================================================== */
+html[data-theme="telegram"] .chat-app-root .chat-messages,
+html[data-theme="telegram"] .chat-sidebar .flex-grow-1,
+html[data-theme="telegram"] .modal-body,
+html[data-theme="telegram"] .chat-app-root .markdown-body pre {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-messages::-webkit-scrollbar,
+html[data-theme="telegram"] .chat-sidebar .flex-grow-1::-webkit-scrollbar,
+html[data-theme="telegram"] .modal-body::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-messages::-webkit-scrollbar-track,
+html[data-theme="telegram"] .chat-sidebar .flex-grow-1::-webkit-scrollbar-track,
+html[data-theme="telegram"] .modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-messages::-webkit-scrollbar-thumb,
+html[data-theme="telegram"] .chat-sidebar .flex-grow-1::-webkit-scrollbar-thumb,
+html[data-theme="telegram"] .modal-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-messages::-webkit-scrollbar-thumb:hover,
+html[data-theme="telegram"] .chat-sidebar .flex-grow-1::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="telegram"] .chat-app-root .btn,
+  html[data-theme="telegram"] .modal .btn,
+  html[data-theme="telegram"] .offcanvas .btn,
+  html[data-theme="telegram"] .chat-sidebar .list-group-item,
+  html[data-theme="telegram"] .chat-app-root .message-header .btn-group,
+  html[data-theme="telegram"] .chat-app-root .copy-code-btn,
+  html[data-theme="telegram"] .modal .form-control,
+  html[data-theme="telegram"] .modal .form-select {
+    transition: none;
+  }
+}
