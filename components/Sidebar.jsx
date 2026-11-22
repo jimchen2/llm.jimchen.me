@@ -25,7 +25,7 @@ export default function Sidebar({
   };
 
   return (
-    <div className="d-flex flex-column h-100 bg-dark text-light border-end border-secondary">
+    <div className="chat-sidebar d-flex flex-column h-100 bg-dark text-light border-end border-secondary">
       <div className="p-3 border-bottom border-secondary d-grid gap-2">
         {onCollapse && (
           <div className="d-flex justify-content-end">
