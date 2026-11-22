@@ -8,6 +8,7 @@ import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 import { updateReplyContent } from "../lib/replyContent";
 import { getModeMessages, getModeMaxMessages } from "../lib/modes";
+import { initializeTheme } from "../lib/theme";
 
 // Placeholder sent in x-db-token while the server runs in test mode (TEST_MODE=true).
 const TEST_MODE_TOKEN = "test-mode";
@@ -181,11 +182,7 @@ export default function App({ routeMode = "default" }) {
   };
 
   useEffect(() => {
-    if (document.cookie.split("; ").find((row) => row.startsWith("theme=dark"))) {
-      import("darkreader").then((darkreader) => {
-        darkreader.enable({ brightness: 100, contrast: 90, sepia: 10 });
-      });
-    }
+    initializeTheme();
 
     // In test mode (TEST_MODE=true on the server) no password is needed. Skip
     // the prompt and use a placeholder token, which is never stored locally.
@@ -626,7 +623,7 @@ export default function App({ routeMode = "default" }) {
     Number.isFinite(maxMessages) && activePath.length >= maxMessages;
 
   return (
-    <Container fluid className="p-0 overflow-hidden d-flex" style={{ height: "100dvh" }}>
+    <Container fluid className="chat-app-root p-0 overflow-hidden d-flex" style={{ height: "100dvh" }}>
       {/* Access Password Prompt Modal */}
       <Modal show={showAuthModal} backdrop="static" keyboard={false} centered>
         <Modal.Header>
@@ -658,7 +655,7 @@ export default function App({ routeMode = "default" }) {
       {/* Desktop Sidebar */}
       <div className="d-none d-md-block flex-shrink-0" style={{ width: sidebarCollapsed ? "56px" : "280px" }}>
         {sidebarCollapsed ? (
-          <div className="h-100 bg-dark border-end border-secondary p-2 d-flex justify-content-center align-items-start">
+          <div className="chat-sidebar-rail h-100 bg-dark border-end border-secondary p-2 d-flex justify-content-center align-items-start">
             <Button variant="outline-light" size="sm" onClick={() => setSidebarCollapsed(false)} aria-label="Expand sidebar" title="Expand sidebar">
               <span aria-hidden="true">›</span>
             </Button>
@@ -685,7 +682,7 @@ export default function App({ routeMode = "default" }) {
         show={showMobileMenu}
         onHide={() => setShowMobileMenu(false)}
         placement="start"
-        className="bg-dark text-light w-75"
+        className="chat-mobile-sidebar bg-dark text-light w-75"
       >
         <Offcanvas.Header closeButton closeVariant="white">
           <Offcanvas.Title>Chats</Offcanvas.Title>
@@ -716,8 +713,8 @@ export default function App({ routeMode = "default" }) {
       />
 
       {/* Main Area */}
-      <div className="d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
-        <div className="d-md-none p-2 border-bottom d-flex align-items-center bg-light">
+      <div className="chat-main d-flex flex-column bg-white h-100 flex-grow-1 position-relative">
+        <div className="chat-mobile-bar d-md-none p-2 border-bottom d-flex align-items-center bg-light">
           <Button variant="outline-dark" size="sm" onClick={() => setShowMobileMenu(true)}>
             ☰ Menu
           </Button>
@@ -731,7 +728,7 @@ export default function App({ routeMode = "default" }) {
         {/* Full-bleed message list: no horizontal padding here so a user
             message's white band can run edge to edge. Each row supplies its
             own readable column (see .message-row-inner). */}
-        <div className="flex-grow-1 overflow-auto pb-3 pb-md-4 bg-light">
+        <div className="chat-messages flex-grow-1 overflow-auto pb-3 pb-md-4 bg-light">
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center px-3">
               <h3 className="text-muted">
@@ -772,7 +769,7 @@ export default function App({ routeMode = "default" }) {
           )}
         </div>
 
-        <div className="p-3 bg-white border-top">
+        <div className="chat-composer-shell p-3 bg-white border-top">
           <Container className="px-0" style={{ maxWidth: "800px" }}>
             {conversationLimitReached && (
               <div className="alert alert-info py-2 mb-2" role="status">
