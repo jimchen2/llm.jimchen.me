@@ -57,6 +57,22 @@ https://github.com/jimchen2/llm.jimchen.me/raw/refs/heads/master/public/annoying
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
 
+### Themes
+
+Settings → Theme switches the appearance and remembers the choice in a
+`theme` cookie:
+
+- **Light** — the original Bootstrap layout.
+- **Dark** — Dark Reader over the original layout.
+- **Brutalist** — opt-in black/white/acid-yellow hard-edged stylesheet
+  (`app/brutalist.css`).
+- **Telegram** — opt-in replica of a light Telegram Day-theme chat
+  (`app/telegram.css`): white chat list with round avatars, patterned
+  wallpaper, white incoming / mint `#effdde` outgoing bubbles with tails and
+  timestamps, a contact header with the model name, and a floating composer
+  with a round blue paper-plane send button. Only the Telegram theme shows the
+  chat header and per-message times; the other themes hide them.
+
 ### Preview without any services
 
 ```bash

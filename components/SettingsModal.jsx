@@ -38,6 +38,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               <option value="light">Light</option>
               <option value="dark">Dark</option>
               <option value="brutalist">Brutalist</option>
+              <option value="telegram">Telegram</option>
             </Form.Select>
           </Form.Group>
 

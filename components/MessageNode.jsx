@@ -61,6 +61,16 @@ export default function MessageNode({
 
   const isUser = msg.role === 'user';
 
+  // Telegram-style time label ("14:32") for the bubble meta row. Message
+  // timestamps are stored as epoch milliseconds.
+  const timeLabel = Number.isFinite(Number(msg.created_at))
+    ? new Date(Number(msg.created_at)).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+    : '';
+
   // User turns ("You") render as a full-bleed white band that spans the entire
   // width of the conversation pane. The band is the outer element and the
   // readable column is nested inside it, so the text stays aligned with the
@@ -117,6 +127,7 @@ export default function MessageNode({
                 dangerouslySetInnerHTML={{ __html: md.render(msg.content || '*(typing...)*') }} 
               />
             )}
+            {timeLabel && <span className="message-time">{timeLabel}</span>}
           </Card.Body>
         </Card>
       </div>
