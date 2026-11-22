@@ -81,7 +81,7 @@ For the full setup, copy `.env.example` to `.env` and fill in:
 | `DEFAULT_MODEL` | Model used by **all** modes |
 | `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |
 
-Modes (`default`, `grammar`, `practical`) differ by their system prompt. All of
+Modes (`default`, `grammar`, `short`) differ by their system prompt. All of
 them keep the full conversation history.
 
 - `/russian` — Russian mode: corrects Russian grammar before answering
