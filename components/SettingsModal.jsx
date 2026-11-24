@@ -20,6 +20,67 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
     await applyThemePreference(newTheme);
   };
 
+  // Switch modes — used by the Mode dropdown and by the 1/2/3 shortcuts.
+  const switchMode = async (newMode) => {
+    setSettings({ ...settings, mode: newMode });
+
+    if (settings.dbToken) {
+      try {
+        await fetch('/api/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-db-token': settings.dbToken,
+          },
+          body: JSON.stringify({
+            model: settings.model,
+            mode: newMode,
+          }),
+        });
+      } catch {
+        // ignore — still navigate to the selected mode
+      }
+    }
+
+    // Grammar and practical modes are separate routes; switching to
+    // one of them navigates there. Switching back to default
+    // navigates home from another route.
+    if (newMode === 'grammar') {
+      window.location.href = '/russian';
+      return;
+    }
+    if (newMode === 'practical') {
+      window.location.href = '/practical';
+      return;
+    }
+    if (routeMode !== 'default') {
+      window.location.href = '/';
+      return;
+    }
+  };
+
+  // Settings mode: while the dialog is open, 1 / 2 / 3 jump straight to
+  // Default / Russian / Short conversation mode. Ignored while the user is
+  // typing in a form field or while modifier keys are held.
+  useEffect(() => {
+    if (!show) return;
+
+    const MODE_BY_KEY = { '1': 'default', '2': 'grammar', '3': 'practical' };
+    const onKeyDown = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      const newMode = MODE_BY_KEY[e.key];
+      if (!newMode || newMode === (settings.mode || 'default')) return;
+      const target = e.target;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+      e.preventDefault();
+      switchMode(newMode);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [show, settings, routeMode]);
+
   return (
     <Modal show={show} onHide={onHide} centered>
       <Modal.Header closeButton>
@@ -95,14 +156,17 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
                 }
               }}
             >
-              <option value="default">Default mode</option>
+              <option value="default">Default mode (1)</option>
               {/* Random mode is disabled for now (app/random/** is commented out). */}
               {/* <option value="random">Random mode (No memory) ↗</option> */}
-              <option value="grammar">Russian mode ↗</option>
-              <option value="practical">Short conversation mode ↗</option>
+              <option value="grammar">Russian mode ↗ (2)</option>
+              <option value="practical">Short conversation mode ↗ (3)</option>
             </Form.Select>
-            <Form.Text className="text-muted">
+            <Form.Text className="text-muted d-block">
               All modes share the same API key and model; each mode only differs by its system prompt.
+            </Form.Text>
+            <Form.Text className="text-muted d-block">
+              Shortcut: press 1, 2, or 3 while this dialog is open to switch modes instantly.
             </Form.Text>
           </Form.Group>
         </Form>
