@@ -156,6 +156,25 @@ export default function App({ routeMode = "default" }) {
     setShowSettings(true);
   };
 
+  // Ctrl+Shift+P toggles the settings dialog (the "settings mode"). While it
+  // is open, 1/2/3 inside SettingsModal switch between the three modes.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (!e.ctrlKey || !e.shiftKey || e.altKey || e.repeat) return;
+      if (e.key.toLowerCase() !== "p") return;
+      e.preventDefault();
+      // Don't pop settings over the password prompt.
+      if (showAuthModal) return;
+      if (showSettings) {
+        setShowSettings(false);
+      } else {
+        handleOpenSettings();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showSettings, showAuthModal, handleOpenSettings]);
+
   const initializeApp = async (token) => {
     loadConversations(token, 0);
 
