@@ -2,10 +2,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Modal, Form, Button } from 'react-bootstrap';
+import { Modal, Form, Button, Dropdown } from 'react-bootstrap';
 import { applyThemePreference, getSavedTheme } from '../lib/theme';
 
-export default function SettingsModal({ show, onHide, settings, setSettings, onSave, routeMode = 'default' }) {
+export default function SettingsModal({ show, onHide, settings, setSettings, onSave, routeMode = 'default', openModeDropdown = false }) {
+  // 'default' | 'grammar' | 'practical' label shown on the Mode toggle.
+  const MODE_LABELS = {
+    default: 'Default mode (1)',
+    grammar: 'Russian mode ↗ (2)',
+    practical: 'Short conversation mode ↗ (3)',
+  };
+  const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
   const [theme, setTheme] = useState('light');
 
   // Read the saved appearance when the settings dialog opens.
@@ -14,6 +21,16 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
       setTheme(getSavedTheme());
     }
   }, [show]);
+
+  // When Ctrl+Shift+P opens the dialog, pop the Mode dropdown (Default /
+  // Russian / Short) open inside Settings right away so the user can pick a
+  // mode with the mouse instead of using the 1/2/3 keys.
+  useEffect(() => {
+    if (!show || !openModeDropdown) return;
+    // Wait a tick for the modal to mount before opening the dropdown.
+    const timer = setTimeout(() => setModeDropdownOpen(true), 60);
+    return () => clearTimeout(timer);
+  }, [show, openModeDropdown]);
 
   const handleThemeChange = async (newTheme) => {
     setTheme(newTheme);
@@ -115,53 +132,49 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
           
           <Form.Group className="mb-3">
             <Form.Label className="fw-bold">Mode</Form.Label>
-            <Form.Select 
-              value={settings.mode || 'default'}
-              onChange={async (e) => {
-                const newMode = e.target.value;
-                setSettings({ ...settings, mode: newMode });
-
-                if (settings.dbToken) {
-                  try {
-                    await fetch('/api/settings', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'x-db-token': settings.dbToken,
-                      },
-                      body: JSON.stringify({
-                        model: settings.model,
-                        mode: newMode,
-                      }),
-                    });
-                  } catch {
-                    // ignore — still navigate to the selected mode
-                  }
-                }
-
-                // Grammar and practical modes are separate routes; switching to
-                // one of them navigates there. Switching back to default
-                // navigates home from another route.
-                if (newMode === 'grammar') {
-                  window.location.href = '/russian';
-                  return;
-                }
-                if (newMode === 'practical') {
-                  window.location.href = '/practical';
-                  return;
-                }
-                if (routeMode !== 'default') {
-                  window.location.href = '/';
-                  return;
-                }
-              }}
+            <Dropdown
+              show={modeDropdownOpen}
+              onToggle={(isOpen) => setModeDropdownOpen(isOpen)}
             >
-              <option value="default">Default mode (1)</option>
-              {/* Random mode is disabled for now (app/random/** is commented out). */}
-              {/* <option value="random">Random mode (No memory) ↗</option> */}
-              <option value="grammar">Russian mode ↗ (2)</option>
-              <option value="practical">Short conversation mode ↗ (3)</option>
-            </Form.Select>
+              <Dropdown.Toggle
+                id="mode-dropdown"
+                variant="outline-dark"
+                style={{ width: '100%' }}
+              >
+                {MODE_LABELS[settings.mode] || MODE_LABELS.default}
+              </Dropdown.Toggle>
+              <Dropdown.Menu align="start" style={{ minWidth: '16rem' }}>
+                {/* Random mode is disabled for now (app/random/** is commented out). */}
+                {/* <Dropdown.Item onClick={() => switchMode('random')}>Random mode (No memory) ↗</Dropdown.Item> */}
+                <Dropdown.Item
+                  active={settings.mode === 'default'}
+                  onClick={() => {
+                    setModeDropdownOpen(false);
+                    switchMode('default');
+                  }}
+                >
+                  Default mode (1)
+                </Dropdown.Item>
+                <Dropdown.Item
+                  active={settings.mode === 'grammar'}
+                  onClick={() => {
+                    setModeDropdownOpen(false);
+                    switchMode('grammar');
+                  }}
+                >
+                  Russian mode ↗ (2)
+                </Dropdown.Item>
+                <Dropdown.Item
+                  active={settings.mode === 'practical'}
+                  onClick={() => {
+                    setModeDropdownOpen(false);
+                    switchMode('practical');
+                  }}
+                >
+                  Short conversation mode ↗ (3)
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
             <Form.Text className="text-muted d-block">
               All modes share the same API key and model; each mode only differs by its system prompt.
             </Form.Text>

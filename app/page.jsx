@@ -63,6 +63,9 @@ export default function App({ routeMode = "default" }) {
   const [messages, setMessages] = useState({});
   const [currentId, setCurrentId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  // When true, the Settings dialog pops its Mode dropdown open on open.
+  // Set by the Ctrl+Shift+P handler and cleared when the dialog closes.
+  const [openModeDropdown, setOpenModeDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -167,7 +170,11 @@ export default function App({ routeMode = "default" }) {
       if (showAuthModal) return;
       if (showSettings) {
         setShowSettings(false);
+        setOpenModeDropdown(false);
       } else {
+        // Open Settings and pop the Mode dropdown (Default / Russian /
+        // Short) open inside it right away.
+        setOpenModeDropdown(true);
         handleOpenSettings();
       }
     };
@@ -724,11 +731,15 @@ export default function App({ routeMode = "default" }) {
 
       <SettingsModal
         show={showSettings}
-        onHide={() => setShowSettings(false)}
+        onHide={() => {
+          setShowSettings(false);
+          setOpenModeDropdown(false);
+        }}
         settings={settings}
         setSettings={setSettings}
         onSave={saveSettings}
         routeMode={routeMode}
+        openModeDropdown={openModeDropdown}
       />
 
       {/* Main Area */}
