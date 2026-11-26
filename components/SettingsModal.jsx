@@ -175,12 +175,6 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
-            <Form.Text className="text-muted d-block">
-              All modes share the same API key and model; each mode only differs by its system prompt.
-            </Form.Text>
-            <Form.Text className="text-muted d-block">
-              Shortcut: press 1, 2, or 3 while this dialog is open to switch modes instantly.
-            </Form.Text>
           </Form.Group>
         </Form>
       </Modal.Body>
