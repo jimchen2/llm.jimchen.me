@@ -11,10 +11,18 @@ test('memory store is seeded with the sample conversations', async () => {
   assert.ok(ids.includes('test-conv-coding'));
   assert.ok(ids.includes('test-conv-math'));
   assert.ok(ids.includes('test-conv-russian'));
+  assert.ok(ids.includes('test-conv-random'));
 
   const conv = await redis.hgetall('conv:test-conv-coding');
   assert.equal(conv.title, 'Binary search complexity');
   assert.equal(conv.mode, 'default');
+
+  // The random-mode sample is visible like the others but has no expiry, and
+  // the shared index is kept forever because it contains that conversation.
+  assert.equal((await redis.hgetall('conv:test-conv-random')).mode, 'random');
+  assert.equal(await redis.ttl('conv:test-conv-random'), -1);
+  assert.equal(await redis.ttl('msgs:test-conv-random'), -1);
+  assert.equal(await redis.ttl('conversations:index'), -1);
 
   const messages = await redis.hgetall('msgs:test-conv-coding');
   const parsed = Object.values(messages).map((m) => JSON.parse(m));

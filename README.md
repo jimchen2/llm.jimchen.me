@@ -89,8 +89,9 @@ npm install && npm run dev   # http://localhost:3000
 
 With `TEST_MODE=true` there is no password prompt, no Redis and no API key:
 the sidebar shows a few fixed sample conversations (code, KaTeX math, Russian
-grammar, short-conversation mode) and sending a message streams a canned reply
-so the streaming UI can be exercised. Everything resets on restart.
+grammar, short-conversation mode, random mode) and sending a message streams a
+canned reply so the streaming UI can be exercised. Everything resets on
+restart.
 
 For the full setup, copy `.env.example` to `.env` and fill in:
 
