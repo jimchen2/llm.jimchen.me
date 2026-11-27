@@ -52,18 +52,19 @@ export default function SettingsModal({
 
   // Switch modes — used by the Mode dropdown and the 1/2/3/4 keys in Settings.
   const switchMode = async (newMode) => {
-    // Random mode is desktop-only and is never saved as the default mode.
+    // Random mode is desktop-only, but is persisted like the other modes.
     const isRandom = newMode === 'random';
 
     setSettings({ ...settings, mode: newMode });
 
-    if (settings.dbToken && !isRandom) {
+    if (settings.dbToken) {
       try {
         await fetch('/api/settings', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-db-token': settings.dbToken,
+            ...(isRandom && randomModeAvailable ? { 'x-random-mode-unlocked': '1' } : {}),
           },
           body: JSON.stringify({
             model: settings.model,

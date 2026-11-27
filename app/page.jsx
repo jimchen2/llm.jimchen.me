@@ -412,12 +412,11 @@ export default function App({ routeMode = "default" }) {
         headers: {
           "Content-Type": "application/json",
           "x-db-token": settings.dbToken,
+          ...(settings.mode === "random" ? { "x-random-mode-unlocked": "1" } : {}),
         },
         body: JSON.stringify({
           model: settings.model,
-          // Random mode is route-scoped and never the saved default mode, so
-          // saving settings from there keeps the old default.
-          mode: settings.mode === "random" ? "default" : settings.mode,
+          mode: settings.mode,
         }),
       });
 
