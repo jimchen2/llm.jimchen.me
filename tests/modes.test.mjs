@@ -5,6 +5,8 @@ import {
   getModeMemory,
   getModeMaxMessages,
   getModeMessages,
+  isDesktopOnlyMode,
+  modePersistsConversation,
   normalizeMode,
 } from '../lib/modes.js';
 
@@ -15,43 +17,42 @@ const messages = {
   otherBranch: { role: 'user', content: 'Unrelated branch', parent_id: 'first' },
 };
 
-// Random mode is disabled for now (see lib/modes.js). The mode key is gone from
-// MODES, so any stored conversation / request with mode "random" falls back to
-// the default mode — including its full conversation memory.
-test('random mode falls back to the default mode', () => {
-  assert.equal(normalizeMode('random'), 'default');
+// Random mode means no system prompt at all. It keeps full memory like the
+// default mode, is desktop-only, and its conversations never expire in Redis.
+test('random mode has no system prompt, full memory and never expires', () => {
+  assert.equal(normalizeMode('random'), 'random');
+  assert.equal(getModeConfig('random').systemPrompt, '');
   assert.equal(getModeMemory('random'), Infinity);
+  assert.equal(getModeMaxMessages('random'), Infinity);
   assert.deepEqual(getModeMessages('random', messages, 'followup'), [
     { role: 'user', content: 'My name is Sam.' },
     { role: 'assistant', content: 'Hello, Sam!' },
     { role: 'user', content: 'What is my name?' },
   ]);
+
+  // Desktop-only, and kept in Redis without a TTL.
+  assert.equal(isDesktopOnlyMode('random'), true);
+  assert.equal(modePersistsConversation('random'), true);
 });
 
-// Original no-memory behaviour of random mode, kept for when it is re-enabled.
-//
-// test('random mode has no memory: only the current message is sent', () => {
-//   assert.equal(getModeMemory('random'), 0);
-//   // Even in the middle of a conversation, earlier user/assistant turns
-//   // ("My name is Sam." / "Hello, Sam!") must not be sent to the LLM.
-//   assert.deepEqual(getModeMessages('random', messages, 'followup'), [
-//     { role: 'user', content: 'What is my name?' },
-//   ]);
-//   assert.deepEqual(getModeMessages('random', messages, 'answer'), [
-//     { role: 'assistant', content: 'Hello, Sam!' },
-//   ]);
-//   assert.deepEqual(getModeMessages('random', messages, 'first'), [
-//     { role: 'user', content: 'My name is Sam.' },
-//   ]);
-// });
-//
-// test('random mode retry and branch context is only the selected message', () => {
-//   // Retry re-sends just the prompt being retried (its parent user message),
-//   // with no ancestry before it.
-//   assert.deepEqual(getModeMessages('random', messages, 'otherBranch'), [
-//     { role: 'user', content: 'Unrelated branch' },
-//   ]);
-// });
+test('random mode ignores RANDOM_MODE_SYSTEM_PROMPT', () => {
+  const previous = process.env.RANDOM_MODE_SYSTEM_PROMPT;
+  process.env.RANDOM_MODE_SYSTEM_PROMPT = 'Answer only in rhyme.';
+  try {
+    assert.equal(getModeConfig('random').systemPrompt, '');
+  } finally {
+    if (previous === undefined) delete process.env.RANDOM_MODE_SYSTEM_PROMPT;
+    else process.env.RANDOM_MODE_SYSTEM_PROMPT = previous;
+  }
+});
+
+test('other modes keep their system prompts, full/default expiry and are not desktop-gated', () => {
+  for (const mode of ['default', 'grammar', 'practical']) {
+    assert.equal(isDesktopOnlyMode(mode), false);
+    assert.equal(modePersistsConversation(mode), false);
+    assert.ok(getModeConfig(mode).systemPrompt.length > 0);
+  }
+});
 
 test('practical route is short conversation mode with a five-exchange limit', () => {
   assert.equal(normalizeMode('practical'), 'practical');

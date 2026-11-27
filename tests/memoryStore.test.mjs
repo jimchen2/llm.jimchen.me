@@ -51,6 +51,25 @@ test('memory store supports the writes the API routes make', async () => {
   assert.equal(await redis.exists('conv:unit-conv'), 0);
 });
 
+test('memory store can drop a key TTL (random mode keeps conversations forever)', async () => {
+  const redis = createMemoryRedis();
+  const pipeline = redis.pipeline();
+  pipeline.hset('conv:unit-forever', { id: 'unit-forever', mode: 'random' });
+  pipeline.expire('conv:unit-forever', 60);
+  await pipeline.exec();
+  assert.equal(await redis.ttl('conv:unit-forever'), 60);
+
+  const clear = redis.pipeline();
+  clear.persist('conv:unit-forever');
+  await clear.exec();
+  // -1 means "exists, no expiry" — exactly like ioredis.
+  assert.equal(await redis.ttl('conv:unit-forever'), -1);
+  assert.equal(await redis.persist('conv:unit-forever'), 0);
+  assert.equal(await redis.persist('conv:unit-missing'), 0);
+
+  await redis.del('conv:unit-forever');
+});
+
 test('memory store publishes to subscribers for chat streaming', async () => {
   const redis = createMemoryRedis();
   const subscriber = createMemorySubscriber();

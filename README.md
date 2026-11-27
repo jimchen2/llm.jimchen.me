@@ -56,6 +56,7 @@ https://github.com/jimchen2/llm.jimchen.me/raw/refs/heads/master/public/annoying
   - Retry: Retrying means first deleting the message, before invoking the LLM again
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
+- Random mode (`/random`): no system prompt at all. Desktop only — press `Ctrl+Alt+Shift+R` on a computer, phones are blocked (even in "desktop site" mode). Its conversations and messages never expire in Redis. See [Random mode](#random-mode-desktop-only-no-redis-expiry).
 
 ### Themes
 
@@ -97,19 +98,42 @@ For the full setup, copy `.env.example` to `.env` and fill in:
 | `DEFAULT_MODEL` | Model used by **all** modes |
 | `*_MODE_SYSTEM_PROMPT` | Optional system prompt overrides per mode |
 
-Modes (`default`, `grammar`, `short`) differ by their system prompt. All of
-them keep the full conversation history.
+Modes (`default`, `grammar`, `practical`, `random`) differ by their system
+prompt. All of them keep the full conversation history.
 
 - `/russian` — Russian mode: corrects Russian grammar before answering
   (`GRAMMAR_MODE_SYSTEM_PROMPT`).
+- `/practical` — short conversation mode: five exchanges (ten messages) per
+  conversation (`PRACTICAL_MODE_SYSTEM_PROMPT`).
+- `/random` — random mode: **no system prompt at all**, the conversation is sent
+  exactly as typed. `RANDOM_MODE_SYSTEM_PROMPT` is intentionally ignored.
 
-Both modes use the same `API_KEY` and `DEFAULT_MODEL` as the default mode.
+Every mode uses the same `API_KEY` and `DEFAULT_MODEL`; there are no per-mode
+keys or models. `GEMINI_API_KEY` and the legacy `DEFAULT_MODE_API_KEY` are still
+accepted as aliases of `API_KEY`.
 
-Random mode (a no-memory mode: `memory: 0` in
-`lib/modes.js`, only the current message sent to the LLM) is currently
-**disabled** — its entry in `lib/modes.js`, its routes (`app/random/**`) and its
-UI wiring are commented out in place. Stored conversations with mode `random`
-fall back to `default`. Uncomment those pieces (plus `RANDOM_MODE_SYSTEM_PROMPT`
-in `.env.example`) to bring it back.
-There are no per-mode API keys or models; `GEMINI_API_KEY` and the legacy
-`DEFAULT_MODE_API_KEY` are still accepted as aliases of `API_KEY`.
+#### Random mode (desktop only, no Redis expiry)
+
+Random mode is deliberately **desktop-only**, and it is armed with a computer key:
+
+- Press **Ctrl+Alt+Shift+R** on a computer to enter random mode, and again to
+  leave it. Settings also lists it (and `4` inside Settings) on a computer.
+- Phones are blocked — including a phone that requests the browser's "desktop
+  site": `lib/desktopGate.js` requires a hover-capable, fine primary pointer
+  (`hover: hover and pointer: fine`), so a phone fails the check even when its
+  User-Agent pretends to be a desktop. `/random` (and `/random/chat/[id]`)
+  redirect to `/` on such devices, and random-mode conversations are hidden from
+  the sidebar there.
+- The API enforces the same rule: `/api/chat`, `/api/conversations` and
+  `/api/settings` only accept `mode: "random"` when the request carries the
+  `x-random-mode-unlocked: 1` header (set only after the shortcut/Random menu
+  entry) and is not a mobile User-Agent. This is a UI gate, not a security
+  boundary.
+- Random mode is never saved as the default mode; it is re-armed each time.
+- Its conversations never expire in Redis: `conv:{id}` and `msgs:{id}` are
+  written without a TTL (and `PERSIST` clears any earlier one), while every other
+  mode keeps `CACHE_TTL_SECONDS`. If the shared `conversations:index` expires
+  before those hashes do, `GET /api/conversations` recovers the conversations
+  from `conv:*` and puts them back in the index, so they never disappear from
+  the sidebar. Deleting a random-mode conversation is still possible (the `×`
+  button / `DELETE /api/conversations`) — it just never expires on its own.

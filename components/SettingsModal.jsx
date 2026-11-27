@@ -4,13 +4,26 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button, Dropdown } from 'react-bootstrap';
 import { applyThemePreference, getSavedTheme } from '../lib/theme';
+import { RANDOM_MODE_SHORTCUT_LABEL } from '../lib/desktopGate';
 
-export default function SettingsModal({ show, onHide, settings, setSettings, onSave, routeMode = 'default', openModeDropdown = false }) {
-  // 'default' | 'grammar' | 'practical' label shown on the Mode toggle.
+export default function SettingsModal({
+  show,
+  onHide,
+  settings,
+  setSettings,
+  onSave,
+  routeMode = 'default',
+  openModeDropdown = false,
+  // Random mode only exists on a computer (lib/desktopGate.js), so the option
+  // is hidden everywhere else and never reachable from a phone.
+  randomModeAvailable = false,
+}) {
+  // 'default' | 'grammar' | 'practical' | 'random' label shown on the Mode toggle.
   const MODE_LABELS = {
     default: 'Default mode (1)',
     grammar: 'Russian mode ↗ (2)',
     practical: 'Short conversation mode ↗ (3)',
+    random: 'Random mode — no system prompt ↗',
   };
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
   const [theme, setTheme] = useState('light');
@@ -37,11 +50,16 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
     await applyThemePreference(newTheme);
   };
 
-  // Switch modes — used by the Mode dropdown and by the 1/2/3 shortcuts.
+  // Switch modes — used by the Mode dropdown and by the 1/2/3/4 shortcuts.
   const switchMode = async (newMode) => {
+    // Random mode is desktop-only and is never saved as the default mode; it is
+    // re-armed each time with the Ctrl+Alt+Shift+R shortcut.
+    const isRandom = newMode === 'random';
+    if (isRandom && !randomModeAvailable) return;
+
     setSettings({ ...settings, mode: newMode });
 
-    if (settings.dbToken) {
+    if (settings.dbToken && !isRandom) {
       try {
         await fetch('/api/settings', {
           method: 'POST',
@@ -59,7 +77,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
       }
     }
 
-    // Grammar and practical modes are separate routes; switching to
+    // Grammar, practical and random modes are separate routes; switching to
     // one of them navigates there. Switching back to default
     // navigates home from another route.
     if (newMode === 'grammar') {
@@ -70,6 +88,10 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
       window.location.href = '/practical';
       return;
     }
+    if (isRandom) {
+      window.location.href = '/random';
+      return;
+    }
     if (routeMode !== 'default') {
       window.location.href = '/';
       return;
@@ -77,12 +99,14 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
   };
 
   // Settings mode: while the dialog is open, 1 / 2 / 3 jump straight to
-  // Default / Russian / Short conversation mode. Ignored while the user is
+  // Default / Russian / Short conversation mode, and 4 to random mode — on a
+  // computer only, where the option is visible. Ignored while the user is
   // typing in a form field or while modifier keys are held.
   useEffect(() => {
     if (!show) return;
 
     const MODE_BY_KEY = { '1': 'default', '2': 'grammar', '3': 'practical' };
+    if (randomModeAvailable) MODE_BY_KEY['4'] = 'random';
     const onKeyDown = (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       const newMode = MODE_BY_KEY[e.key];
@@ -96,7 +120,7 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [show, settings, routeMode]);
+  }, [show, settings, routeMode, randomModeAvailable]);
 
   return (
     <Modal show={show} onHide={onHide} centered>
@@ -144,8 +168,18 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
                 {MODE_LABELS[settings.mode] || MODE_LABELS.default}
               </Dropdown.Toggle>
               <Dropdown.Menu align="start" style={{ minWidth: '16rem' }}>
-                {/* Random mode is disabled for now (app/random/** is commented out). */}
-                {/* <Dropdown.Item onClick={() => switchMode('random')}>Random mode (No memory) ↗</Dropdown.Item> */}
+                {/* Random mode is desktop-only, so it is listed on a computer only. */}
+                {randomModeAvailable && (
+                  <Dropdown.Item
+                    active={settings.mode === 'random'}
+                    onClick={() => {
+                      setModeDropdownOpen(false);
+                      switchMode('random');
+                    }}
+                  >
+                    Random mode — no system prompt ↗ (4)
+                  </Dropdown.Item>
+                )}
                 <Dropdown.Item
                   active={settings.mode === 'default'}
                   onClick={() => {
@@ -179,8 +213,16 @@ export default function SettingsModal({ show, onHide, settings, setSettings, onS
               All modes share the same API key and model; each mode only differs by its system prompt.
             </Form.Text>
             <Form.Text className="text-muted d-block">
-              Shortcut: press 1, 2, or 3 while this dialog is open to switch modes instantly.
+              Shortcut: press 1, 2, or 3 while this dialog is open to switch modes instantly
+              {randomModeAvailable ? ', or 4 for random mode' : ''}.
             </Form.Text>
+            {randomModeAvailable && (
+              <Form.Text className="text-muted d-block">
+                Random mode sends no system prompt at all and is only available on a computer.
+                Press {RANDOM_MODE_SHORTCUT_LABEL} anywhere to arm it, and again to leave it.
+                Its conversations are kept forever (no Redis expiry).
+              </Form.Text>
+            )}
           </Form.Group>
         </Form>
       </Modal.Body>

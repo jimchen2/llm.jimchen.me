@@ -8,6 +8,11 @@ import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 import { updateReplyContent } from "../lib/replyContent";
 import { getModeMessages, getModeMaxMessages } from "../lib/modes";
+import {
+  isComputerDevice,
+  isRandomModeShortcut,
+  randomModeHeaders,
+} from "../lib/desktopGate";
 import { initializeTheme } from "../lib/theme";
 
 // Placeholder sent in x-db-token while the server runs in test mode (TEST_MODE=true).
@@ -68,6 +73,12 @@ export default function App({ routeMode = "default" }) {
   const [openModeDropdown, setOpenModeDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Random mode is desktop-only (lib/desktopGate.js). Resolved from the device's
+  // pointer/hover capabilities and User-Agent — a phone asking for the "desktop
+  // site" still reports a coarse pointer, so it stays a non-computer. The lazy
+  // initializer keeps the first client render correct (the random-mode routes
+  // only mount their App in the browser, see components/RandomModeGate.jsx).
+  const [isComputer, setIsComputer] = useState(() => isComputerDevice());
 
   // Authentication Modal State
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -101,7 +112,11 @@ export default function App({ routeMode = "default" }) {
 
   // A conversation can have a different mode than the route it was opened on;
   // prefer the conversation's saved mode, otherwise use the page's mode.
-  const mode = (activeConversation && getConversationMode(activeConversation)) || pageMode;
+  const requestedMode =
+    (activeConversation && getConversationMode(activeConversation)) || pageMode;
+  // Random mode only exists on a computer: everywhere else the default mode is
+  // used, so a random conversation can never be continued from a phone.
+  const mode = requestedMode === "random" && !isComputer ? "default" : requestedMode;
   const uiMode = modeResolved ? mode : null;
 
   const endOfMessagesRef = useRef(null);
@@ -118,7 +133,11 @@ export default function App({ routeMode = "default" }) {
         // The root route can use the saved mode directly. Don't force a full
         // page navigation to /russian or /practical just to learn the mode —
         // the route and the settings request are enough to initialize the UI.
-        const savedMode = data.settings.mode;
+        // A saved random mode only applies on a computer.
+        const savedMode =
+          data.settings.mode === "random" && !isComputerDevice()
+            ? "default"
+            : data.settings.mode;
         const initialMode =
           typeof window !== "undefined" && window.location.pathname === "/"
             ? savedMode || routeMode
@@ -182,6 +201,24 @@ export default function App({ routeMode = "default" }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [showSettings, showAuthModal, handleOpenSettings]);
 
+  // Ctrl+Alt+Shift+R arms random mode (the mode with no system prompt). It needs
+  // a real computer keyboard, and the device must look like a computer: phones
+  // cannot send the chord, and a phone in "desktop site" mode fails the
+  // pointer/hover check in lib/desktopGate.js. Pressing it again leaves the mode.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.repeat || !isRandomModeShortcut(e)) return;
+      if (!isComputerDevice()) return;
+      // Don't navigate away under the password prompt.
+      if (showAuthModal) return;
+      e.preventDefault();
+      const leavingRandomMode = routeMode === "random" || mode === "random";
+      window.location.href = leavingRandomMode ? "/" : "/random";
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [routeMode, mode, showAuthModal]);
+
   const initializeApp = async (token) => {
     loadConversations(token, 0);
 
@@ -189,11 +226,9 @@ export default function App({ routeMode = "default" }) {
     const params = new URLSearchParams(window.location.search);
     let urlId = params.get("chat");
 
-    // Random mode is disabled for now (app/random/** is commented out).
-    // if (pathname.startsWith("/random/chat/")) {
-    //   urlId = pathname.split("/random/chat/")[1];
-    // } else
-    if (pathname.startsWith("/russian/chat/")) {
+    if (pathname.startsWith("/random/chat/")) {
+      urlId = pathname.split("/random/chat/")[1];
+    } else if (pathname.startsWith("/russian/chat/")) {
       urlId = pathname.split("/russian/chat/")[1];
     } else if (pathname.startsWith("/practical/chat/")) {
       urlId = pathname.split("/practical/chat/")[1];
@@ -209,6 +244,7 @@ export default function App({ routeMode = "default" }) {
 
   useEffect(() => {
     initializeTheme();
+    setIsComputer(isComputerDevice());
 
     // In test mode (TEST_MODE=true on the server) no password is needed. Skip
     // the prompt and use a placeholder token, which is never stored locally.
@@ -291,15 +327,18 @@ export default function App({ routeMode = "default" }) {
       })
       .then((data) => {
         // Guard against phantom rows (e.g. conversations whose Redis hash
-        // expired but whose ID lingered in the index).
-        const valid = Array.isArray(data) ? data.filter((c) => c && c.id) : [];
+        // expired but whose ID lingered in the index), and hide random-mode
+        // conversations on anything that is not a computer.
+        const rows = Array.isArray(data) ? data.filter((c) => c && c.id) : [];
+        const canUseRandomMode = isComputerDevice();
+        const valid = rows.filter((c) => canUseRandomMode || c.mode !== "random");
 
         if (offset === 0) {
           setConversations(valid);
         } else {
           setConversations((prev) => [...prev, ...valid]);
         }
-        setHasMoreConv(valid.length === 10);
+        setHasMoreConv(rows.length === 10);
       })
       .catch((err) => {
         console.error(err);
@@ -348,8 +387,7 @@ export default function App({ routeMode = "default" }) {
           if (
             typeof window !== "undefined" &&
             (window.location.pathname.startsWith("/chat/") ||
-              // Random mode is disabled for now (app/random/** is commented out).
-              // window.location.pathname.startsWith("/random/chat/") ||
+              window.location.pathname.startsWith("/random/chat/") ||
               window.location.pathname.startsWith("/russian/chat/") ||
               window.location.pathname.startsWith("/practical/chat/") ||
               new URLSearchParams(window.location.search).get("chat"))
@@ -393,7 +431,9 @@ export default function App({ routeMode = "default" }) {
         },
         body: JSON.stringify({
           model: settings.model,
-          mode: settings.mode,
+          // Random mode is route-scoped (Ctrl+Alt+Shift+R), never the saved
+          // default mode, so saving settings from there keeps the old default.
+          mode: settings.mode === "random" ? "default" : settings.mode,
         }),
       });
 
@@ -468,24 +508,32 @@ export default function App({ routeMode = "default" }) {
       setConversations((prev) => [{ id: convId, title, mode: conversationMode }, ...prev]);
     }
 
-    // Send the mode's context to the LLM. A mode with memory = 0 would only
-    // send the current message — no previous context, every prompt fresh.
-    // Default/grammar use Infinity and keep the full active chain (or the
-    // retry's ancestry).
+    // Send the mode's context to the LLM. Default/grammar/random keep the full
+    // active chain (or the retry's ancestry); short conversation mode caps it.
+    // Random mode sends no system prompt at all — the server drops it there.
     const path = getModeMessages(conversationMode, newMsgs, isBotRetry ? parentId : userMsgId);
 
     try {
       if (isNewConv) {
         await fetch("/api/conversations", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+          headers: {
+            "Content-Type": "application/json",
+            "x-db-token": settings.dbToken,
+            // Random mode is desktop-only; the server checks this header.
+            ...randomModeHeaders(conversationMode, isComputer),
+          },
           body: JSON.stringify({ id: convId, title, mode: conversationMode }),
         });
       }
 
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+        headers: {
+          "Content-Type": "application/json",
+          "x-db-token": settings.dbToken,
+          ...randomModeHeaders(conversationMode, isComputer),
+        },
         body: JSON.stringify({
           messages: path,
           userMsgId: isBotRetry ? null : userMsgId,
@@ -544,7 +592,11 @@ export default function App({ routeMode = "default" }) {
     try {
       await fetch("/api/conversations", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-db-token": settings.dbToken },
+        headers: {
+          "Content-Type": "application/json",
+          "x-db-token": settings.dbToken,
+          ...randomModeHeaders(branchMode, isComputer),
+        },
         body: JSON.stringify({ id: newConvId, title, mode: branchMode }),
       });
 
@@ -740,6 +792,7 @@ export default function App({ routeMode = "default" }) {
         onSave={saveSettings}
         routeMode={routeMode}
         openModeDropdown={openModeDropdown}
+        randomModeAvailable={isComputer}
       />
 
       {/* Main Area */}
@@ -777,17 +830,15 @@ export default function App({ routeMode = "default" }) {
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center px-3">
               <h3 className="text-muted">
-                {/* Random mode is disabled for now (app/random/** is commented out). */}
-                {/* uiMode === "random"
-                  ? "Random mode — ask anything"
-                  : */}
                 {uiMode === null
                   ? ""
                   : uiMode === "grammar"
                     ? "Russian mode — исправьте грамматику"
                     : uiMode === "practical"
                       ? "Short conversation mode — concise replies, up to 5 exchanges"
-                      : "Please only talk about coding"}
+                      : uiMode === "random"
+                        ? "Random mode — no system prompt, ask anything"
+                        : "Please only talk about coding"}
               </h3>
             </div>
           ) : (
@@ -827,17 +878,15 @@ export default function App({ routeMode = "default" }) {
               key={`${activeConversation || "new-chat"}:${uiMode ?? "pending"}`}
               onSend={(text) => sendMessage(text)}
               placeholder={
-                // Random mode is disabled for now (app/random/** is commented out).
-                // uiMode === "random"
-                //   ? "Ask anything"
-                //   :
                 uiMode === null
                   ? ""
                   : uiMode === "grammar"
                     ? "Введите текст для исправления"
                     : uiMode === "practical"
                       ? "Say something — short conversational replies"
-                      : "Please only talk about coding"
+                      : uiMode === "random"
+                        ? "Ask anything — no system prompt"
+                        : "Please only talk about coding"
               }
               disabled={conversationLimitReached}
             />
