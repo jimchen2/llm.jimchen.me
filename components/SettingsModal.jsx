@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button, Dropdown } from 'react-bootstrap';
 import { applyThemePreference, getSavedTheme } from '../lib/theme';
-import { RANDOM_MODE_SHORTCUT_LABEL } from '../lib/desktopGate';
 
 export default function SettingsModal({
   show,
@@ -209,20 +208,6 @@ export default function SettingsModal({
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
-            <Form.Text className="text-muted d-block">
-              All modes share the same API key and model; each mode only differs by its system prompt.
-            </Form.Text>
-            <Form.Text className="text-muted d-block">
-              Shortcut: press 1, 2, or 3 while this dialog is open to switch modes instantly
-              {randomModeAvailable ? ', or 4 for random mode' : ''}.
-            </Form.Text>
-            {randomModeAvailable && (
-              <Form.Text className="text-muted d-block">
-                Random mode sends no system prompt at all and is only available on a computer.
-                Press {RANDOM_MODE_SHORTCUT_LABEL} anywhere to arm it, and again to leave it.
-                Its conversations are kept forever (no Redis expiry).
-              </Form.Text>
-            )}
           </Form.Group>
         </Form>
       </Modal.Body>
