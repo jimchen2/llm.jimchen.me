@@ -120,9 +120,10 @@ accepted as aliases of `API_KEY`.
 Random mode is deliberately **desktop-only**:
 
 - Open Settings → Mode and choose **Random mode — no system prompt** on a
-  computer. To leave it, choose another mode from the same dropdown. The option
-  is hidden on mobile devices; the `4` key also selects it while Settings is
-  open on desktop.
+  computer. To leave it, choose another mode from the same dropdown. The
+  option is always listed (the `4` key also selects it while Settings is
+  open); on a phone selecting it stays on the current page and disables the
+  input bar with a desktop-only notice instead of navigating to `/random`.
 - Phones are blocked — including a phone that requests the browser's "desktop
   site": `lib/desktopGate.js` requires a hover-capable, fine primary pointer
   (`hover: hover and pointer: fine`), so a phone fails the check even when its

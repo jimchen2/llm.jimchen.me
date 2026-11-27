@@ -117,6 +117,9 @@ export default function App({ routeMode = "default" }) {
   // used, so a random conversation can never be continued from a phone.
   const mode = requestedMode === "random" && !isComputer ? "default" : requestedMode;
   const uiMode = modeResolved ? mode : null;
+  // On a phone Random is shown in the Mode dropdown but cannot be used:
+  // selecting it disables the composer instead of navigating to /random.
+  const randomBlocked = !isComputer && settings.mode === "random";
 
   const endOfMessagesRef = useRef(null);
 
@@ -811,15 +814,17 @@ export default function App({ routeMode = "default" }) {
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center px-3">
               <h3 className="text-muted">
-                {uiMode === null
-                  ? ""
-                  : uiMode === "grammar"
-                    ? "Russian mode — исправьте грамматику"
-                    : uiMode === "practical"
-                      ? "Short conversation mode — concise replies, up to 5 exchanges"
-                      : uiMode === "random"
-                        ? "Random mode — no system prompt, ask anything"
-                        : "Please only talk about coding"}
+                {randomBlocked
+                  ? "Random mode is only available on a computer"
+                  : uiMode === null
+                    ? ""
+                    : uiMode === "grammar"
+                      ? "Russian mode — исправьте грамматику"
+                      : uiMode === "practical"
+                        ? "Short conversation mode — concise replies, up to 5 exchanges"
+                        : uiMode === "random"
+                          ? "Random mode — no system prompt, ask anything"
+                          : "Please only talk about coding"}
               </h3>
             </div>
           ) : (
@@ -853,23 +858,30 @@ export default function App({ routeMode = "default" }) {
                 This conversation has reached its limit of 5 exchanges (10 messages). Start a new conversation to continue.
               </div>
             )}
+            {randomBlocked && (
+              <div className="alert alert-info py-2 mb-2" role="status">
+                Random mode is only available on a computer. Choose another mode in Settings to continue chatting.
+              </div>
+            )}
             <ChatInput
               // Re-mount when the UI mode becomes known so the placeholder is
               // right from the first paint instead of updating in place.
               key={`${activeConversation || "new-chat"}:${uiMode ?? "pending"}`}
               onSend={(text) => sendMessage(text)}
               placeholder={
-                uiMode === null
-                  ? ""
-                  : uiMode === "grammar"
-                    ? "Введите текст для исправления"
-                    : uiMode === "practical"
-                      ? "Say something — short conversational replies"
-                      : uiMode === "random"
-                        ? "Ask anything — no system prompt"
-                        : "Please only talk about coding"
+                randomBlocked
+                  ? "Random mode is only available on a computer"
+                  : uiMode === null
+                    ? ""
+                    : uiMode === "grammar"
+                      ? "Введите текст для исправления"
+                      : uiMode === "practical"
+                        ? "Say something — short conversational replies"
+                        : uiMode === "random"
+                          ? "Ask anything — no system prompt"
+                          : "Please only talk about coding"
               }
-              disabled={conversationLimitReached}
+              disabled={conversationLimitReached || randomBlocked}
             />
           </Container>
         </div>

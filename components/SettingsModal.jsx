@@ -13,8 +13,9 @@ export default function SettingsModal({
   onSave,
   routeMode = 'default',
   openModeDropdown = false,
-  // Random mode only exists on a computer (lib/desktopGate.js), so the option
-  // is hidden everywhere else and never reachable from a phone.
+  // Random mode can only be used on a computer (lib/desktopGate.js). The
+  // option is always shown in the dropdown; on a phone selecting it stays
+  // on the current page and disables the input instead of navigating.
   randomModeAvailable = false,
 }) {
   // 'default' | 'grammar' | 'practical' | 'random' label shown on the Mode toggle.
@@ -53,7 +54,6 @@ export default function SettingsModal({
   const switchMode = async (newMode) => {
     // Random mode is desktop-only and is never saved as the default mode.
     const isRandom = newMode === 'random';
-    if (isRandom && !randomModeAvailable) return;
 
     setSettings({ ...settings, mode: newMode });
 
@@ -87,7 +87,12 @@ export default function SettingsModal({
       return;
     }
     if (isRandom) {
-      window.location.href = '/random';
+      // On a computer, go to the random-mode route. On a phone, stay put:
+      // settings.mode is now 'random' and the main page disables the
+      // input bar with a desktop-only notice instead of navigating.
+      if (randomModeAvailable) {
+        window.location.href = '/random';
+      }
       return;
     }
     if (routeMode !== 'default') {
@@ -97,14 +102,13 @@ export default function SettingsModal({
   };
 
   // Settings mode: while the dialog is open, 1 / 2 / 3 jump straight to
-  // Default / Russian / Short conversation mode, and 4 to random mode — on a
-  // computer only, where the option is visible. Ignored while the user is
-  // typing in a form field or while modifier keys are held.
+  // Default / Russian / Short conversation mode, and 4 to random mode
+  // (shown everywhere; on a phone it only disables the input). Ignored
+  // while the user is typing in a form field or while modifier keys are held.
   useEffect(() => {
     if (!show) return;
 
-    const MODE_BY_KEY = { '1': 'default', '2': 'grammar', '3': 'practical' };
-    if (randomModeAvailable) MODE_BY_KEY['4'] = 'random';
+    const MODE_BY_KEY = { '1': 'default', '2': 'grammar', '3': 'practical', '4': 'random' };
     const onKeyDown = (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       const newMode = MODE_BY_KEY[e.key];
@@ -193,18 +197,19 @@ export default function SettingsModal({
                 >
                   Short conversation mode ↗ (3)
                 </Dropdown.Item>
-                {/* Random mode is desktop-only, so it is listed on a computer only. */}
-                {randomModeAvailable && (
-                  <Dropdown.Item
-                    active={settings.mode === 'random'}
-                    onClick={() => {
-                      setModeDropdownOpen(false);
-                      switchMode('random');
-                    }}
-                  >
-                    Random mode — no system prompt ↗ (4)
-                  </Dropdown.Item>
-                )}
+                {/* Random mode is desktop-only: always listed, but on a
+                    phone selecting it only disables the input bar. */}
+                <Dropdown.Item
+                  active={settings.mode === 'random'}
+                  onClick={() => {
+                    setModeDropdownOpen(false);
+                    switchMode('random');
+                  }}
+                >
+                  {randomModeAvailable
+                    ? 'Random mode — no system prompt ↗ (4)'
+                    : 'Random mode — no system prompt (desktop only)'}
+                </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
           </Form.Group>
