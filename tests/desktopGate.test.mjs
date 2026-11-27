@@ -5,7 +5,6 @@ import {
   allowsRandomMode,
   isComputerDevice,
   isMobileUserAgent,
-  isRandomModeShortcut,
   randomModeHeaders,
 } from '../lib/desktopGate.js';
 
@@ -37,24 +36,11 @@ test('the device is not a computer outside a browser', () => {
   assert.equal(isComputerDevice(), false);
 });
 
-test('random mode is only armed by Ctrl+Alt+Shift+R', () => {
-  const chord = { ctrlKey: true, altKey: true, shiftKey: true, code: 'KeyR', key: 'r' };
-  assert.equal(isRandomModeShortcut(chord), true);
-  // `code` wins on non-Latin keyboard layouts.
-  assert.equal(isRandomModeShortcut({ ...chord, key: 'к' }), true);
-
-  assert.equal(isRandomModeShortcut({ ctrlKey: true, shiftKey: true, code: 'KeyR' }), false);
-  assert.equal(isRandomModeShortcut({ ctrlKey: true, altKey: true, code: 'KeyR' }), false);
-  assert.equal(isRandomModeShortcut({ ...chord, metaKey: true }), false);
-  assert.equal(isRandomModeShortcut({ ...chord, code: 'KeyP', key: 'p' }), false);
-  assert.equal(isRandomModeShortcut(null), false);
-});
-
-test('server gate needs the shortcut header and a non-mobile client', () => {
+test('server gate needs the desktop-mode header and rejects mobile clients', () => {
   assert.equal(allowsRandomMode(request({ 'user-agent': DESKTOP_UA, [RANDOM_MODE_HEADER]: '1' })), true);
   assert.equal(allowsRandomMode(request({ 'user-agent': DESKTOP_UA })), false);
-  // A phone in "desktop site" mode can fake the UA, but the client never sets
-  // the header there; a phone UA is rejected even when it is present.
+  // A phone in "desktop site" mode can fake the UA, but its coarse pointer
+  // prevents the client from setting this header; mobile UAs are rejected too.
   assert.equal(allowsRandomMode(request({ 'user-agent': PHONE_UA, [RANDOM_MODE_HEADER]: '1' })), false);
   assert.equal(allowsRandomMode(request({ [RANDOM_MODE_HEADER]: '1' })), true); // no UA at all
   assert.equal(allowsRandomMode(null), false);

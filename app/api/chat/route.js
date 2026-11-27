@@ -16,7 +16,7 @@ export async function POST(req) {
   const msgKey = `msgs:${conversationId}`;
 
   // Random mode is desktop-only: reject it unless the request carries the
-  // header the Ctrl+Alt+Shift+R shortcut sets and is not coming from a phone.
+  // header the desktop-only Mode dropdown sets and is not coming from a phone.
   if (isDesktopOnlyMode(mode) && !allowsRandomMode(req)) {
     return NextResponse.json({ error: "random_mode_desktop_only" }, { status: 403 });
   }

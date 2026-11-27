@@ -45,8 +45,8 @@ export async function POST(request) {
     const resolvedMode = normalizeMode(mode || DEFAULT_MODE);
 
     // Random mode is desktop-only (see lib/desktopGate.js): a request from a
-    // phone, or one that did not go through the Ctrl+Alt+Shift+R shortcut, is
-    // not allowed to make it the saved mode.
+    // phone, or one without the desktop-only Mode dropdown header, is not
+    // allowed to make it the saved mode.
     if (isDesktopOnlyMode(resolvedMode) && !allowsRandomMode(request)) {
       return NextResponse.json({ error: 'random_mode_desktop_only' }, { status: 403 });
     }

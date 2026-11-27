@@ -10,7 +10,6 @@ import { updateReplyContent } from "../lib/replyContent";
 import { getModeMessages, getModeMaxMessages } from "../lib/modes";
 import {
   isComputerDevice,
-  isRandomModeShortcut,
   randomModeHeaders,
 } from "../lib/desktopGate";
 import { initializeTheme } from "../lib/theme";
@@ -179,7 +178,7 @@ export default function App({ routeMode = "default" }) {
   };
 
   // Ctrl+Shift+P toggles the settings dialog (the "settings mode"). While it
-  // is open, 1/2/3 inside SettingsModal switch between the three modes.
+  // is open, 1/2/3 switch the common modes; 4 selects desktop-only random mode.
   useEffect(() => {
     const onKeyDown = (e) => {
       if (!e.ctrlKey || !e.shiftKey || e.altKey || e.repeat) return;
@@ -200,24 +199,6 @@ export default function App({ routeMode = "default" }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [showSettings, showAuthModal, handleOpenSettings]);
-
-  // Ctrl+Alt+Shift+R arms random mode (the mode with no system prompt). It needs
-  // a real computer keyboard, and the device must look like a computer: phones
-  // cannot send the chord, and a phone in "desktop site" mode fails the
-  // pointer/hover check in lib/desktopGate.js. Pressing it again leaves the mode.
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.repeat || !isRandomModeShortcut(e)) return;
-      if (!isComputerDevice()) return;
-      // Don't navigate away under the password prompt.
-      if (showAuthModal) return;
-      e.preventDefault();
-      const leavingRandomMode = routeMode === "random" || mode === "random";
-      window.location.href = leavingRandomMode ? "/" : "/random";
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [routeMode, mode, showAuthModal]);
 
   const initializeApp = async (token) => {
     loadConversations(token, 0);
@@ -431,8 +412,8 @@ export default function App({ routeMode = "default" }) {
         },
         body: JSON.stringify({
           model: settings.model,
-          // Random mode is route-scoped (Ctrl+Alt+Shift+R), never the saved
-          // default mode, so saving settings from there keeps the old default.
+          // Random mode is route-scoped and never the saved default mode, so
+          // saving settings from there keeps the old default.
           mode: settings.mode === "random" ? "default" : settings.mode,
         }),
       });

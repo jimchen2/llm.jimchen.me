@@ -34,9 +34,9 @@ export default function SettingsModal({
     }
   }, [show]);
 
-  // When Ctrl+Shift+P opens the dialog, pop the Mode dropdown (Default /
-  // Russian / Short) open inside Settings right away so the user can pick a
-  // mode with the mouse instead of using the 1/2/3 keys.
+  // When Ctrl+Shift+P opens the dialog, pop the Mode dropdown open inside
+  // Settings right away so the user can pick a mode with the mouse instead of
+  // using the number keys.
   useEffect(() => {
     if (!show || !openModeDropdown) return;
     // Wait a tick for the modal to mount before opening the dropdown.
@@ -49,10 +49,9 @@ export default function SettingsModal({
     await applyThemePreference(newTheme);
   };
 
-  // Switch modes — used by the Mode dropdown and by the 1/2/3/4 shortcuts.
+  // Switch modes — used by the Mode dropdown and the 1/2/3/4 keys in Settings.
   const switchMode = async (newMode) => {
-    // Random mode is desktop-only and is never saved as the default mode; it is
-    // re-armed each time with the Ctrl+Alt+Shift+R shortcut.
+    // Random mode is desktop-only and is never saved as the default mode.
     const isRandom = newMode === 'random';
     if (isRandom && !randomModeAvailable) return;
 
@@ -167,18 +166,6 @@ export default function SettingsModal({
                 {MODE_LABELS[settings.mode] || MODE_LABELS.default}
               </Dropdown.Toggle>
               <Dropdown.Menu align="start" style={{ minWidth: '16rem' }}>
-                {/* Random mode is desktop-only, so it is listed on a computer only. */}
-                {randomModeAvailable && (
-                  <Dropdown.Item
-                    active={settings.mode === 'random'}
-                    onClick={() => {
-                      setModeDropdownOpen(false);
-                      switchMode('random');
-                    }}
-                  >
-                    Random mode — no system prompt ↗ (4)
-                  </Dropdown.Item>
-                )}
                 <Dropdown.Item
                   active={settings.mode === 'default'}
                   onClick={() => {
@@ -206,6 +193,18 @@ export default function SettingsModal({
                 >
                   Short conversation mode ↗ (3)
                 </Dropdown.Item>
+                {/* Random mode is desktop-only, so it is listed on a computer only. */}
+                {randomModeAvailable && (
+                  <Dropdown.Item
+                    active={settings.mode === 'random'}
+                    onClick={() => {
+                      setModeDropdownOpen(false);
+                      switchMode('random');
+                    }}
+                  >
+                    Random mode — no system prompt ↗ (4)
+                  </Dropdown.Item>
+                )}
               </Dropdown.Menu>
             </Dropdown>
           </Form.Group>
