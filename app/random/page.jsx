@@ -1,8 +1,7 @@
 // app/random/page.jsx
 //
 // Random mode: no system prompt at all. Desktop only — the route is wrapped in
-// RandomModeGate, and the mode is normally armed with Ctrl+Alt+Shift+R (see
-// lib/desktopGate.js).
+// RandomModeGate, and is entered from the desktop-only Mode dropdown.
 'use client';
 
 import App from '../page';

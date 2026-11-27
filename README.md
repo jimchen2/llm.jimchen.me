@@ -56,7 +56,10 @@ https://github.com/jimchen2/llm.jimchen.me/raw/refs/heads/master/public/annoying
   - Retry: Retrying means first deleting the message, before invoking the LLM again
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
-- Random mode (`/random`): no system prompt at all. Desktop only — press `Ctrl+Alt+Shift+R` on a computer, phones are blocked (even in "desktop site" mode). Its conversations and messages never expire in Redis. See [Random mode](#random-mode-desktop-only-no-redis-expiry).
+- Random mode (`/random`): no system prompt at all. Desktop only — select it
+  from Settings → Mode on a computer; phones are blocked (even in "desktop site"
+  mode). Its conversations and messages never expire in Redis. See [Random
+  mode](#random-mode-desktop-only-no-redis-expiry).
 
 ### Themes
 
@@ -114,10 +117,12 @@ accepted as aliases of `API_KEY`.
 
 #### Random mode (desktop only, no Redis expiry)
 
-Random mode is deliberately **desktop-only**, and it is armed with a computer key:
+Random mode is deliberately **desktop-only**:
 
-- Press **Ctrl+Alt+Shift+R** on a computer to enter random mode, and again to
-  leave it. Settings also lists it (and `4` inside Settings) on a computer.
+- Open Settings → Mode and choose **Random mode — no system prompt** on a
+  computer. To leave it, choose another mode from the same dropdown. The option
+  is hidden on mobile devices; the `4` key also selects it while Settings is
+  open on desktop.
 - Phones are blocked — including a phone that requests the browser's "desktop
   site": `lib/desktopGate.js` requires a hover-capable, fine primary pointer
   (`hover: hover and pointer: fine`), so a phone fails the check even when its
@@ -126,9 +131,8 @@ Random mode is deliberately **desktop-only**, and it is armed with a computer ke
   the sidebar there.
 - The API enforces the same rule: `/api/chat`, `/api/conversations` and
   `/api/settings` only accept `mode: "random"` when the request carries the
-  `x-random-mode-unlocked: 1` header (set only after the shortcut/Random menu
-  entry) and is not a mobile User-Agent. This is a UI gate, not a security
-  boundary.
+  `x-random-mode-unlocked: 1` header (set only by the desktop-only Mode menu)
+  and is not a mobile User-Agent. This is a UI gate, not a security boundary.
 - Random mode is never saved as the default mode; it is re-armed each time.
 - Its conversations never expire in Redis: `conv:{id}` and `msgs:{id}` are
   written without a TTL (and `PERSIST` clears any earlier one), while every other
