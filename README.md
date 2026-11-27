@@ -56,10 +56,12 @@ https://github.com/jimchen2/llm.jimchen.me/raw/refs/heads/master/public/annoying
   - Retry: Retrying means first deleting the message, before invoking the LLM again
   - Copying Code Snippets: Do not generate the copy button dynamically many times or while the AI is streaming, generate it once hardcoded into the HTML
 - All messages are saved on the server with Redis and PSQL, there is only one user with one password authentication, message continues if user closes the browser tab, timeout 120s
-- Random mode (`/random`): no system prompt at all. Desktop only — select it
-  from Settings → Mode on a computer; phones are blocked (even in "desktop site"
-  mode). Its conversations and messages never expire in Redis. See [Random
-  mode](#random-mode-desktop-only-no-redis-expiry).
+- Random mode (`/random`): no system prompt at all. Its conversations look and
+  behave like every other conversation on any device; on a phone or tablet the
+  chat is read-only (the history is visible, the composer and the message
+  actions are not). Its conversations, messages and sidebar entry never expire
+  in Redis. See [Random
+  mode](#random-mode-visible-everywhere-read-only-on-phones-no-redis-expiry).
 
 ### Themes
 
@@ -87,8 +89,9 @@ npm install && npm run dev   # http://localhost:3000
 
 With `TEST_MODE=true` there is no password prompt, no Redis and no API key:
 the sidebar shows a few fixed sample conversations (code, KaTeX math, Russian
-grammar, short-conversation mode) and sending a message streams a canned reply
-so the streaming UI can be exercised. Everything resets on restart.
+grammar, short-conversation mode, random mode) and sending a message streams a
+canned reply so the streaming UI can be exercised. Everything resets on
+restart.
 
 For the full setup, copy `.env.example` to `.env` and fill in:
 
@@ -115,30 +118,34 @@ Every mode uses the same `API_KEY` and `DEFAULT_MODEL`; there are no per-mode
 keys or models. `GEMINI_API_KEY` and the legacy `DEFAULT_MODE_API_KEY` are still
 accepted as aliases of `API_KEY`.
 
-#### Random mode (desktop only, no Redis expiry)
+#### Random mode (visible everywhere, read-only on phones, no Redis expiry)
 
-Random mode is deliberately **desktop-only**:
+Random mode is a normal, always-visible mode. It is only **read-only on a
+phone or tablet**:
 
-- Open Settings → Mode and choose **Random mode — no system prompt** on a
-  computer. To leave it, choose another mode from the same dropdown. The
-  option is always listed (the `4` key also selects it while Settings is
-  open); on a phone selecting it stays on the current page and disables the
-  input bar with a desktop-only notice instead of navigating to `/random`.
-- Phones are blocked — including a phone that requests the browser's "desktop
-  site": `lib/desktopGate.js` requires a hover-capable, fine primary pointer
-  (`hover: hover and pointer: fine`), so a phone fails the check even when its
-  User-Agent pretends to be a desktop. `/random` (and `/random/chat/[id]`)
-  redirect to `/` on such devices, and random-mode conversations are hidden from
-  the sidebar there.
-- The API enforces the same rule: `/api/chat`, `/api/conversations` and
-  `/api/settings` only accept `mode: "random"` when the request carries the
-  `x-random-mode-unlocked: 1` header (set only by the desktop-only Mode menu)
-  and is not a mobile User-Agent. This is a UI gate, not a security boundary.
-- The selected mode, including Random mode, is saved in Redis settings and restored on reload. Random mode remains subject to the desktop-only gate.
-- Its conversations never expire in Redis: `conv:{id}` and `msgs:{id}` are
-  written without a TTL (and `PERSIST` clears any earlier one), while every other
-  mode keeps `CACHE_TTL_SECONDS`. If the shared `conversations:index` expires
-  before those hashes do, `GET /api/conversations` recovers the conversations
-  from `conv:*` and puts them back in the index, so they never disappear from
-  the sidebar. Deleting a random-mode conversation is still possible (the `×`
-  button / `DELETE /api/conversations`) — it just never expires on its own.
+- Open Settings → Mode and choose **Random mode — no system prompt** on any
+  device (the `4` key also selects it while Settings is open). To leave it,
+  choose another mode from the same dropdown.
+- Its conversations are listed in the sidebar exactly like the others, on every
+  device, and `/random` / `/random/chat/[id]` open normally instead of
+  redirecting. The whole history renders as usual.
+- On a phone or tablet — including a phone that requests the browser's
+  "desktop site" — the composer is disabled and Edit / Branch / Delete are
+  hidden, with a "read-only on this device" notice. Copy and branch navigation
+  keep working. `lib/desktopGate.js` requires a hover-capable, fine primary
+  pointer (`hover: hover and pointer: fine`), so a phone fails the check even
+  when its User-Agent pretends to be a desktop.
+- The API keeps the matching write check: `/api/chat` and `POST
+  /api/conversations` only accept `mode: "random"` when the request carries the
+  `x-random-mode-unlocked: 1` header (set by the client on a computer only) and
+  is not a mobile User-Agent. Reading (`GET /api/conversations`, `GET
+  /api/messages`) is never gated, and the saved mode (`/api/settings`) can be
+  random on any device. This is a UI gate, not a security boundary.
+- Its conversations never expire in Redis: `conv:{id}`, `msgs:{id}` and the
+  shared `conversations:index` are written without a TTL (and `PERSIST` clears
+  any earlier one), while every other mode keeps `CACHE_TTL_SECONDS`. Should an
+  older index still have kept a TTL, `GET /api/conversations` recovers random
+  conversations from `conv:*` and persists the index again, so they never
+  disappear from the sidebar. Deleting a random-mode conversation is still
+  possible (the `×` button / `DELETE /api/conversations`) — it just never
+  expires on its own.

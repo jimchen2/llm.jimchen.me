@@ -13,9 +13,9 @@ export default function SettingsModal({
   onSave,
   routeMode = 'default',
   openModeDropdown = false,
-  // Random mode can only be used on a computer (lib/desktopGate.js). The
-  // option is always shown in the dropdown; on a phone selecting it stays
-  // on the current page and disables the input instead of navigating.
+  // Random mode is listed and selectable everywhere, exactly like the other
+  // modes. On a device that is not a computer it opens read-only (no input),
+  // so the option gets a small hint below the dropdown instead of a block.
   randomModeAvailable = false,
 }) {
   // 'default' | 'grammar' | 'practical' | 'random' label shown on the Mode toggle.
@@ -52,7 +52,8 @@ export default function SettingsModal({
 
   // Switch modes — used by the Mode dropdown and the 1/2/3/4 keys in Settings.
   const switchMode = async (newMode) => {
-    // Random mode is desktop-only, but is persisted like the other modes.
+    // Random mode is persisted like every other mode, on every device. Only
+    // sending messages needs a computer (the chat is read-only elsewhere).
     const isRandom = newMode === 'random';
 
     setSettings({ ...settings, mode: newMode });
@@ -64,7 +65,6 @@ export default function SettingsModal({
           headers: {
             'Content-Type': 'application/json',
             'x-db-token': settings.dbToken,
-            ...(isRandom && randomModeAvailable ? { 'x-random-mode-unlocked': '1' } : {}),
           },
           body: JSON.stringify({
             model: settings.model,
@@ -88,12 +88,9 @@ export default function SettingsModal({
       return;
     }
     if (isRandom) {
-      // On a computer, go to the random-mode route. On a phone, stay put:
-      // settings.mode is now 'random' and the main page disables the
-      // input bar with a desktop-only notice instead of navigating.
-      if (randomModeAvailable) {
-        window.location.href = '/random';
-      }
+      // Random mode has its own route on every device. On a phone the route
+      // renders the normal chat UI read-only instead of hiding it.
+      window.location.href = '/random';
       return;
     }
     if (routeMode !== 'default') {
@@ -104,8 +101,8 @@ export default function SettingsModal({
 
   // Settings mode: while the dialog is open, 1 / 2 / 3 jump straight to
   // Default / Russian / Short conversation mode, and 4 to random mode
-  // (shown everywhere; on a phone it only disables the input). Ignored
-  // while the user is typing in a form field or while modifier keys are held.
+  // (available everywhere; read-only on a phone). Ignored while the user is
+  // typing in a form field or while modifier keys are held.
   useEffect(() => {
     if (!show) return;
 
@@ -198,8 +195,6 @@ export default function SettingsModal({
                 >
                   Short conversation mode ↗ (3)
                 </Dropdown.Item>
-                {/* Random mode is desktop-only: always listed, but on a
-                    phone selecting it only disables the input bar. */}
                 <Dropdown.Item
                   active={settings.mode === 'random'}
                   onClick={() => {
@@ -207,12 +202,15 @@ export default function SettingsModal({
                     switchMode('random');
                   }}
                 >
-                  {randomModeAvailable
-                    ? 'Random mode — no system prompt ↗ (4)'
-                    : 'Random mode — no system prompt (desktop only)'}
+                  Random mode — no system prompt ↗ (4)
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
+            {!randomModeAvailable && (
+              <Form.Text className="text-muted">
+                Random mode is read-only on this device. Open it on a computer to send messages.
+              </Form.Text>
+            )}
           </Form.Group>
         </Form>
       </Modal.Body>

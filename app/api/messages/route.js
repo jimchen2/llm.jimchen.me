@@ -90,10 +90,14 @@ export async function POST(req) {
 
     // Random-mode conversations are kept in Redis forever, so their messages get
     // no TTL either (this is the branch/duplicate path in the UI). The mode is
-    // read from the stored conversation, not from the request.
+    // read from the stored conversation, not from the request. The conversation
+    // hash and the shared index are persisted too, so a random conversation is
+    // never left with a partially expiring state.
     const conversation = await redis.hgetall(`conv:${convId}`);
     if (modePersistsConversation(conversation && conversation.mode)) {
       pipeline.persist(key);
+      pipeline.persist(`conv:${convId}`);
+      pipeline.persist('conversations:index');
     } else {
       pipeline.expire(key, CACHE_TTL_SECONDS);
     }

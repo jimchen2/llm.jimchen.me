@@ -5,8 +5,9 @@ import {
   getModeMemory,
   getModeMaxMessages,
   getModeMessages,
-  isDesktopOnlyMode,
+  modeIsReadOnlyOnDevice,
   modePersistsConversation,
+  modeWriteRequiresComputer,
   normalizeMode,
 } from '../lib/modes.js';
 
@@ -18,7 +19,8 @@ const messages = {
 };
 
 // Random mode means no system prompt at all. It keeps full memory like the
-// default mode, is desktop-only, and its conversations never expire in Redis.
+// default mode, is read-only on phones, and its conversations never expire in
+// Redis.
 test('random mode has no system prompt, full memory and never expires', () => {
   assert.equal(normalizeMode('random'), 'random');
   assert.equal(getModeConfig('random').systemPrompt, '');
@@ -30,8 +32,11 @@ test('random mode has no system prompt, full memory and never expires', () => {
     { role: 'user', content: 'What is my name?' },
   ]);
 
-  // Desktop-only, and kept in Redis without a TTL.
-  assert.equal(isDesktopOnlyMode('random'), true);
+  // Read-only on a phone, writable on a computer, and kept in Redis without a
+  // TTL.
+  assert.equal(modeWriteRequiresComputer('random'), true);
+  assert.equal(modeIsReadOnlyOnDevice('random', false), true);
+  assert.equal(modeIsReadOnlyOnDevice('random', true), false);
   assert.equal(modePersistsConversation('random'), true);
 });
 
@@ -46,9 +51,11 @@ test('random mode ignores RANDOM_MODE_SYSTEM_PROMPT', () => {
   }
 });
 
-test('other modes keep their system prompts, full/default expiry and are not desktop-gated', () => {
+test('other modes keep their system prompts, full/default expiry and are writable everywhere', () => {
   for (const mode of ['default', 'grammar', 'practical']) {
-    assert.equal(isDesktopOnlyMode(mode), false);
+    assert.equal(modeWriteRequiresComputer(mode), false);
+    assert.equal(modeIsReadOnlyOnDevice(mode, false), false);
+    assert.equal(modeIsReadOnlyOnDevice(mode, true), false);
     assert.equal(modePersistsConversation(mode), false);
     assert.ok(getModeConfig(mode).systemPrompt.length > 0);
   }

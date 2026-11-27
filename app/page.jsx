@@ -7,7 +7,11 @@ import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
 import { updateReplyContent } from "../lib/replyContent";
-import { getModeMessages, getModeMaxMessages } from "../lib/modes";
+import {
+  getModeMessages,
+  getModeMaxMessages,
+  modeIsReadOnlyOnDevice,
+} from "../lib/modes";
 import {
   isComputerDevice,
   randomModeHeaders,
@@ -72,11 +76,13 @@ export default function App({ routeMode = "default" }) {
   const [openModeDropdown, setOpenModeDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  // Random mode is desktop-only (lib/desktopGate.js). Resolved from the device's
-  // pointer/hover capabilities and User-Agent — a phone asking for the "desktop
-  // site" still reports a coarse pointer, so it stays a non-computer. The lazy
+  // Whether the device behaves like a computer (hover-capable, fine pointer).
+  // Resolved from the device's pointer/hover capabilities and User-Agent — a
+  // phone asking for the "desktop site" still reports a coarse pointer, so it
+  // stays a non-computer. Random mode is fully visible everywhere; on anything
+  // that is not a computer it is read-only (see randomReadOnly below). The lazy
   // initializer keeps the first client render correct (the random-mode routes
-  // only mount their App in the browser, see components/RandomModeGate.jsx).
+  // mount their App only in the browser, see components/RandomModeGate.jsx).
   const [isComputer, setIsComputer] = useState(() => isComputerDevice());
 
   // Authentication Modal State
@@ -113,13 +119,13 @@ export default function App({ routeMode = "default" }) {
   // prefer the conversation's saved mode, otherwise use the page's mode.
   const requestedMode =
     (activeConversation && getConversationMode(activeConversation)) || pageMode;
-  // Random mode only exists on a computer: everywhere else the default mode is
-  // used, so a random conversation can never be continued from a phone.
-  const mode = requestedMode === "random" && !isComputer ? "default" : requestedMode;
+  const mode = requestedMode;
   const uiMode = modeResolved ? mode : null;
-  // On a phone Random is shown in the Mode dropdown but cannot be used:
-  // selecting it disables the composer instead of navigating to /random.
-  const randomBlocked = !isComputer && settings.mode === "random";
+  // Random mode is visible everywhere, just like any other conversation. On a
+  // phone or tablet it is read-only: the whole chat (including its history) is
+  // shown, but the composer and the message-editing actions are disabled, so
+  // nothing can be typed into or changed from that device.
+  const randomReadOnly = modeIsReadOnlyOnDevice(mode, isComputer);
 
   const endOfMessagesRef = useRef(null);
 
@@ -135,14 +141,11 @@ export default function App({ routeMode = "default" }) {
         // The root route can use the saved mode directly. Don't force a full
         // page navigation to /russian or /practical just to learn the mode —
         // the route and the settings request are enough to initialize the UI.
-        // A saved random mode only applies on a computer.
-        const savedMode =
-          data.settings.mode === "random" && !isComputerDevice()
-            ? "default"
-            : data.settings.mode;
+        // A saved random mode applies on every device; it is only read-only
+        // where randomReadOnly is true.
         const initialMode =
           typeof window !== "undefined" && window.location.pathname === "/"
-            ? savedMode || routeMode
+            ? data.settings.mode || routeMode
             : routeMode;
         setSettings({
           dbToken: token,
@@ -181,7 +184,8 @@ export default function App({ routeMode = "default" }) {
   };
 
   // Ctrl+Shift+P toggles the settings dialog (the "settings mode"). While it
-  // is open, 1/2/3 switch the common modes; 4 selects desktop-only random mode.
+  // is open, 1/2/3 switch the common modes; 4 selects random mode (read-only on
+  // a phone, like every other way of entering it there).
   useEffect(() => {
     const onKeyDown = (e) => {
       if (!e.ctrlKey || !e.shiftKey || e.altKey || e.repeat) return;
@@ -311,16 +315,15 @@ export default function App({ routeMode = "default" }) {
       })
       .then((data) => {
         // Guard against phantom rows (e.g. conversations whose Redis hash
-        // expired but whose ID lingered in the index), and hide random-mode
-        // conversations on anything that is not a computer.
+        // expired but whose ID lingered in the index). Random-mode
+        // conversations are listed exactly like every other conversation, on
+        // every device — on a phone they simply open read-only.
         const rows = Array.isArray(data) ? data.filter((c) => c && c.id) : [];
-        const canUseRandomMode = isComputerDevice();
-        const valid = rows.filter((c) => canUseRandomMode || c.mode !== "random");
 
         if (offset === 0) {
-          setConversations(valid);
+          setConversations(rows);
         } else {
-          setConversations((prev) => [...prev, ...valid]);
+          setConversations((prev) => [...prev, ...rows]);
         }
         setHasMoreConv(rows.length === 10);
       })
@@ -412,7 +415,6 @@ export default function App({ routeMode = "default" }) {
         headers: {
           "Content-Type": "application/json",
           "x-db-token": settings.dbToken,
-          ...(settings.mode === "random" ? { "x-random-mode-unlocked": "1" } : {}),
         },
         body: JSON.stringify({
           model: settings.model,
@@ -452,6 +454,8 @@ export default function App({ routeMode = "default" }) {
       if (!settings.dbToken) alert("Please authenticate first.");
       return;
     }
+    // Random mode is read-only on a phone or tablet: never send from there.
+    if (randomReadOnly) return;
 
     const content = text || "";
     let convId = activeConversation;
@@ -503,7 +507,7 @@ export default function App({ routeMode = "default" }) {
           headers: {
             "Content-Type": "application/json",
             "x-db-token": settings.dbToken,
-            // Random mode is desktop-only; the server checks this header.
+            // Random-mode writes need a computer; the server checks this header.
             ...randomModeHeaders(conversationMode, isComputer),
           },
           body: JSON.stringify({ id: convId, title, mode: conversationMode }),
@@ -813,17 +817,15 @@ export default function App({ routeMode = "default" }) {
           {activePath.length === 0 ? (
             <div className="h-100 d-flex justify-content-center align-items-center px-3">
               <h3 className="text-muted">
-                {randomBlocked
-                  ? "Random mode is only available on a computer"
-                  : uiMode === null
-                    ? ""
-                    : uiMode === "grammar"
-                      ? "Russian mode — исправьте грамматику"
-                      : uiMode === "practical"
-                        ? "Short conversation mode — concise replies, up to 5 exchanges"
-                        : uiMode === "random"
-                          ? "Random mode — no system prompt, ask anything"
-                          : "Please only talk about coding"}
+                {uiMode === null
+                  ? ""
+                  : uiMode === "grammar"
+                    ? "Russian mode — исправьте грамматику"
+                    : uiMode === "practical"
+                      ? "Short conversation mode — concise replies, up to 5 exchanges"
+                      : uiMode === "random"
+                        ? "Random mode — no system prompt, ask anything"
+                        : "Please only talk about coding"}
               </h3>
             </div>
           ) : (
@@ -842,6 +844,7 @@ export default function App({ routeMode = "default" }) {
                     handleRetry={handleRetry}
                     deleteMessage={deleteMessage}
                     modelName={settings.model}
+                    readOnly={randomReadOnly}
                   />
                 );
               })}
@@ -857,9 +860,9 @@ export default function App({ routeMode = "default" }) {
                 This conversation has reached its limit of 5 exchanges (10 messages). Start a new conversation to continue.
               </div>
             )}
-            {randomBlocked && (
+            {randomReadOnly && (
               <div className="alert alert-info py-2 mb-2" role="status">
-                Random mode is only available on a computer. Choose another mode in Settings to continue chatting.
+                Random mode is read-only on this device. Open this chat on a computer to send messages.
               </div>
             )}
             <ChatInput
@@ -868,8 +871,8 @@ export default function App({ routeMode = "default" }) {
               key={`${activeConversation || "new-chat"}:${uiMode ?? "pending"}`}
               onSend={(text) => sendMessage(text)}
               placeholder={
-                randomBlocked
-                  ? "Random mode is only available on a computer"
+                randomReadOnly
+                  ? "Random mode is read-only on this device"
                   : uiMode === null
                     ? ""
                     : uiMode === "grammar"
@@ -880,7 +883,7 @@ export default function App({ routeMode = "default" }) {
                           ? "Ask anything — no system prompt"
                           : "Please only talk about coding"
               }
-              disabled={conversationLimitReached || randomBlocked}
+              disabled={conversationLimitReached || randomReadOnly}
             />
           </Container>
         </div>

@@ -1,8 +1,7 @@
 // app/api/settings/route.js
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
-import { MODES, DEFAULT_MODE, normalizeMode, isDesktopOnlyMode } from '@/lib/modes';
-import { allowsRandomMode } from '@/lib/desktopGate';
+import { MODES, DEFAULT_MODE, normalizeMode } from '@/lib/modes';
 import { isTestMode } from '@/lib/testMode';
 
 function isAuthorized(request) {
@@ -44,13 +43,10 @@ export async function POST(request) {
     const { model, mode } = body;
     const resolvedMode = normalizeMode(mode || DEFAULT_MODE);
 
-    // Random mode is desktop-only (see lib/desktopGate.js): a request from a
-    // phone, or one without the desktop-only Mode dropdown header, is not
-    // allowed to make it the saved mode.
-    if (isDesktopOnlyMode(resolvedMode) && !allowsRandomMode(request)) {
-      return NextResponse.json({ error: 'random_mode_desktop_only' }, { status: 403 });
-    }
-
+    // The saved mode is a preference, so every mode (including random) can be
+    // chosen on every device. Random mode itself is read-only on a phone; that
+    // is enforced by the chat UI, not by the settings endpoint.
+    //
     // Save general settings persistently (mode only, not system prompts —
     // those live in the environment, never in Redis).
     await redis.set(

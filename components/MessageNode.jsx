@@ -31,7 +31,11 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
 
 export default function MessageNode({ 
   msg, siblings, index, switchBranch, handleCopy, 
-  handleBranch, handleRetry, deleteMessage, modelName
+  handleBranch, handleRetry, deleteMessage, modelName,
+  // Read-only turns (random mode opened on a phone/tablet): the message is
+  // still shown in full, but the actions that change the conversation — Edit,
+  // Branch and Delete — are hidden. Copy and branch navigation still work.
+  readOnly = false,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(msg.content);
@@ -103,9 +107,13 @@ export default function MessageNode({
               {!isEditing && (
                 <ButtonGroup size="sm">
                   <Button variant="outline-secondary" onClick={() => handleCopy(msg.content)}>Copy</Button>
-                  <Button variant="outline-secondary" onClick={() => setIsEditing(true)}>Edit</Button>
-                  <Button variant="outline-secondary" onClick={() => handleBranch(msg.id)}>Branch</Button>
-                  <Button variant="outline-danger" onClick={() => deleteMessage(msg.id)}>Delete</Button>
+                  {!readOnly && (
+                    <>
+                      <Button variant="outline-secondary" onClick={() => setIsEditing(true)}>Edit</Button>
+                      <Button variant="outline-secondary" onClick={() => handleBranch(msg.id)}>Branch</Button>
+                      <Button variant="outline-danger" onClick={() => deleteMessage(msg.id)}>Delete</Button>
+                    </>
+                  )}
                 </ButtonGroup>
               )}
             </div>

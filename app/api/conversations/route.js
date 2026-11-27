@@ -3,7 +3,7 @@ import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
 import {
   DEFAULT_MODE,
   normalizeMode,
-  isDesktopOnlyMode,
+  modeWriteRequiresComputer,
   modePersistsConversation,
 } from '@/lib/modes';
 import { allowsRandomMode } from '@/lib/desktopGate';
@@ -20,15 +20,16 @@ export async function GET(req) {
 
   // "conversations:index" is a sorted set of conversation IDs (newest first).
   // Each conversation's data lives in `conv:{id}` with its own TTL, while the
-  // index TTL is refreshed by *any* chat activity — so the index can contain
-  // IDs whose hash has already expired. Hydrate every ID and drop the stale
-  // ones so the frontend never receives phantom conversations.
+  // index TTL is refreshed by *any* cache-like chat activity — so the index can
+  // contain IDs whose hash has already expired. Hydrate every ID and drop the
+  // stale ones so the frontend never receives phantom conversations.
   const indexedIds = await redis.zrevrange('conversations:index', 0, -1);
 
-  // Random-mode conversations are stored without a TTL, so their hashes can
-  // outlive the index (which still expires). Recover those hashes and put them
-  // back into the index, so "never expires" really means never disappears from
-  // the sidebar.
+  // Random-mode conversations are stored without a TTL, and their writes also
+  // persist the shared index. This recovery path covers two cases anyway: an
+  // index written before that change (so it still carried a TTL), and an index
+  // that is missing entirely. Recover the hashes and put them back, so "never
+  // expires" really means never disappears from the sidebar.
   const indexed = new Set(indexedIds);
   const orphanIds = [];
   for (const key of await redis.keys('conv:*')) {
@@ -63,7 +64,11 @@ export async function GET(req) {
       }
 
       if (orphanSet.has(chunkIds[j])) {
-        recovered.push({ id: chunkIds[j], createdAt: Number(data.created_at) || Date.now() });
+        recovered.push({
+          id: chunkIds[j],
+          createdAt: Number(data.created_at) || Date.now(),
+          mode: normalizeMode(data.mode),
+        });
       }
 
       if (skip > 0) {
@@ -86,10 +91,21 @@ export async function GET(req) {
     await pipeline.exec();
   }
 
-  // Index the recovered conversations again, keeping the usual newest-first order.
+  // Index the recovered conversations again, keeping the usual newest-first
+  // order. Persistent (random-mode) ones also have any leftover TTL cleared on
+  // their conversation and message hashes. The index itself is persisted as
+  // well: it holds at least one never-expiring conversation, so there is no
+  // reason to let it expire and rely on this recovery path again later.
   if (recovered.length > 0) {
     const pipeline = redis.pipeline();
-    recovered.forEach(({ id, createdAt }) => pipeline.zadd('conversations:index', createdAt, id));
+    recovered.forEach(({ id, createdAt, mode }) => {
+      pipeline.zadd('conversations:index', createdAt, id);
+      if (modePersistsConversation(mode)) {
+        pipeline.persist(`conv:${id}`);
+        pipeline.persist(`msgs:${id}`);
+      }
+    });
+    pipeline.persist('conversations:index');
     await pipeline.exec();
   }
 
@@ -101,8 +117,11 @@ export async function POST(req) {
   const now = Date.now();
   const resolvedMode = normalizeMode(mode || DEFAULT_MODE);
 
-  // Random mode is desktop-only (see lib/desktopGate.js).
-  if (isDesktopOnlyMode(resolvedMode) && !allowsRandomMode(req)) {
+  // Random mode is read-only on phones/tablets: the chat UI never sends this
+  // request there, and the server keeps the same check so a random conversation
+  // cannot be created from one by accident. Reading random conversations is
+  // never gated (`GET` above lists them for every device).
+  if (modeWriteRequiresComputer(resolvedMode) && !allowsRandomMode(req)) {
     return NextResponse.json({ error: 'random_mode_desktop_only' }, { status: 403 });
   }
 
@@ -112,13 +131,16 @@ export async function POST(req) {
 
   // Expiration: most conversations are cache-like and expire after
   // CACHE_TTL_SECONDS. Random-mode conversations never expire — PERSIST also
-  // clears a TTL if the same ID was written before.
+  // clears a TTL if the same ID (or the shared index) was written before. The
+  // index is shared by all modes, but a persistent conversation needs it to
+  // stay forever too; stale IDs from expired conversations are pruned by GET.
   if (modePersistsConversation(resolvedMode)) {
     pipeline.persist(`conv:${id}`);
+    pipeline.persist('conversations:index');
   } else {
     pipeline.expire(`conv:${id}`, CACHE_TTL_SECONDS);
+    pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
   }
-  pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
 
   await pipeline.exec();
   return NextResponse.json({ success: true });
