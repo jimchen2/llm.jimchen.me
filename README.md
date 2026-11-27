@@ -134,7 +134,7 @@ Random mode is deliberately **desktop-only**:
   `/api/settings` only accept `mode: "random"` when the request carries the
   `x-random-mode-unlocked: 1` header (set only by the desktop-only Mode menu)
   and is not a mobile User-Agent. This is a UI gate, not a security boundary.
-- Random mode is never saved as the default mode; it is re-armed each time.
+- The selected mode, including Random mode, is saved in Redis settings and restored on reload. Random mode remains subject to the desktop-only gate.
 - Its conversations never expire in Redis: `conv:{id}` and `msgs:{id}` are
   written without a TTL (and `PERSIST` clears any earlier one), while every other
   mode keeps `CACHE_TTL_SECONDS`. If the shared `conversations:index` expires
