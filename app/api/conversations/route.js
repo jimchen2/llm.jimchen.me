@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
-import { DEFAULT_MODE, normalizeMode } from '@/lib/modes';
+import {
+  DEFAULT_MODE,
+  normalizeMode,
+  isDesktopOnlyMode,
+  modePersistsConversation,
+} from '@/lib/modes';
+import { allowsRandomMode } from '@/lib/desktopGate';
 import { isTestMode } from '@/lib/testMode';
 import { ensureTestSeed } from '@/lib/testSeed';
 
@@ -17,12 +23,26 @@ export async function GET(req) {
   // index TTL is refreshed by *any* chat activity — so the index can contain
   // IDs whose hash has already expired. Hydrate every ID and drop the stale
   // ones so the frontend never receives phantom conversations.
-  const convIds = await redis.zrevrange('conversations:index', 0, -1);
+  const indexedIds = await redis.zrevrange('conversations:index', 0, -1);
+
+  // Random-mode conversations are stored without a TTL, so their hashes can
+  // outlive the index (which still expires). Recover those hashes and put them
+  // back into the index, so "never expires" really means never disappears from
+  // the sidebar.
+  const indexed = new Set(indexedIds);
+  const orphanIds = [];
+  for (const key of await redis.keys('conv:*')) {
+    const id = key.slice('conv:'.length);
+    if (id && !indexed.has(id)) orphanIds.push(id);
+  }
+  const orphanSet = new Set(orphanIds);
+  const convIds = [...indexedIds, ...orphanIds];
 
   if (convIds.length === 0) return NextResponse.json([]);
 
   const rows = [];
   const staleIds = [];
+  const recovered = []; // orphaned conversations re-added to the index
   let skip = offset;
   const CHUNK_SIZE = 50; // hydrate in chunks so we don't build one giant pipeline
 
@@ -42,6 +62,10 @@ export async function GET(req) {
         continue;
       }
 
+      if (orphanSet.has(chunkIds[j])) {
+        recovered.push({ id: chunkIds[j], createdAt: Number(data.created_at) || Date.now() });
+      }
+
       if (skip > 0) {
         skip -= 1;
         continue;
@@ -52,11 +76,20 @@ export async function GET(req) {
   }
 
   // Remove expired conversations from the index (and their leftover messages)
-  // so they can't come back as phantom rows on later requests.
+  // so they can't come back as phantom rows on later requests. Note that this
+  // only ever removes IDs and message hashes that are already gone: random-mode
+  // conversations have no TTL and are never collected here.
   if (staleIds.length > 0) {
     const pipeline = redis.pipeline();
     pipeline.zrem('conversations:index', ...staleIds);
     staleIds.forEach((id) => pipeline.del(`msgs:${id}`));
+    await pipeline.exec();
+  }
+
+  // Index the recovered conversations again, keeping the usual newest-first order.
+  if (recovered.length > 0) {
+    const pipeline = redis.pipeline();
+    recovered.forEach(({ id, createdAt }) => pipeline.zadd('conversations:index', createdAt, id));
     await pipeline.exec();
   }
 
@@ -68,14 +101,25 @@ export async function POST(req) {
   const now = Date.now();
   const resolvedMode = normalizeMode(mode || DEFAULT_MODE);
 
+  // Random mode is desktop-only (see lib/desktopGate.js).
+  if (isDesktopOnlyMode(resolvedMode) && !allowsRandomMode(req)) {
+    return NextResponse.json({ error: 'random_mode_desktop_only' }, { status: 403 });
+  }
+
   const pipeline = redis.pipeline();
   pipeline.zadd('conversations:index', now, id);
   pipeline.hset(`conv:${id}`, { id, title: title || 'New Conversation', created_at: now, mode: resolvedMode });
-  
-  // Set expiration
+
+  // Expiration: most conversations are cache-like and expire after
+  // CACHE_TTL_SECONDS. Random-mode conversations never expire — PERSIST also
+  // clears a TTL if the same ID was written before.
+  if (modePersistsConversation(resolvedMode)) {
+    pipeline.persist(`conv:${id}`);
+  } else {
+    pipeline.expire(`conv:${id}`, CACHE_TTL_SECONDS);
+  }
   pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
-  pipeline.expire(`conv:${id}`, CACHE_TTL_SECONDS);
-  
+
   await pipeline.exec();
   return NextResponse.json({ success: true });
 }

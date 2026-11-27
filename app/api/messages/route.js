@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { redis, CACHE_TTL_SECONDS } from '@/lib/redis';
+import { modePersistsConversation } from '@/lib/modes';
 
 export async function GET(req) {
   const conversationId = req.nextUrl.searchParams.get('conversationId');
@@ -86,7 +87,16 @@ export async function POST(req) {
     for (const m of messages) {
       pipeline.hset(key, m.id, JSON.stringify(m));
     }
-    pipeline.expire(key, CACHE_TTL_SECONDS);
+
+    // Random-mode conversations are kept in Redis forever, so their messages get
+    // no TTL either (this is the branch/duplicate path in the UI). The mode is
+    // read from the stored conversation, not from the request.
+    const conversation = await redis.hgetall(`conv:${convId}`);
+    if (modePersistsConversation(conversation && conversation.mode)) {
+      pipeline.persist(key);
+    } else {
+      pipeline.expire(key, CACHE_TTL_SECONDS);
+    }
     await pipeline.exec();
   }
   return NextResponse.json({ success: true });
