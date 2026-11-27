@@ -5,7 +5,7 @@ import {
   getModeConfig,
   getModeMemory,
   getModeMaxMessages,
-  isDesktopOnlyMode,
+  modeWriteRequiresComputer,
   modePersistsConversation,
 } from "@/lib/modes";
 import { allowsRandomMode } from "@/lib/desktopGate";
@@ -15,9 +15,11 @@ export async function POST(req) {
   const userMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const msgKey = `msgs:${conversationId}`;
 
-  // Random mode is desktop-only: reject it unless the request carries the
-  // header the desktop-only Mode dropdown sets and is not coming from a phone.
-  if (isDesktopOnlyMode(mode) && !allowsRandomMode(req)) {
+  // Random mode is read-only on a phone/tablet: the chat UI disables the
+  // composer and the editing actions there, and the server keeps this check so
+  // no random-mode turn can be written from such a device by accident. Reading
+  // random conversations is not gated anywhere.
+  if (modeWriteRequiresComputer(mode) && !allowsRandomMode(req)) {
     return NextResponse.json({ error: "random_mode_desktop_only" }, { status: 403 });
   }
 
@@ -65,21 +67,21 @@ export async function POST(req) {
   };
   pipeline.hset(msgKey, botMsgId, JSON.stringify(botPayload));
 
-  // Random-mode conversations are kept in Redis forever: no TTL on the messages
-  // or on the conversation hash (PERSIST also clears a TTL set earlier). Every
-  // other mode keeps the normal cache expiry.
+  // Random-mode conversations are kept in Redis forever: no TTL on the messages,
+  // the conversation hash, or the shared conversation index (PERSIST also
+  // clears a TTL set earlier). Every other mode keeps the normal cache expiry.
   if (modePersistsConversation(mode)) {
     pipeline.persist(msgKey);
     pipeline.persist(`conv:${conversationId}`);
+    pipeline.persist('conversations:index');
   } else {
     pipeline.expire(msgKey, CACHE_TTL_SECONDS);
     pipeline.expire(`conv:${conversationId}`, CACHE_TTL_SECONDS);
+    // Extend the shared index expiration for cache-like modes. (The index is
+    // kept forever once any random-mode conversation is stored in it; stale IDs
+    // from expired conversations are pruned by GET /api/conversations.)
+    pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
   }
-
-  // Extend conversation index expiration (the index itself is shared by all
-  // modes; app/api/conversations recovers persistent conversations if it ever
-  // expires before their data does).
-  pipeline.expire('conversations:index', CACHE_TTL_SECONDS);
 
   await pipeline.exec();
 
