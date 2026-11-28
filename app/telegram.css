@@ -688,6 +688,10 @@ html[data-theme="telegram"] .chat-app-root .message-header strong {
 /* Like Telegram, a message carries no action row at all: Copy / Edit / Branch
    / Retry / Delete live in the context menu (right-click on a computer, a
    single tap on a phone). The menu itself is styled further below. */
+html[data-theme="telegram"] .chat-app-root .message-actions {
+  display: none !important;
+}
+
 @media (hover: none), (pointer: coarse) {
   html[data-theme="telegram"] .chat-app-root .message-card {
     max-width: 88%;

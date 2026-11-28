@@ -18,7 +18,6 @@ import {
   isComputerDevice,
   randomModeHeaders,
 } from "../lib/desktopGate";
-import { initializeTheme } from "../lib/theme";
 
 // Placeholder sent in x-db-token while the server runs in test mode (TEST_MODE=true).
 const TEST_MODE_TOKEN = "test-mode";
@@ -233,7 +232,6 @@ export default function App({ routeMode = "default" }) {
   };
 
   useEffect(() => {
-    initializeTheme();
     setIsComputer(isComputerDevice());
 
     // In test mode (TEST_MODE=true on the server) no password is needed. Skip
