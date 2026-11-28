@@ -1330,3 +1330,141 @@ html[data-theme="telegram"] .chat-sidebar .flex-grow-1::-webkit-scrollbar-thumb:
     animation: none;
   }
 }
+
+/* ==================================================== */
+/* TELEGRAM WEB A POLISH                                 */
+/* ==================================================== */
+/* Match the clean light Telegram Web reference more closely: neutral chat
+   wallpaper, Telegram's exact message colors, and a roomier dialogs column. */
+html[data-theme="telegram"] {
+  --tg-out-bg: #e1ffc7;
+  --tg-chatlist-hover: #f4f4f5;
+  --tg-divider: #dadce0;
+}
+
+@media (min-width: 768px) {
+  html[data-theme="telegram"] .chat-app-root > .d-none.d-md-block {
+    width: clamp(310px, 31vw, 390px) !important;
+    min-width: 300px;
+  }
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-main {
+  background-color: #dfe4e8 !important;
+  background-image: var(--tg-wallpaper),
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.24), transparent 64%),
+    linear-gradient(135deg, #e3e8eb 0%, #dce2e6 52%, #e1e6e9 100%);
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-sidebar > .border-bottom {
+  padding: 0.85rem !important;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item {
+  min-height: 64px;
+  padding: 0.62rem 0.75rem;
+  border-radius: 12px !important;
+}
+
+html[data-theme="telegram"] .chat-row-avatar {
+  width: 46px;
+  height: 46px;
+  margin-right: 0.7rem;
+}
+
+html[data-theme="telegram"] .chat-row-title {
+  font-size: 0.96rem;
+  font-weight: 500;
+}
+
+html[data-theme="telegram"] .chat-row-mode-label {
+  margin-top: 0.12rem;
+  font-size: 0.8rem;
+}
+
+html[data-theme="telegram"] .chat-sidebar .list-group-item.bg-secondary,
+html[data-theme="telegram"] .chat-mobile-sidebar .list-group-item.bg-secondary {
+  box-shadow: none;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-header {
+  min-height: 64px;
+  padding-right: 1.35rem;
+  padding-left: 1.35rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-header-avatar {
+  width: 44px;
+  height: 44px;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-header-title {
+  font-size: 1.02rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-messages {
+  padding-top: 0.5rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .conversation-rows {
+  padding-top: 0.55rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row + .message-row {
+  margin-top: 0.45rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-row-inner {
+  max-width: 980px;
+  padding-right: 1.25rem;
+  padding-left: 1.25rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card {
+  max-width: min(78%, 720px);
+  border-radius: 16px !important;
+  filter: drop-shadow(0 1px 1px rgba(29, 39, 47, 0.08));
+}
+
+/* This is a one-to-one assistant chat, not a group conversation. Telegram
+   doesn't repeat a sender name above every private-message bubble. */
+html[data-theme="telegram"] .chat-app-root .message-card .message-header {
+  display: none;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card .card-body,
+html[data-theme="telegram"] .chat-app-root .message-card > .card-body {
+  padding: 0.58rem 0.78rem 0.62rem;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card-assistant,
+html[data-theme="telegram"] .chat-app-root .message-row-assistant .message-card {
+  border-radius: 16px 16px 16px 4px !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .message-card-user,
+html[data-theme="telegram"] .chat-app-root .message-row-user .message-card {
+  border-radius: 16px 16px 4px 16px !important;
+}
+
+html[data-theme="telegram"] .chat-app-root .chat-composer-shell > .container {
+  max-width: 980px !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  html[data-theme="telegram"] .chat-app-root .message-card {
+    max-width: 88%;
+  }
+}
+
+@media (max-width: 767.98px) {
+  html[data-theme="telegram"] .chat-app-root .chat-header {
+    min-height: 56px;
+  }
+
+  html[data-theme="telegram"] .chat-app-root .message-row-inner {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+}
