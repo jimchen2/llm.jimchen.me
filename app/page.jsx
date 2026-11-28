@@ -6,8 +6,10 @@ import { Container, Button, Form, InputGroup, Offcanvas, Modal } from "react-boo
 import Sidebar from "../components/Sidebar";
 import SettingsModal from "../components/SettingsModal";
 import MessageNode from "../components/MessageNode";
+import ChatAvatar from "../components/ChatAvatar";
 import { updateReplyContent } from "../lib/replyContent";
 import {
+  getModeLabel,
   getModeMessages,
   getModeMaxMessages,
   modeIsReadOnlyOnDevice,
@@ -795,13 +797,15 @@ export default function App({ routeMode = "default" }) {
             (avatar, title, last-seen line); other themes hide it entirely and
             keep their original layout without it. */}
         <div className="chat-header align-items-center">
-          <div className="chat-header-avatar" aria-hidden="true">✳</div>
+          {/* The contact-bar avatar shows the conversation's mode, matching the
+              row it was opened from in the chat list. */}
+          <ChatAvatar mode={mode} className="chat-header-avatar" />
           <div className="chat-header-text">
             <div className="chat-header-title">{settings.model || 'Chat'}</div>
             <div className="chat-header-status">
-              {activePath.length > 0
-                ? `${activePath.length} message${activePath.length === 1 ? '' : 's'}`
-                : 'last seen recently'}
+              {`${getModeLabel(mode)}${activePath.length > 0
+                ? ` · ${activePath.length} message${activePath.length === 1 ? '' : 's'}`
+                : ''}`}
             </div>
           </div>
         </div>

@@ -250,10 +250,13 @@ p:has(.katex-display) {
 /* ==================================================== */
 /* TELEGRAM-THEME-ONLY MARKUP                           */
 /* ==================================================== */
-/* The chat header and per-message timestamps are only
+/* The chat header, per-message timestamps, the round
+   mode avatars and the chat-list mode labels are only
    rendered by the opt-in Telegram theme; keep them out
    of the light, dark and brutalist layouts. */
 .chat-header,
-.message-time {
+.message-time,
+.chat-avatar,
+.chat-row-mode-label {
   display: none;
 }
