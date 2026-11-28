@@ -103,7 +103,7 @@ export default function App({ routeMode = "default" }) {
   const [modeResolved, setModeResolved] = useState(routeMode !== "default");
 
   const [settings, setSettings] = useState({
-    model: "gemini-3.7-flash",
+    model: "",
     dbToken: "",
     mode: routeMode,
   });
