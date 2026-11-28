@@ -72,10 +72,10 @@ Settings → Theme switches the appearance and remembers the choice in a
 - **Dark** — Dark Reader over the original layout.
 - **Brutalist** — opt-in black/white/acid-yellow hard-edged stylesheet
   (`app/brutalist.css`).
-- **Telegram** — opt-in replica of a light Telegram Day-theme chat
+- **Telegram** — opt-in replica of Telegram Web's light theme
   (`app/telegram.css`): white chat list with round avatars, patterned
-  wallpaper, white incoming / mint `#effdde` outgoing bubbles with tails and
-  timestamps, a contact header with the model name, and a floating composer
+  wallpaper, white incoming / pale green `#e1ffc7` outgoing bubbles with tails
+  and timestamps, a contact header with the model name, and a floating composer
   with a round blue paper-plane send button. Only the Telegram theme shows the
   chat header and per-message times; the other themes hide them. It also speaks
   Telegram's own interaction language:
