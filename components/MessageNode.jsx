@@ -228,7 +228,7 @@ export default function MessageNode({
             {/* Every appearance except Telegram keeps the actions pinned to the
                 top of the message; Telegram shows them in the popup menu. */}
             {!isTelegram && (
-              <div className="d-flex align-items-center gap-2 flex-shrink-0">
+              <div className="message-actions d-flex align-items-center gap-2 flex-shrink-0">
                 {branchNavigation}
                 {!isEditing && (
                   <ButtonGroup size="sm">

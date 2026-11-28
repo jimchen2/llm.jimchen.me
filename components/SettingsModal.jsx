@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { Modal, Form, Button, Dropdown } from 'react-bootstrap';
-import { applyThemePreference, getSavedTheme } from '../lib/theme';
+import { applyThemePreference } from '../lib/theme';
+import useActiveTheme from '../lib/useActiveTheme';
 
 export default function SettingsModal({
   show,
@@ -26,14 +27,13 @@ export default function SettingsModal({
     random: 'Random mode — no system prompt ↗',
   };
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const activeTheme = useActiveTheme();
+  const [theme, setTheme] = useState(activeTheme);
 
-  // Read the saved appearance when the settings dialog opens.
+  // Sync the dropdown with the active appearance whenever it changes or the dialog opens.
   useEffect(() => {
-    if (show) {
-      setTheme(getSavedTheme());
-    }
-  }, [show]);
+    setTheme(activeTheme);
+  }, [activeTheme, show]);
 
   // When Ctrl+Shift+P opens the dialog, pop the Mode dropdown open inside
   // Settings right away so the user can pick a mode with the mouse instead of
