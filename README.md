@@ -50,7 +50,7 @@ https://github.com/jimchen2/llm.jimchen.me/raw/refs/heads/master/public/annoying
 - A separate file to call the LLM. Minimal and fast interface
 - User can set a default model, no default system instructions. User provides the API, but all the endpoints are in the backend, enter sends the message in the frontend, autofocus on page load, stream the message, no pictures for now, parse the output with `vscode/markdown-it-katex`
 - User can copy (purely on frontend), edit, branch, and delete any messages by user or bot, user can "retry" for every previous bot message, based on messages before that, user can copy the specific code snippets
-  - Sticky header: the model name and the message actions stay pinned to the top of the chat pane while a long message scrolls past
+  - Sticky header: the model name and the message actions stay pinned to the top of the chat pane while a long message scrolls past (the Telegram theme keeps only the sender line and moves the actions into a right-click / single-tap menu)
   - Delete: Delete means deleting only the one message and not deleting anything else
   - Branch: Branch means duplicating the entire message so far and not having any more relationships
   - Retry: Retrying means first deleting the message, before invoking the LLM again
@@ -77,7 +77,18 @@ Settings → Theme switches the appearance and remembers the choice in a
   wallpaper, white incoming / mint `#effdde` outgoing bubbles with tails and
   timestamps, a contact header with the model name, and a floating composer
   with a round blue paper-plane send button. Only the Telegram theme shows the
-  chat header and per-message times; the other themes hide them.
+  chat header and per-message times; the other themes hide them. It also speaks
+  Telegram's own interaction language:
+  - **The chat-list circle says what kind of conversation a row is.** Each
+    mode gets its own Telegram avatar color and glyph (default `{ }`, Russian
+    mode a pencil, short conversation mode a bolt, random mode a sparkle), and
+    the mode's name sits under the title like a Telegram message preview. The
+    contact-bar avatar repeats it for the open chat.
+  - **Message actions are not pinned to the bubble.** Copy / Edit / Branch /
+    Retry / Delete (and the branch switcher) live in a popup menu, opened by
+    right-clicking a message on a computer or by a single tap on a phone or
+    tablet — the way Telegram itself works. Every other theme keeps the
+    visible action row unchanged.
 
 ### Preview without any services
 

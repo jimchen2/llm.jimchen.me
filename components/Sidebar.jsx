@@ -1,5 +1,7 @@
 'use client';
 import { Button, ListGroup } from 'react-bootstrap';
+import ChatAvatar from './ChatAvatar';
+import { getModeLabel, normalizeMode } from '../lib/modes';
 
 export default function Sidebar({ 
   conversations, 
@@ -41,27 +43,36 @@ export default function Sidebar({
       
       <div className="flex-grow-1 overflow-auto p-2" onScroll={handleScroll}>
         <ListGroup variant="flush">
-          {conversations.map(c => (
-            <ListGroup.Item 
-              as="div"
-              key={c.id} 
-              action 
-              onClick={() => loadMessages(dbToken, c.id)}
-              className={`d-flex justify-content-between align-items-center rounded mb-1 text-light border-0 ${
-                c.id === activeConversation ? 'bg-secondary' : 'bg-dark'
-              }`}
-              style={{ cursor: 'pointer' }}
-            >
-              <span className="text-truncate flex-grow-1 me-2">{c.title}</span>
-              <Button 
-                variant="link" 
-                className="p-0 text-white-50 text-decoration-none fs-5" 
-                onClick={(e) => handleDeleteConversation(e, c.id)}
+          {conversations.map(c => {
+            // Each conversation carries the mode it was created with, so the
+            // Telegram theme can show what kind of conversation the row is.
+            const conversationMode = normalizeMode(c.mode);
+            return (
+              <ListGroup.Item 
+                as="div"
+                key={c.id} 
+                action 
+                onClick={() => loadMessages(dbToken, c.id)}
+                className={`chat-row chat-row-${conversationMode} d-flex justify-content-between align-items-center rounded mb-1 text-light border-0 ${
+                  c.id === activeConversation ? 'bg-secondary' : 'bg-dark'
+                }`}
+                style={{ cursor: 'pointer' }}
               >
-                &times;
-              </Button>
-            </ListGroup.Item>
-          ))}
+                <ChatAvatar mode={conversationMode} className="chat-row-avatar" />
+                <div className="chat-row-text flex-grow-1 me-2">
+                  <div className="chat-row-title text-truncate">{c.title}</div>
+                  <div className="chat-row-mode-label">{getModeLabel(conversationMode)}</div>
+                </div>
+                <Button 
+                  variant="link" 
+                  className="p-0 text-white-50 text-decoration-none fs-5" 
+                  onClick={(e) => handleDeleteConversation(e, c.id)}
+                >
+                  &times;
+                </Button>
+              </ListGroup.Item>
+            );
+          })}
         </ListGroup>
         
         {/* Loading Spinner / Text indicator */}

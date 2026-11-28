@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getModeConfig,
+  getModeLabel,
   getModeMemory,
   getModeMaxMessages,
   getModeMessages,
@@ -107,4 +108,16 @@ test('short conversation context is capped at the latest ten messages', () => {
       content: `Message ${i + 2}`,
     }))
   );
+});
+
+// The Telegram theme labels a conversation with the kind of chat it is, both
+// on its chat-list row and in the contact bar, so every mode needs a name and
+// an unknown/missing mode falls back to the default one.
+test('every mode has a display label, unknown modes fall back to default', () => {
+  assert.equal(getModeLabel('default'), 'Default mode');
+  assert.equal(getModeLabel('grammar'), 'Russian mode');
+  assert.equal(getModeLabel('practical'), 'Short conversation mode');
+  assert.equal(getModeLabel('random'), 'Random mode');
+  assert.equal(getModeLabel(undefined), 'Default mode');
+  assert.equal(getModeLabel('nonsense'), 'Default mode');
 });
