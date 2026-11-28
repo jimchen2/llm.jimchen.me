@@ -181,13 +181,13 @@ export default function MessageNode({
 
   const isUser = msg.role === 'user';
 
-  // Telegram-style time label ("14:32") for the bubble meta row. Message
+  // Telegram-style time label ("05:35 AM") for the bubble meta row. Message
   // timestamps are stored as epoch milliseconds.
   const timeLabel = Number.isFinite(Number(msg.created_at))
     ? new Date(Number(msg.created_at)).toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false,
+        hour12: true,
       })
     : '';
 
